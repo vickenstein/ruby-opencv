@@ -1120,7 +1120,7 @@ rb_set_data(VALUE self, VALUE data)
  *   mat[I] = value if mask(I) != 0
  *
  * @overload set(value, mask = nil) Fill value
- * @param value [CvScalar]
+ * @param value [CvScalar] Fill value
  * @param mask [CvMat] Operation mask, 8-bit single channel array;
  *   specifies elements of the destination array to be changed
  * @return [CvMat] Matrix which is set every element to a given value.
@@ -2626,16 +2626,20 @@ rb_eigenvv(int argc, VALUE *argv, VALUE self)
 
 
 /*
- * call-seq:
- *   dft(flags = CV_DXT_FORWARD, nonzero_rows = 0) -> cvmat
+ * Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
  *
- * Performs forward or inverse Discrete Fourier Transform(DFT) of 1D or 2D floating-point array.
- *
- * Params:
- *   * flags - transformation flags
- *   * nonzero_rows - when the parameter is not zero, the function assumes that only
+ * @overload dft(flags = CV_DXT_FORWARD, nonzero_rows = 0)
+ *   @param flags [Integer] transformation flags, representing a combination of the following values:
+ *     * <tt>CV_DXT_FORWARD</tt> - Performs a 1D or 2D transform.
+ *     * <tt>CV_DXT_INVERSE</tt> - Performs an inverse 1D or 2D transform instead of the default forward transform.
+ *     * <tt>CV_DXT_SCALE</tt> - Scales the result: divide it by the number of array elements. 
+ *       Normally, it is combined with <tt>CV_DXT_INVERSE</tt>.
+ *     * <tt>CV_DXT_INV_SCALE</tt> - <tt>CV_DXT_INVERSE</tt> + <tt>CV_DXT_SCALE</tt>
+ *   @param nonzero_rows [Integer] when the parameter is not zero, the function assumes that only
  *       the first <i>nonzero_rows</i> rows of the input array (CV_DXT_INVERSE is not set)
  *       or only the first nonzero_rows of the output array (CV_DXT_INVERSE is set) contain non-zeros.
+ * @return [CvMat] Output array
+ * @opencv_func cvDFT
  */
 VALUE
 rb_dft(int argc, VALUE *argv, VALUE self)
@@ -2658,13 +2662,18 @@ rb_dft(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   dct(flags = CV_DXT_FORWARD) -> cvmat
- *
  * Performs forward or inverse Discrete Cosine Transform(DCT) of 1D or 2D floating-point array.
  *
- * Params:
- *   * flags - transformation flags
+ * @overload dct(flags = CV_DXT_FORWARD)
+ *   @param flags [Integer] transformation flags, representing a combination of the following values:
+ *     * <tt>CV_DXT_FORWARD</tt> - Performs a 1D or 2D transform.
+ *     * <tt>CV_DXT_INVERSE</tt> - Performs an inverse 1D or 2D transform instead of the default forward transform.
+ *     * <tt>CV_DXT_ROWS</tt> - Performs a forward or inverse transform of every individual row of the input matrix.
+ *       This flag enables you to transform multiple vectors simultaneously and can be used to decrease
+ *       the overhead (which is sometimes several times larger than the processing itself) to perform 3D
+ *       and higher-dimensional transforms and so forth.
+ * @return [CvMat] Output array
+ * @opencv_func cvDCT
  */
 VALUE
 rb_dct(int argc, VALUE *argv, VALUE self)
@@ -2686,29 +2695,21 @@ rb_dct(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   line(<i>p1, p2[, drawing_option]</i>) -> mat
+ * Returns an image that is drawn a line segment connecting two points.
  *
- * Return image is drawn a line segment connecting two points.
- *
- * <i>drawing_option</i> should be Hash include these keys.
- *   :color
- *      Line color.
- *   :thickness
- *      Line Thickness.
- *   :line_type
- *      Type of the line:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the point coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- *
- * for example
- *   mat = CvMat.new(100, 100)
- *   mat.line(CvPoint.new(10, 10), CvPoint.new(90, 90), :thickness => 3, :line_type => :aa)
+ * @overload line(p1, p2, options = nil)
+ *   @param p1 [CvPoint] First point of the line segment.
+ *   @param p2 [CvPoint] Second point of the line segment.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvLine
  */
 VALUE
 rb_line(int argc, VALUE *argv, VALUE self)
@@ -2717,12 +2718,21 @@ rb_line(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   line!(<i>p1, p2[, drawing_option]</i>) -> self
- *
  * Draws a line segment connecting two points.
- * Same as CvMat#line, but modifies the receiver in place.
- * see CvMat#line
+ *
+ * @overload line!(p1, p2, options = nil)
+ *   @param p1 [CvPoint] First point of the line segment.
+ *   @param p2 [CvPoint] Second point of the line segment.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func (see #line)
  */
 VALUE
 rb_line_bang(int argc, VALUE *argv, VALUE self)
@@ -2744,26 +2754,21 @@ rb_line_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   rectangle(<i>p1, p2[, drawing_option]</i>) -> mat
+ * Returns an image that is drawn a simple, thick, or filled up-right rectangle.
  *
- * Return image is drawn a rectangle with two opposite corners <i>p1</i> and <i>p2</i>.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Line color.
- *   :thickness
- *      Thickness of lines that make up the rectangle.
- *      Negative values make the function to draw a filled rectangle.
- *   :line_type
- *      Type of the line:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the point coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload rectangle(p1, p2, options = nil)
+ *   @param p1 [CvPoint] Vertex of the rectangle.
+ *   @param p2 [CvPoint] Vertex of the rectangle opposite to <tt>p1</tt>.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvRectangle
  */
 VALUE
 rb_rectangle(int argc, VALUE *argv, VALUE self)
@@ -2772,12 +2777,21 @@ rb_rectangle(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   rectangle!(<i>p1, p2[, drawing_option]</i>) -> self
+ * Draws a simple, thick, or filled up-right rectangle.
  *
- * Draws simple, thick or filled rectangle.
- * Same as CvMat#rectangle, but modifies the receiver in place.
- * see CvMat#rectangle
+ * @overload rectangle!(p1, p2, options = nil)
+ *   @param p1 [CvPoint] Vertex of the rectangle.
+ *   @param p2 [CvPoint] Vertex of the rectangle opposite to <tt>p1</tt>.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvRectangle
  */
 VALUE
 rb_rectangle_bang(int argc, VALUE *argv, VALUE self)
@@ -2799,25 +2813,21 @@ rb_rectangle_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   circle(<i>center, radius[,drawing_option]</i>) -> cvmat
+ * Returns an image that is drawn a circle
  *
- * Return image is drawn a simple or filled circle with given center and radius.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Circle color.
- *   :thickness
- *      Thickness of the circle outline if positive, otherwise that a filled circle has to be drawn.
- *   :line_type
- *      Type of the circle boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the center coordinates and radius value.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload circle(center, radius, options = nil)
+ *   @param center [CvPoint] Center of the circle.
+ *   @param radius [Integer] Radius of the circle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvCircle
  */
 VALUE
 rb_circle(int argc, VALUE *argv, VALUE self)
@@ -2826,13 +2836,21 @@ rb_circle(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   circle!(<i>center, radius[,drawing_option]</i>) -> cvmat
+ * Draws a circle
  *
- * Draw a circle.
- * Same as CvMat#circle, but modifies the receiver in place.
- *
- * see CvMat#circle
+ * @overload circle!(center, radius, options = nil)
+ *   @param center [CvPoint] Center of the circle.
+ *   @param radius [Integer] Radius of the circle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvCircle
  */
 VALUE
 rb_circle_bang(int argc, VALUE *argv, VALUE self)
@@ -2854,25 +2872,24 @@ rb_circle_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   ellipse(<i>center, axis, angle, start_angle, end_angle[,drawing_option]</i>) -> mat
+ * Returns an image that is drawn a simple or thick elliptic arc or fills an ellipse sector.
  *
- * Return image is drawn a simple or thick elliptic arc or fills an ellipse sector.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Ellipse color.
- *   :thickness
- *      Thickness of the ellipse arc.
- *   :line_type
- *      Type of the ellipse boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the center coordinates and axes' value.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload ellipse(center, axes, angle, start_angle, end_angle, options = nil)
+ *   @param center [CvPoint] Center of the ellipse.
+ *   @param axes [CvSize] Length of the ellipse axes.
+ *   @param angle [Number] Ellipse rotation angle in degrees.
+ *   @param start_angle [Number] Starting angle of the elliptic arc in degrees.
+ *   @param end_angle [Number] Ending angle of the elliptic arc in degrees.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvEllipse
  */
 VALUE
 rb_ellipse(int argc, VALUE *argv, VALUE self)
@@ -2881,13 +2898,24 @@ rb_ellipse(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   ellipse!(<i>center, axis, angle, start_angle, end_angle[,drawing_option]</i>) -> self
+ * Draws a simple or thick elliptic arc or fills an ellipse sector.
  *
- * Draws simple or thick elliptic arc or fills ellipse sector.
- * Same as CvMat#ellipse, but modifies the receiver in place.
- *
- * see CvMat#ellipse
+ * @overload ellipse!(center, axes, angle, start_angle, end_angle, options = nil)
+ *   @param center [CvPoint] Center of the ellipse.
+ *   @param axes [CvSize] Length of the ellipse axes.
+ *   @param angle [Number] Ellipse rotation angle in degrees.
+ *   @param start_angle [Number] Starting angle of the elliptic arc in degrees.
+ *   @param end_angle [Number] Ending angle of the elliptic arc in degrees.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvEllipse
  */
 VALUE
 rb_ellipse_bang(int argc, VALUE *argv, VALUE self)
@@ -2911,26 +2939,21 @@ rb_ellipse_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   ellipse_box(<i>box[, drawing_option]</i>) -> mat
+ * Returns an image that is drawn a simple or thick elliptic arc or fills an ellipse sector.
  *
- * Return image is drawn a simple or thick ellipse outline, or fills an ellipse.
- * The method provides a convenient way to draw an ellipse approximating some shape.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Ellipse color.
- *   :thickness
- *      Thickness of the ellipse drawn.
- *   :line_type
- *      Type of the ellipse boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the box vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload ellipse_box(box, options = nil)
+ *   @param box [CvBox2D] Alternative ellipse representation via <tt>CvBox2D</tt>. This means that
+ *     the function draws an ellipse inscribed in the rotated rectangle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvEllipseBox
  */
 VALUE
 rb_ellipse_box(int argc, VALUE *argv, VALUE self)
@@ -2939,13 +2962,21 @@ rb_ellipse_box(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   ellipse_box!(<i>box[, drawing_option]</i>) -> self
+ * Draws a simple or thick elliptic arc or fills an ellipse sector.
  *
- * Draws simple or thick elliptic arc or fills ellipse sector.
- * Same as CvMat#ellipse_box, but modifies the receiver in place.
- *
- * see CvMat#ellipse_box
+ * @overload ellipse_box!(box, options = nil)
+ *   @param box [CvBox2D] Alternative ellipse representation via <tt>CvBox2D</tt>. This means that
+ *     the function draws an ellipse inscribed in the rotated rectangle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvEllipseBox
  */
 VALUE
 rb_ellipse_box_bang(int argc, VALUE *argv, VALUE self)
@@ -2967,11 +2998,20 @@ rb_ellipse_box_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   fill_poly(<i>points[,drawing_option]</i>) -> mat
+ * Returns an image that is filled the area bounded by one or more polygons.
  *
- * Return image is filled an area bounded by several polygonal contours.
- * The method fills complex areas, for example, areas with holes, contour self-intersection, etc.
+ * @overload fill_poly(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygons where each polygon is represented as an array of points.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvFillPoly
  */
 VALUE
 rb_fill_poly(int argc, VALUE *argv, VALUE self)
@@ -2980,24 +3020,20 @@ rb_fill_poly(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   fill_poly!(<i>points[,drawing_option]</i>) -> self
+ * Fills the area bounded by one or more polygons.
  *
- * Fills polygons interior.
- * Same as CvMat#fill_poly, but modifies the receiver in place.
- *
- * drawing_options should be Hash include these keys.
- *   :color
- *      Polygon color.
- *   :line_type
- *      Type of the polygon boundaries:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload fill_poly!(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygons where each polygon is represented as an array of points.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvFillPoly
  */
 VALUE
 rb_fill_poly_bang(int argc, VALUE *argv, VALUE self)
@@ -3038,27 +3074,20 @@ rb_fill_poly_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   fill_convex_poly(<i>points[,drawing_option]</i>) -> mat
+ * Returns an image that is filled a convex polygon.
  *
- * Return image is filled convex polygon interior.
- * This method is much faster than The function CvMat#fill_poly
- * and can fill not only the convex polygons but any monotonic polygon,
- * i.e. a polygon whose contour intersects every horizontal line (scan line)
- * twice at the most.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Polygon color.
- *   :line_type
- *      Type of the polygon boundaries:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload fill_convex_poly(points, options = nil)
+ *   @param points [Array<CvPoint>] Polygon vertices.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvFillConvexPoly
  */
 VALUE
 rb_fill_convex_poly(int argc, VALUE *argv, VALUE self)
@@ -3067,13 +3096,20 @@ rb_fill_convex_poly(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   fill_convex_poly!(<i>points[,drawing_option]</i>) -> self
+ * Fills a convex polygon.
  *
- * Fills convex polygon.
- * Same as CvMat#fill_convex_poly, but modifies the receiver in place.
- *
- * see CvMat#fill_convex_poly
+ * @overload fill_convex_poly!(points, options = nil)
+ *   @param points [Array<CvPoint>] Polygon vertices.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvFillConvexPoly
  */
 VALUE
 rb_fill_convex_poly_bang(int argc, VALUE *argv, VALUE self)
@@ -3103,29 +3139,24 @@ rb_fill_convex_poly_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   poly_line(<i>points[,drawing_option]</i>) -> mat
+ * Returns an image that is drawn several polygonal curves.
  *
- * Return image drawed a single or multiple polygonal curves.
- *
- * <i>drawing_option</i> should be Hash include these keys.
- *   :is_closed
- *      Indicates whether the polylines must be drawn closed.
- *      If closed, the method draws the line from the last vertex
- *      of every contour to the first vertex.
- *   :color
- *      Polyline color.
- *   :thickness
- *      Thickness of the polyline edges
- *   :line_type
- *      Type of line segments:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
+ * @overload poly_line(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygonal curves.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Boolean] :is_closed
+ *     Indicates whether the polylines must be drawn closed.
+ *     If closed, the method draws the line from the last vertex
+ *     of every contour to the first vertex.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvPolyLine
  */
 VALUE
 rb_poly_line(int argc, VALUE *argv, VALUE self)
@@ -3134,14 +3165,24 @@ rb_poly_line(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   poly_line!(<i>points[,drawing_option]</i>) -> self
+ * Draws several polygonal curves.
  *
- * Draws simple or thick polygons.
- *
- * Same as CvMat#poly_line, but modifies the receiver in place.
- *
- * see CvMat#poly_line
+ * @overload poly_line!(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygonal curves.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Boolean] :is_closed
+ *     Indicates whether the polylines must be drawn closed.
+ *     If closed, the method draws the line from the last vertex
+ *     of every contour to the first vertex.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvPolyLine
  */
 VALUE
 rb_poly_line_bang(int argc, VALUE *argv, VALUE self)
