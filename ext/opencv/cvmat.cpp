@@ -3228,11 +3228,15 @@ rb_poly_line_bang(int argc, VALUE *argv, VALUE self)
 
 
 /*
- * call-seq:
- *   put_text(<i>str, point, font[,color]</i>) -> cvmat
+ * Returns an image which is drawn a text string.
  *
- * Return image is drawn text string.
- * <i>font</i> should be CvFont object.
+ * @overload put_text(text, org, font, color = CvColor::Black)
+ * @param text [String] Text string to be drawn.
+ * @param org [CvPoint] Bottom-left corner of the text string in the image.
+ * @param font [CvFont] <tt>CvFont</tt> object.
+ * @param color [CvScalar] Text color.
+ * @return [CvMat] Output image
+ * @opencv_func cvPutText
  */
 VALUE
 rb_put_text(int argc, VALUE* argv, VALUE self)
@@ -3241,10 +3245,15 @@ rb_put_text(int argc, VALUE* argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   put_text!(<i>str, point, font[,color]</i>) -> self
+ * Draws a text string.
  *
- * Draws text string. Return self.
+ * @overload put_text!(text, org, font, color = CvColor::Black)
+ * @param text [String] Text string to be drawn.
+ * @param org [CvPoint] Bottom-left corner of the text string in the image.
+ * @param font [CvFont] <tt>CvFont</tt> object.
+ * @param color [CvScalar] Text color.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvPutText
  */
 VALUE
 rb_put_text_bang(int argc, VALUE* argv, VALUE self)
@@ -3263,13 +3272,14 @@ rb_put_text_bang(int argc, VALUE* argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   sobel(<i>xorder,yorder[,aperture_size=3]</i>) -> cvmat
+ * Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
  *
- * Calculates first, second, third or mixed image derivatives using extended Sobel operator.
- * <i>self</i> should be single-channel 8bit unsigned or 32bit floating-point.
- *
- * link:../images/CvMat_sobel.png
+ * @overload sobel(xorder, yorder, aperture_size = 3)
+ * @param xorder [Integer] Order of the derivative x.
+ * @param yorder [Integer] Order of the derivative y.
+ * @param aperture_size [Integer] Size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
+ * @return [CvMat] Output image.
+ * @opencv_func cvSovel
  */
 VALUE
 rb_sobel(int argc, VALUE *argv, VALUE self)
@@ -3300,11 +3310,13 @@ rb_sobel(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   laplace(<i>[aperture_size = 3]</i>) -> cvmat
+ * Calculates the Laplacian of an image.
  *
- * Calculates Laplacian of the image.
- * <i>self</i> should be single-channel 8bit unsigned or 32bit floating-point.
+ * @overload laplace(aperture_size = 3)
+ * @param aperture_size [Integer] Aperture size used to compute the second-derivative filters.
+ *     The size must be positive and odd.
+ * @return Output image.
+ * @opencv_func cvLaplace
  */
 VALUE
 rb_laplace(int argc, VALUE *argv, VALUE self)
@@ -3334,10 +3346,17 @@ rb_laplace(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   canny(<i>thresh1,thresh2[,aperture_size = 3]</i>) -> cvmat
+ * Finds edges in an image using the [Canny86] algorithm.
  *
- * Canny algorithm for edge detection.
+ * Canny86: J. Canny. A Computational Approach to Edge Detection, IEEE Trans. on Pattern Analysis
+ * and Machine Intelligence, 8(6), pp. 679-698 (1986).
+ *
+ * @overload canny(thresh1, thresh2, aperture_size = 3)
+ * @param thresh1 [Number] First threshold for the hysteresis procedure.
+ * @param thresh2 [Number] Second threshold for the hysteresis procedure.
+ * @param aperture_size [Integer] Aperture size for the sobel operator.
+ * @return [CvMat] Output edge map
+ * @opencv_func cvCanny
  */
 VALUE
 rb_canny(int argc, VALUE *argv, VALUE self)
@@ -3358,13 +3377,12 @@ rb_canny(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   pre_corner_detect(<i>[aperture_size = 3]</i>) -> cvmat
+ * Calculates a feature map for corner detection.
  *
- * Calculates feature map for corner detection.
- * <i>aperture_size</i> is parameter for sobel operator(see #sobel).
- *
- * The corners can be found as local maximums of the function.
+ * @overload pre_corner_detect(aperture_size = 3)
+ * @param aperture_size [Integer] Aperture size for the sobel operator.
+ * @return [CvMat] Output image
+ * @opencv_func cvPreCornerDetect
  */
 VALUE
 rb_pre_corner_detect(int argc, VALUE *argv, VALUE self)
