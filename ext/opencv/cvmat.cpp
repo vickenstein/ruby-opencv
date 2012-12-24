@@ -3403,11 +3403,13 @@ rb_pre_corner_detect(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   corner_eigenvv(<i>block_size[,aperture_size]</i>) -> cvmat
+ * Calculates eigenvalues and eigenvectors of image blocks for corner detection.
  *
- * For every pixel considers <i>block_size x block_size</i> neighborhood S(p).
- * It calculates convariation matrix of derivatives over the neighborhood.
+ * @overload corner_eigenvv(block_size, aperture_size = 3)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @return [CvMat] Result array.
+ * @opencv_func cvCornerEigenValsAndVecs
  */
 VALUE
 rb_corner_eigenvv(int argc, VALUE *argv, VALUE self)
@@ -3427,10 +3429,13 @@ rb_corner_eigenvv(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   corner_min_eigen_val(<i>block_size[,aperture_size = 3]</i>) -> cvmat
+ * Calculates the minimal eigenvalue of gradient matrices for corner detection.
  *
- * Calculates minimal eigenvalue of gradient matrices for corner detection.
+ * @overload corner_min_eigen_val(block_size, aperture_size = 3)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @return [CvMat] Result array.
+ * @opencv_func cvCornerMinEigenVal
  */
 VALUE
 rb_corner_min_eigen_val(int argc, VALUE *argv, VALUE self)
@@ -3450,10 +3455,14 @@ rb_corner_min_eigen_val(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   corner_harris(<i>block_size[,aperture_size = 3][,k = 0.04]</i>) -> cvmat
+ * Harris edge detector.
  *
- * Return image Applied Harris edge detector.
+ * @overload corner_harris(block_size, aperture_size = 3, k = 0.04)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @param k [Number] Harris detector free parameter.
+ * @return [CvMat] The Harris detector responses.
+ * @opencv_func cvCornerHarris
  */
 VALUE
 rb_corner_harris(int argc, VALUE *argv, VALUE self)
@@ -3472,23 +3481,40 @@ rb_corner_harris(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   find_chessboard_corners(pattern_size, flag = CV_CALIB_CB_ADAPTIVE_THRESH) -> Array<Array<CvPoint2D32f>, Boolean>
+ * Finds the positions of internal corners of the chessboard.
  *
- * Returns an array which includes the positions of internal corners of the chessboard, and
- * a parameter indicating whether the complete board was found or not.
+ * @overload find_chessboard_corners(pattern_size, flag = CV_CALIB_CB_ADAPTIVE_THRESH)
+ * @param pattern_size [CvSize] Number of inner corners per a chessboard row and column.
+ * @param flags [Integer] Various operation flags that can be zero or a combination of the following values.
+ *   * CV_CALIB_CB_ADAPTIVE_THRESH
+ *     * Use adaptive thresholding to convert the image to black and white, rather than
+ *       a fixed threshold level (computed from the average image brightness).
+ *   * CV_CALIB_CB_NORMALIZE_IMAGE
+ *     * Normalize the image gamma with CvMat#equalize_hist() before applying fixed or adaptive thresholding.
+ *   * CV_CALIB_CB_FILTER_QUADS
+ *     * Use additional criteria (like contour area, perimeter, square-like shape) to
+ *       filter out false quads extracted at the contour retrieval stage.
+ *   * CALIB_CB_FAST_CHECK
+ *     * Run a fast check on the image that looks for chessboard corners, and shortcut the call
+ *       if none is found. This can drastically speed up the call in the degenerate condition
+ *       when no chessboard is observed.
+ * @return [Array<Array<CvPoint2D32f>, Boolean>] An array which includes the positions of internal corners
+ *     of the chessboard, and a parameter indicating whether the complete board was found or not.
+ * @opencv_func cvFindChessboardCorners
+ * @example
+ *   mat = CvMat.load('chessboard.jpg', 1)
+ *   gray = mat.BGR2GRAY
+ *   pattern_size = CvSize.new(4, 4)
+ *   corners, found = gray.find_chessboard_corners(pattern_size, CV_CALIB_CB_ADAPTIVE_THRESH)
  *
- * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
- * flags (Integer) - Various operation flags that can be zero or a combination of the following values
- *   * CV_CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black and white,
- *         rather than a fixed threshold level (computed from the average image brightness).
- *   * CV_CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with CvMat#equalize_hist() before applying fixed
- *         or adaptive thresholding.
- *   * CV_CALIB_CB_FILTER_QUADS Use additional criteria (like contour area, perimeter, square-like shape)
- *         to filter out false quads extracted at the contour retrieval stage.
- *   * CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners, and shortcut
- *         the call if none is found. This can drastically speed up the call in the degenerate condition
- *         when no chessboard is observed.
+ *   if found
+ *     corners = gray.find_corner_sub_pix(corners, CvSize.new(3, 3), CvSize.new(-1, -1), CvTermCriteria.new(20, 0.03));
+ *   end
+ *
+ *   result = mat.draw_chessboard_corners(pattern_size, corners, found)
+ *   w = GUI::Window.new('Result')
+ *   w.show result
+ *   GUI::wait_key
  */
 VALUE
 rb_find_chessboard_corners(int argc, VALUE *argv, VALUE self)
@@ -3518,16 +3544,16 @@ rb_find_chessboard_corners(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   find_corner_sub_pix(corners, win_size, zero_zone, criteria) -> Array<CvPoint2D32f>
- *
- * Returns refined corner locations.
- *
- * corners - Initial coordinates of the input corners and refined coordinates provided for output.
- * win_size - Half of the side length of the search window.
- * zero_zone - Half of the size of the dead region in the middle of the search zone over
- *             which the summation in the formula below is not done.
- * criteria - Criteria for termination of the iterative process of corner refinement.
+ * Refines the corner locations.
+ * 
+ * @overload find_corner_sub_pix(corners, win_size, zero_zone, criteria)
+ * @param corners [Array<CvPoint>] Initial coordinates of the input corners.
+ * @param win_size [CvSize] Half of the side length of the search window.
+ * @param zero_zone [CvSize] Half of the size of the dead region in the middle of the search zone over
+ *   which the summation in the formula below is not done.
+ * @param criteria [CvTermCriteria] Criteria for termination of the iterative process of corner refinement.
+ * @return [Array<CvPoint2D32f>] Refined corner coordinates.
+ * @opencv_func cvFindCornerSubPix
  */
 VALUE
 rb_find_corner_sub_pix(VALUE self, VALUE corners, VALUE win_size, VALUE zero_zone, VALUE criteria)
@@ -3558,24 +3584,24 @@ rb_find_corner_sub_pix(VALUE self, VALUE corners, VALUE win_size, VALUE zero_zon
 }
 
 /*
- * call-seq:
- *   good_features_to_track(<i>quality_level, min_distance[, good_features_to_track_option]</i>)
- *         -> array (include CvPoint2D32f)
  * Determines strong corners on an image.
  *
- * quality_level – Multiplier for the max/min eigenvalue; specifies the minimal accepted quality of image corners
- * min_distance – Limit, specifying the minimum possible distance between the returned corners; Euclidian distance is used
- * <i>good_features_to_track_option</i> should be Hash include these keys.
- *   :mask
- *      Region of interest. The function selects points either in the specified region or in the whole image
- *      if the mask is nil.
- *   :block_size
- *      Size of the averaging block, passed to the underlying CornerMinEigenVal or CornerHarris used by the function.
- *   :use_harris
- *      If true, Harris operator ( CornerHarris ) is used instead of default CornerMinEigenVal
- *   :k
- *      Free parameter of Harris detector; used only if ( :use_harris => true )
- * note: <i>good_features_to_track_option</i>'s default value is CvMat::GOOD_FEATURES_TO_TRACK_OPTION
+ * @overload good_features_to_track(quality_level, min_distance, good_features_to_track_option = {})
+ *   @param quality_level [Number] Parameter characterizing the minimal accepted quality of image corners.
+ *     The parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
+ *     or the Harris function response.
+ *   @param min_distance [Number] Minimum possible Euclidean distance between the returned corners.
+ *   @param good_features_to_track_option [Hash] Options.
+ *   @option good_features_to_track_option [CvMat] :mask (nil) Optional region of interest.
+ *     If the image is not empty (it needs to have the type CV_8UC1 and the same size as image),
+ *     it specifies the region in which the corners are detected.
+ *   @option good_features_to_track_option [Integer] :block_size (3) Size of an average block for computing
+ *     a derivative covariation matrix over each pixel neighborhood.
+ *   @option good_features_to_track_option [Boolean] :use_harris (false) Parameter indicating whether
+ *     to use a Harris detector.
+ *   @option good_features_to_track_option [Number] :k (0.04) Free parameter of the Harris detector.
+ * @return [Array<CvPoint2D32f>] Output vector of detected corners.
+ * @opencv_func cvGoodFeaturesToTrack
  */
 VALUE
 rb_good_features_to_track(int argc, VALUE *argv, VALUE self)
