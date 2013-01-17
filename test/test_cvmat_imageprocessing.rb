@@ -424,14 +424,16 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     map_matrix[5] = CvScalar.new(66.08774)
 
     mat1 = mat0.warp_affine(map_matrix)
-    mat2 = mat0.warp_affine(map_matrix, CV_INTER_NN)
-    mat3 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
-    mat4 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR, :inverse_map)
-    
-    assert_equal('da3d7cdefabbaf84c4080ecd40d00897', hash_img(mat1))
-    assert_equal('b4abcd12c4e1103c3de87bf9ad854936', hash_img(mat2))
-    assert_equal('26f6b10e955125c91fd7e63a63cc06a3', hash_img(mat3))
-    assert_equal('cc4eb5d8eb7cb2c0b76941bc38fb91b1', hash_img(mat4))
+    mat2 = mat0.warp_affine(map_matrix, CV_INTER_NN | CV_WARP_FILL_OUTLIERS)
+    mat3 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, CvColor::Yellow)
+    mat4 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS | CV_WARP_INVERSE_MAP)
+
+    [mat1, mat2, mat3, mat4].each { |m|
+      assert_equal(mat0.cols, m.cols)
+      assert_equal(mat0.rows, m.rows)
+      assert_equal(mat0.depth, m.depth)
+      assert_equal(mat0.channel, m.channel)
+    }
 
     assert_raise(TypeError) {
       mat0.warp_affine(DUMMY_OBJ)
@@ -439,9 +441,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     assert_raise(TypeError) {
       mat0.warp_affine(map_matrix, DUMMY_OBJ)
     }
-    # assert_raise(CvError) {
-    #   mat0.warp_affine(CvMat.new(3, 3))
-    # }
+
+    # Uncomment the following lines to show the results
+    # snap mat0, mat1, mat2, mat3, mat4
   end
 
   def test_rotation_matrix2D
@@ -488,13 +490,15 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     
     mat1 = mat0.warp_perspective(map_matrix)
     mat2 = mat0.warp_perspective(map_matrix, CV_INTER_NN)
-    mat3 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR, :inverse_map)
-    mat4 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
+    mat3 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR | CV_WARP_INVERSE_MAP)
+    mat4 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, CvColor::Yellow)
 
-    assert_equal('bba3a5395f9dd9a400a0083ae74d8986', hash_img(mat1))
-    assert_equal('a0cc4f329f459410293b75b417fc4f25', hash_img(mat2))
-    assert_equal('3e34e6ed2404056bb72e86edf02610cb', hash_img(mat3))
-    assert_equal('71bd12857d2e4ac0c919652c2963b4e1', hash_img(mat4))
+    [mat1, mat2, mat3, mat4].each { |m|
+      assert_equal(mat0.cols, m.cols)
+      assert_equal(mat0.rows, m.rows)
+      assert_equal(mat0.depth, m.depth)
+      assert_equal(mat0.channel, m.channel)
+    }
 
     assert_raise(TypeError) {
       mat0.warp_perspective(DUMMY_OBJ)
@@ -502,9 +506,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     assert_raise(TypeError) {
       mat0.warp_perspective(map_matrix, DUMMY_OBJ)
     }
-    # assert_raise(CvError) {
-    #   mat0.warp_perspective(CvMat.new(2, 3))
-    # }
+
+    # Uncomment the following line to show the results
+    # snap mat0, mat1, mat2, mat3, mat4
   end
 
   def test_remap
@@ -527,11 +531,14 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
     mat1 = mat0.remap(matx, maty)
     mat2 = mat0.remap(matx, maty, CV_INTER_NN)
-    mat3 = mat0.remap(matx, maty, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
+    mat3 = mat0.remap(matx, maty, CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, CvColor::Yellow)
 
-    assert_equal('586716c0262a3e03a54b9fc6e671e5f7', hash_img(mat1))
-    assert_equal('5461ecdee23d5e8a9099500d631c9f0f', hash_img(mat2))
-    assert_equal('1f6b73925056298c566e8e727627d929', hash_img(mat3))
+    [mat1, mat2, mat3].each { |m|
+      assert_equal(mat0.cols, m.cols)
+      assert_equal(mat0.rows, m.rows)
+      assert_equal(mat0.depth, m.depth)
+      assert_equal(mat0.channel, m.channel)
+    }
 
     assert_raise(TypeError) {
       mat0.remap(DUMMY_OBJ, maty)
@@ -542,9 +549,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     assert_raise(TypeError) {
       mat0.remap(matx, maty, DUMMY_OBJ)
     }
-    # assert_raise(CvError) {
-    #   mat0.remap(CvMat.new(3, 3, :cv8u), maty)
-    # }
+
+    # Uncomment the following line to show the results
+    # snap mat0, mat1, mat2, mat3
   end
 
   def test_log_polar

@@ -346,12 +346,6 @@ define_ruby_module()
   REGISTER_CVMETHOD(inversion_method, "svd_sym", CV_SVD_SYM);
   REGISTER_CVMETHOD(inversion_method, "svd_symmetric", CV_SVD_SYM);
     
-  VALUE warp_flag = rb_hash_new();
-  /* {:fill_outliers, :inverse_map}: Warp affine optional flags */
-  rb_define_const(rb_module, "WARP_FLAG", warp_flag);
-  REGISTER_CVMETHOD(warp_flag, "fill_outliers", CV_WARP_FILL_OUTLIERS);
-  REGISTER_CVMETHOD(warp_flag, "inverse_map", CV_WARP_INVERSE_MAP);
-
   VALUE homography_calc_method = rb_hash_new();
   /* {:all, :ransac, :lmeds}: Methods used to computed homography matrix */
   rb_define_const(rb_module, "HOMOGRAPHY_CALC_METHOD", homography_calc_method);

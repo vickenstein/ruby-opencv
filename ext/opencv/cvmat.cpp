@@ -3945,24 +3945,23 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   warp_affine(<i>map_matrix[,interpolation = CV_INTER_LINEAR][,option = :fill_outliers][,fillval = 0]</i>) -> cvmat
+ *   warp_affine(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval = 0]</i>) -> cvmat
  *
  * Applies affine transformation to the image.
  */
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, interpolation, option, fill_value;
+  VALUE map_matrix, flags_val, option, fill_value;
   VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &interpolation, &option, &fill_value) < 4)
+  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fill_value) < 4)
     fill_value = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
-  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvWarpAffine(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		 method | CVMETHOD("WARP_FLAG", option, CV_WARP_FILL_OUTLIERS),
-		 VALUE_TO_CVSCALAR(fill_value));
+		 flags, VALUE_TO_CVSCALAR(fill_value));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -4050,24 +4049,23 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
 
 /*
  * call-seq:
- *   warp_perspective(<i>map_matrix[,interpolation=CV_INTER_LINEAR][,option =:fill_outliers][,fillval=0])</i>) -> cvmat
+ *   warp_perspective(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0])</i>) -> cvmat
  *
  * Applies perspective transformation to the image.
  */
 VALUE
 rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, interpolation, option, fillval;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &interpolation, &option, &fillval) < 4)
+  VALUE map_matrix, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fillval) < 4)
     fillval = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   VALUE dest = Qnil;
-  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvWarpPerspective(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		      method | CVMETHOD("WARP_FLAG",option, CV_WARP_FILL_OUTLIERS),
-		      VALUE_TO_CVSCALAR(fillval));
+		      flags, VALUE_TO_CVSCALAR(fillval));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -4077,7 +4075,7 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   remap(<i>mapx,mapy[,interpolation=CV_INTER_LINEAR][,option=:fill_outliers][,fillval=0]</i>) -> cvmat
+ *   remap(<i>mapx,mapy[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0]</i>) -> cvmat
  *
  * Applies generic geometrical transformation to the image.
  * Transforms source image using the specified map:
@@ -4088,17 +4086,16 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 VALUE
 rb_remap(int argc, VALUE *argv, VALUE self)
 {
-  VALUE mapx, mapy, interpolation, option, fillval;
-  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &interpolation, &option, &fillval) < 5)
+  VALUE mapx, mapy, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &flags_val, &option, &fillval) < 5)
     fillval = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   VALUE dest = Qnil;
-  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvRemap(self_ptr, CVARR(dest), CVARR_WITH_CHECK(mapx), CVARR_WITH_CHECK(mapy),
-	    method | CVMETHOD("WARP_FLAG", option, CV_WARP_FILL_OUTLIERS),
-	    VALUE_TO_CVSCALAR(fillval));
+	    flags, VALUE_TO_CVSCALAR(fillval));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);

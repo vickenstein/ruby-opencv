@@ -164,16 +164,6 @@ class TestOpenCV < OpenCVTestCase
     assert_equal(2, INVERSION_METHOD[:svd_sym])
     assert_equal(2, INVERSION_METHOD[:svd_symmetric])
 
-    # Interpolation methods
-    assert_equal(0, INTERPOLATION_METHOD[:nn])
-    assert_equal(1, INTERPOLATION_METHOD[:linear])
-    assert_equal(2, INTERPOLATION_METHOD[:cubic])
-    assert_equal(3, INTERPOLATION_METHOD[:area])
-
-    # Warp affine optional flags
-    assert_equal(8, WARP_FLAG[:fill_outliers])
-    assert_equal(16, WARP_FLAG[:inverse_map])
-
     # Homography calculation methods
     assert_equal(0, HOMOGRAPHY_CALC_METHOD[:all])
     assert_equal(4, HOMOGRAPHY_CALC_METHOD[:lmeds])
