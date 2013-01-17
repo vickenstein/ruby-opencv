@@ -3643,18 +3643,15 @@ rb_good_features_to_track(int argc, VALUE *argv, VALUE self)
   return corners;
 }
 
-
 /*
- * call-seq:
- *   rect_sub_pix(<i>center[, size = self.size]</i>) -> cvmat
+ * Retrieves a pixel rectangle from an image with sub-pixel accuracy.
  *
- * Retrieves pixel rectangle from image with sub-pixel accuracy.
- * Extracts pixels from <i>self</i>.
- *   dst(x,y) = self(x + center.x - (size.width - 1) * 0.5, y + center.y - (size.height - 1) * 0.5)
- * where the values of pixels at non-integer coordinates are retrived using bilinear iterpolation.
- * Every channel of multiple-channel images is processed independently.
- * Whereas the rectangle center must be inside the image, the whole rectangle may be partially occludedl.
- * In this case, the replication border mode is used to get pixel values beyond the image boundaries.
+ * @overload rect_sub_pix(center, size = self.size)
+ * @param center [CvPoint2D32f] Floating point coordinates of the center of the extracted rectangle within
+ *     the source image. The center must be inside the image.
+ * @param size [CvSize] Size of the extracted patch.
+ * @return [CvMat] Extracted patch that has the size <tt>size</tt> and the same number of channels as <tt>self</tt>.
+ * @opencv_func cvGetRectSubPix
  */
 VALUE
 rb_rect_sub_pix(int argc, VALUE *argv, VALUE self)
@@ -3678,11 +3675,15 @@ rb_rect_sub_pix(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   quandrangle_sub_pix(<i>map_matrix[, size = self.size]</i>) -> cvmat
- *
- * Retrives pixel quadrangle from image with sub-pixel accuracy.
- * Extracts pixel from <i>self</i> at sub-pixel accuracy and store them:
+ * Applies an affine transformation to an image.
+ * 
+ * @overload quadrangle_sub_pix(map_matrix, size = self.size)
+ * @param map_matrix [CvMat] 2x3 transformation matrix.
+ * @param size [CvSize] Size of the output image.
+ * @return [CvMat] Output image that has the size <tt>size</tt> and the same type as <tt>self</tt>.
+ * @opencv_func cvGetQuadrangleSubPix
+ * @note <tt>CvMat#quadrangle_sub_pix</tt> is similar to <tt>CvMat#warp_affine</tt>, but the outliers are
+ *     extrapolated using replication border mode.
  */
 VALUE
 rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self)
@@ -3706,21 +3707,20 @@ rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   resize(<i>size[,interpolation = :linear]</i>) -> cvmat
+ * Resizes an image.
  *
- * Resize image.
- * <i>interpolation</i> is interpolation method:
- * * CV_INTER_NN
- *   nearest-neighbor interpolation.
- * * CV_INTER_LINEAR
- *   bilinear interpolation (used by default)
- * * CV_INTER_AREA
- *   resampling using pixel area relation. It is preferred method for image decimation that give moire-free results.
- *   In case of zooming it is similar to NN method.
- * * CV_INTER_CUBIC
- *   bicubic interpolation.
- * Return <i>self</i> resized image that it fits exactly to <i>size</i>. If ROI is set, the method consideres the ROI as supported as usual.
+ * @overload resize(size, interpolation = :linear)
+ * @param size [CvSize] Output image size.
+ * @param interpolation [Symbol] Interpolation method:
+ *     * <tt>CV_INTER_NN</tt> - A nearest-neighbor interpolation
+ *     * <tt>CV_INTER_LINEAR</tt> - A bilinear interpolation (used by default)
+ *     * <tt>CV_INTER_AREA</tt> - Resampling using pixel area relation. It may be a preferred method for
+ *       image decimation, as it gives moire'-free results. But when the image is zoomed,
+ *       it is similar to the <tt>:nn</tt> method.
+ *     * <tt>CV_INTER_CUBIC</tt> - A bicubic interpolation over 4x4 pixel neighborhood
+ *     * <tt>CV_INTER_LANCZOS4</tt> - A Lanczos interpolation over 8x8 pixel neighborhood
+ * @return [CvMat] Output image.
+ * @opencv_func cvResize
  */
 VALUE
 rb_resize(int argc, VALUE *argv, VALUE self)
@@ -3740,10 +3740,15 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   warp_affine(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval = 0]</i>) -> cvmat
+ * Applies an affine transformation to an image.
  *
- * Applies affine transformation to the image.
+ * @overload warp_affine(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ * @param map_matrix [CvMat] 2x3 transformation matrix.
+ * @param flags [Integer] Combination of interpolation methods (#see resize) and the optional
+ *     flag <tt>WARP_INVERSE_MAP</tt> that means that <tt>map_matrix</tt> is the inverse transformation.
+ * @return [CvMat] Output image that has the size <tt>size</tt> and the same type as <tt>self</tt>.
+ * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @opencv_func cvWarpAffine
  */
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
