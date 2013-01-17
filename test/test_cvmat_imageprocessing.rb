@@ -388,10 +388,10 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     size_512 = CvSize.new(512, 512)
     size_128 = CvSize.new(128, 128)
     mat1 = mat0.resize(size_512)
-    mat2 = mat0.resize(size_512, :linear)
-    mat3 = mat0.resize(size_512, :nn)
-    mat4 = mat0.resize(size_128, :area)
-    mat5 = mat0.resize(size_128, :cubic)
+    mat2 = mat0.resize(size_512, CV_INTER_LINEAR)
+    mat3 = mat0.resize(size_512, CV_INTER_NN)
+    mat4 = mat0.resize(size_128, CV_INTER_AREA)
+    mat5 = mat0.resize(size_128, CV_INTER_CUBIC)
     mat6 = mat0.clone
 
     assert_equal('b2203ccca2c17b042a90b79704c0f535', hash_img(mat1))
@@ -420,9 +420,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     map_matrix[5] = CvScalar.new(66.08774)
 
     mat1 = mat0.warp_affine(map_matrix)
-    mat2 = mat0.warp_affine(map_matrix, :nn)
-    mat3 = mat0.warp_affine(map_matrix, :linear, :fill_outliers, CvColor::Yellow)
-    mat4 = mat0.warp_affine(map_matrix, :linear, :inverse_map)
+    mat2 = mat0.warp_affine(map_matrix, CV_INTER_NN)
+    mat3 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
+    mat4 = mat0.warp_affine(map_matrix, CV_INTER_LINEAR, :inverse_map)
     
     assert_equal('da3d7cdefabbaf84c4080ecd40d00897', hash_img(mat1))
     assert_equal('b4abcd12c4e1103c3de87bf9ad854936', hash_img(mat2))
@@ -483,9 +483,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     map_matrix[8] = CvScalar.new(1.00000)
     
     mat1 = mat0.warp_perspective(map_matrix)
-    mat2 = mat0.warp_perspective(map_matrix, :nn)
-    mat3 = mat0.warp_perspective(map_matrix, :linear, :inverse_map)
-    mat4 = mat0.warp_perspective(map_matrix, :linear, :fill_outliers, CvColor::Yellow)
+    mat2 = mat0.warp_perspective(map_matrix, CV_INTER_NN)
+    mat3 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR, :inverse_map)
+    mat4 = mat0.warp_perspective(map_matrix, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
 
     assert_equal('bba3a5395f9dd9a400a0083ae74d8986', hash_img(mat1))
     assert_equal('a0cc4f329f459410293b75b417fc4f25', hash_img(mat2))
@@ -522,8 +522,8 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     }
 
     mat1 = mat0.remap(matx, maty)
-    mat2 = mat0.remap(matx, maty, :nn)
-    mat3 = mat0.remap(matx, maty, :linear, :fill_outliers, CvColor::Yellow)
+    mat2 = mat0.remap(matx, maty, CV_INTER_NN)
+    mat3 = mat0.remap(matx, maty, CV_INTER_LINEAR, :fill_outliers, CvColor::Yellow)
 
     assert_equal('586716c0262a3e03a54b9fc6e671e5f7', hash_img(mat1))
     assert_equal('5461ecdee23d5e8a9099500d631c9f0f', hash_img(mat2))
