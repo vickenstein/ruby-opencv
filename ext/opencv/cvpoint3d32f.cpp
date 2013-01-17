@@ -113,7 +113,6 @@ rb_allocate(VALUE klass)
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
 {
-  VALUE obj, x, y, z;
   CvPoint3D32f *self_ptr = CVPOINT3D32F(self);
   switch (argc) {
   case 0:

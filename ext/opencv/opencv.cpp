@@ -294,7 +294,8 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_INTER_LINEAR", INT2FIX(CV_INTER_LINEAR));
   rb_define_const(rb_module, "CV_INTER_AREA", INT2FIX(CV_INTER_AREA));
   rb_define_const(rb_module, "CV_INTER_CUBIC", INT2FIX(CV_INTER_CUBIC));
-  
+  rb_define_const(rb_module, "CV_INTER_LANCZOS4", INT2FIX(CV_INTER_LANCZOS4));
+
   /* Warp affine optional flags */
   rb_define_const(rb_module, "CV_WARP_FILL_OUTLIERS", INT2FIX(CV_WARP_FILL_OUTLIERS));
   rb_define_const(rb_module, "CV_WARP_INVERSE_MAP", INT2FIX(CV_WARP_INVERSE_MAP));
@@ -345,20 +346,6 @@ define_ruby_module()
   REGISTER_CVMETHOD(inversion_method, "svd_sym", CV_SVD_SYM);
   REGISTER_CVMETHOD(inversion_method, "svd_symmetric", CV_SVD_SYM);
     
-  VALUE interpolation_method = rb_hash_new();
-  /* {:nn, :linear, :area, :cubic}: Interpolation method */
-  rb_define_const(rb_module, "INTERPOLATION_METHOD", interpolation_method);
-  REGISTER_CVMETHOD(interpolation_method, "nn", CV_INTER_NN);
-  REGISTER_CVMETHOD(interpolation_method, "linear", CV_INTER_LINEAR);
-  REGISTER_CVMETHOD(interpolation_method, "area", CV_INTER_AREA);
-  REGISTER_CVMETHOD(interpolation_method, "cubic", CV_INTER_CUBIC);
-  
-  VALUE warp_flag = rb_hash_new();
-  /* {:fill_outliers, :inverse_map}: Warp affine optional flags */
-  rb_define_const(rb_module, "WARP_FLAG", warp_flag);
-  REGISTER_CVMETHOD(warp_flag, "fill_outliers", CV_WARP_FILL_OUTLIERS);
-  REGISTER_CVMETHOD(warp_flag, "inverse_map", CV_WARP_INVERSE_MAP);
-
   VALUE homography_calc_method = rb_hash_new();
   /* {:all, :ransac, :lmeds}: Methods used to computed homography matrix */
   rb_define_const(rb_module, "HOMOGRAPHY_CALC_METHOD", homography_calc_method);

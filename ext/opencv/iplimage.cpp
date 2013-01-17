@@ -377,7 +377,7 @@ compute_smoothness(const IplImage *pFourierImage, const double lowFreqRatio, con
   int low, high;
   IplImage *filteredFourierImage;
   int totalIntensity;
-  double sum, den, totalArea;
+  double den, totalArea;
   CvScalar scalar;
 
   if (!(pFourierImage->nChannels == 1 && pFourierImage->depth == 64) ) {

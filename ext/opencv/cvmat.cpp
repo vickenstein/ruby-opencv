@@ -3711,14 +3711,14 @@ rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self)
  *
  * Resize image.
  * <i>interpolation</i> is interpolation method:
- * * :nn
+ * * CV_INTER_NN
  *   nearest-neighbor interpolation.
- * * :linear
+ * * CV_INTER_LINEAR
  *   bilinear interpolation (used by default)
- * * :area
+ * * CV_INTER_AREA
  *   resampling using pixel area relation. It is preferred method for image decimation that give moire-free results.
  *   In case of zooming it is similar to NN method.
- * * :cubic
+ * * CV_INTER_CUBIC
  *   bicubic interpolation.
  * Return <i>self</i> resized image that it fits exactly to <i>size</i>. If ROI is set, the method consideres the ROI as supported as usual.
  */
@@ -3728,8 +3728,10 @@ rb_resize(int argc, VALUE *argv, VALUE self)
   VALUE size, interpolation;
   rb_scan_args(argc, argv, "11", &size, &interpolation);
   VALUE dest = new_mat_kind_object(VALUE_TO_CVSIZE(size), self);
+  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
+
   try {
-    cvResize(CVARR(self), CVARR(dest), CVMETHOD("INTERPOLATION_METHOD", interpolation, CV_INTER_LINEAR));
+    cvResize(CVARR(self), CVARR(dest), method);
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -3739,23 +3741,23 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   warp_affine(<i>map_matrix[,interpolation = :linear][,option = :fill_outliers][,fillval = 0]</i>) -> cvmat
+ *   warp_affine(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval = 0]</i>) -> cvmat
  *
  * Applies affine transformation to the image.
  */
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, interpolation, option, fill_value;
+  VALUE map_matrix, flags_val, option, fill_value;
   VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &interpolation, &option, &fill_value) < 4)
+  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fill_value) < 4)
     fill_value = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvWarpAffine(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		 CVMETHOD("INTERPOLATION_METHOD", interpolation, CV_INTER_LINEAR)
-		 | CVMETHOD("WARP_FLAG", option, CV_WARP_FILL_OUTLIERS), VALUE_TO_CVSCALAR(fill_value));
+		 flags, VALUE_TO_CVSCALAR(fill_value));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -3843,24 +3845,23 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
 
 /*
  * call-seq:
- *   warp_perspective(<i>map_matrix[,interpolation=:linear][,option =:fill_outliers][,fillval=0])</i>) -> cvmat
+ *   warp_perspective(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0])</i>) -> cvmat
  *
  * Applies perspective transformation to the image.
  */
 VALUE
 rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, interpolation, option, fillval;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &interpolation, &option, &fillval) < 4)
+  VALUE map_matrix, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fillval) < 4)
     fillval = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   VALUE dest = Qnil;
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvWarpPerspective(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		      CVMETHOD("INTERPOLATION_METHOD", interpolation, CV_INTER_LINEAR)
-		      | CVMETHOD("WARP_FLAG",option, CV_WARP_FILL_OUTLIERS),
-		      VALUE_TO_CVSCALAR(fillval));
+		      flags, VALUE_TO_CVSCALAR(fillval));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -3870,7 +3871,7 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   remap(<i>mapx,mapy[,interpolation=:linear][,option=:fill_outliers][,fillval=0]</i>) -> cvmat
+ *   remap(<i>mapx,mapy[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0]</i>) -> cvmat
  *
  * Applies generic geometrical transformation to the image.
  * Transforms source image using the specified map:
@@ -3881,17 +3882,16 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 VALUE
 rb_remap(int argc, VALUE *argv, VALUE self)
 {
-  VALUE mapx, mapy, interpolation, option, fillval;
-  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &interpolation, &option, &fillval) < 5)
+  VALUE mapx, mapy, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &flags_val, &option, &fillval) < 5)
     fillval = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   VALUE dest = Qnil;
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvRemap(self_ptr, CVARR(dest), CVARR_WITH_CHECK(mapx), CVARR_WITH_CHECK(mapy),
-	    CVMETHOD("INTERPOLATION_METHOD", interpolation, CV_INTER_LINEAR)
-	    | CVMETHOD("WARP_FLAG", option, CV_WARP_FILL_OUTLIERS),
-	    VALUE_TO_CVSCALAR(fillval));
+	    flags, VALUE_TO_CVSCALAR(fillval));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -4211,7 +4211,6 @@ rb_filter2d(int argc, VALUE *argv, VALUE self)
   CvArr* self_ptr = CVARR(self);
   VALUE _dest = Qnil;
   try {
-    int type = cvGetElemType(kernel);
     _dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvFilter2D(self_ptr, CVARR(_dest), kernel, NIL_P(_anchor) ? cvPoint(-1,-1) : VALUE_TO_CVPOINT(_anchor));
   }

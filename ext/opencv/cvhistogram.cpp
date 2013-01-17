@@ -89,7 +89,7 @@ VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
 {
   VALUE _dims, _sizes, _type, _ranges, _uniform;
-  int dims, type, uniform;
+  int uniform;
   int* sizes;
   float** ranges = NULL;
 
