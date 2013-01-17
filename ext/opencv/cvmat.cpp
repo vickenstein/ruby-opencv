@@ -4415,7 +4415,6 @@ rb_filter2d(int argc, VALUE *argv, VALUE self)
   CvArr* self_ptr = CVARR(self);
   VALUE _dest = Qnil;
   try {
-    int type = cvGetElemType(kernel);
     _dest = new_mat_kind_object(cvGetSize(self_ptr), self);
     cvFilter2D(self_ptr, CVARR(_dest), kernel, NIL_P(_anchor) ? cvPoint(-1,-1) : VALUE_TO_CVPOINT(_anchor));
   }
