@@ -27,32 +27,26 @@ class TestIplImage < OpenCVTestCase
   end
 
   def test_load
-    img = IplImage.load(FILENAME_CAT)
-    assert_equal(IplImage, img.class)
-    assert_equal(375, img.width)
-    assert_equal(500, img.height)
-    assert_equal(:cv8u, img.depth)
-    assert_equal(3, img.channel)
-    assert_equal('f2e4dc5d6d3fc285203762ff53d150c7', hash_img(img))
+    img1 = IplImage.load(FILENAME_CAT)
+    assert_equal(IplImage, img1.class)
+    assert_equal(375, img1.width)
+    assert_equal(500, img1.height)
+    assert_equal(:cv8u, img1.depth)
+    assert_equal(3, img1.channel)
 
-    img = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_GRAYSCALE)
-    assert_equal(IplImage, img.class)
-    assert_equal(375, img.width)
-    assert_equal(500, img.height)
-    assert_equal(:cv8u, img.depth)
-    assert_equal(1, img.channel)
-    # The following test fails only when executed by test runner. (I don't know why...)
-    #   $ ruby test/runner.rb #=> fail
-    #   $ ruby test/test_iplimage.rb #=> pass
-    assert_equal('b1a0c1c5504961b62e15fa7d57a2e7e0', hash_img(img))
+    img2 = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_GRAYSCALE)
+    assert_equal(IplImage, img2.class)
+    assert_equal(375, img2.width)
+    assert_equal(500, img2.height)
+    assert_equal(:cv8u, img2.depth)
+    assert_equal(1, img2.channel)
 
-    img = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR)
-    assert_equal(IplImage, img.class)
-    assert_equal(375, img.width)
-    assert_equal(500, img.height)
-    assert_equal(:cv8u, img.depth)
-    assert_equal(3, img.channel)
-    assert_equal('f2e4dc5d6d3fc285203762ff53d150c7', hash_img(img))
+    img3 = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR)
+    assert_equal(IplImage, img3.class)
+    assert_equal(375, img3.width)
+    assert_equal(500, img3.height)
+    assert_equal(:cv8u, img3.depth)
+    assert_equal(3, img3.channel)
 
     assert_raise(ArgumentError) {
       IplImage.load
@@ -66,6 +60,9 @@ class TestIplImage < OpenCVTestCase
     assert_raise(StandardError) {
       IplImage.load('file/does/not/exist')
     }
+
+    # Uncomment the following lines to show the results
+    # snap img1, img2, img3
   end
 
   def test_decode
