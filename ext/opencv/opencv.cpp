@@ -294,6 +294,7 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_INTER_LINEAR", INT2FIX(CV_INTER_LINEAR));
   rb_define_const(rb_module, "CV_INTER_AREA", INT2FIX(CV_INTER_AREA));
   rb_define_const(rb_module, "CV_INTER_CUBIC", INT2FIX(CV_INTER_CUBIC));
+  rb_define_const(rb_module, "CV_INTER_LANCZOS4", INT2FIX(CV_INTER_LANCZOS4));
 
   /* Warp affine optional flags */
   rb_define_const(rb_module, "CV_WARP_FILL_OUTLIERS", INT2FIX(CV_WARP_FILL_OUTLIERS));

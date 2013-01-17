@@ -385,27 +385,31 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
   def test_resize
     mat0 = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    size_512 = CvSize.new(512, 512)
-    size_128 = CvSize.new(128, 128)
-    mat1 = mat0.resize(size_512)
-    mat2 = mat0.resize(size_512, CV_INTER_LINEAR)
-    mat3 = mat0.resize(size_512, CV_INTER_NN)
-    mat4 = mat0.resize(size_128, CV_INTER_AREA)
-    mat5 = mat0.resize(size_128, CV_INTER_CUBIC)
-    mat6 = mat0.clone
+    size = CvSize.new(384, 384)
+    mat1 = mat0.resize(size)
+    mat2 = mat0.resize(size, CV_INTER_LINEAR)
+    mat3 = mat0.resize(size, CV_INTER_NN)
+    mat4 = mat0.resize(size, CV_INTER_AREA)
+    mat5 = mat0.resize(size, CV_INTER_CUBIC)
+    mat6 = mat0.resize(size, CV_INTER_LANCZOS4)
 
-    assert_equal('b2203ccca2c17b042a90b79704c0f535', hash_img(mat1))
-    assert_equal('b2203ccca2c17b042a90b79704c0f535', hash_img(mat2))
-    assert_equal('ba8f2dee2329aaa6309de4770fc8fa55', hash_img(mat3))
-    assert_equal('10cf18adaa8548101cc230206624133a', hash_img(mat4))
-    assert_equal('de5c30fcd9e817aa282ab05388de995b', hash_img(mat5))
+    [mat1, mat2, mat3, mat4, mat5, mat6].each { |m|
+      assert_equal(size.width, m.cols)
+      assert_equal(size.height, m.rows)
+      assert_equal(mat0.depth, m.depth)
+      assert_equal(mat0.channel, m.channel)
+    }
 
     assert_raise(TypeError) {
       mat0.resize(DUMMY_OBJ)
     }
     assert_raise(TypeError) {
-      mat0.resize(size_128, DUMMY_OBJ)
+      mat0.resize(size, DUMMY_OBJ)
     }
+
+    # Uncomment the following lines to show the results
+    # snap(['original', mat0], ['default(linear)', mat1], ['linear', mat2],
+    #      ['nn', mat3], ['area', mat4], ['cubic', mat5] , ['lanczos4', mat6])
   end
 
   def test_warp_affine
