@@ -5033,7 +5033,7 @@ rb_watershed(VALUE self, VALUE markers)
 
 /*
  * call-seq:
- *   moments -> array(include CvMoments)
+ *   moments -> cvmoments
  *
  * Calculates moments.
  */
@@ -5042,14 +5042,10 @@ rb_moments(int argc, VALUE *argv, VALUE self)
 {
   VALUE is_binary;
   rb_scan_args(argc, argv, "01", &is_binary);
-  IplImage image = *IPLIMAGE(self);
-  VALUE moments = rb_ary_new();
+  CvArr *self_ptr = CVARR(self);
+  VALUE moments = Qnil;
   try {
-    int cn = CV_MAT_CN(cvGetElemType(CVARR(self)));
-    for (int i = 1; i <= cn; ++i) {
-      cvSetImageCOI(&image, i);
-      rb_ary_push(moments, cCvMoments::new_object(&image, TRUE_OR_FALSE(is_binary, 0)));
-    }
+    moments = cCvMoments::new_object(self_ptr, TRUE_OR_FALSE(is_binary, 0));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);

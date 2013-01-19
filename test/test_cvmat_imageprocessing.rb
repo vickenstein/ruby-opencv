@@ -1367,9 +1367,7 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     moments2 = mat.moments(false)
     moments3 = mat.moments(true)
 
-    [moments1, moments2].each { |moments|
-      assert_equal(1, moments.size)
-      m = moments[0]
+    [moments1, moments2].each { |m|
       assert_in_delta(2221056, m.spatial(0, 0), 0.1)
       assert_in_delta(2221056, m.central(0, 0), 0.1)
       assert_in_delta(1, m.normalized_central(0, 0), 0.1)
@@ -1408,9 +1406,7 @@ class TestCvMat_imageprocessing < OpenCVTestCase
       assert_in_delta(0.000671, m.inv_sqrt_m00, 0.000001)
     }
 
-    assert_equal(1, moments3.size)
-    m = moments3[0]
-
+    m = moments3
     assert_in_delta(10240, m.spatial(0, 0), 0.1)
     assert_in_delta(10240, m.central(0, 0), 0.1)
     assert_in_delta(1, m.normalized_central(0, 0), 0.1)
