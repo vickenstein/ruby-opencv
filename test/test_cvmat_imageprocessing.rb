@@ -165,10 +165,14 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat3 = mat0.corner_harris(3, 3, 0.04)
     mat4 = mat0.corner_harris(3, 7, 0.01)
 
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat1))
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat2))
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat3))
-    assert_equal('6515d75f6223806f077cebc7b3927a13', hash_img(mat4))
+    [mat1, mat2, mat3].each { |mat|
+      assert_equal(mat0.rows, mat.rows)
+      assert_equal(mat0.cols, mat.cols)
+      assert_in_delta(0, count_threshold(mat, 10), 10)
+    }
+    assert_equal(mat0.rows, mat4.rows)
+    assert_equal(mat0.cols, mat4.cols)
+    assert_in_delta(90, count_threshold(mat4, 10), 10)
 
     # Uncomment the following lines to show the images
     # snap(['original', mat0], ['corner_harris(3)', mat1], ['corner_harris(3,3)', mat2],
