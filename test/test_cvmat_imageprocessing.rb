@@ -115,9 +115,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat2 = mat0.pre_corner_detect(3)
     mat3 = mat0.pre_corner_detect(5)
 
-    assert_equal('1ec909dfa2e497c7f454e39aefd764f5', hash_img(mat1))
-    assert_equal('1ec909dfa2e497c7f454e39aefd764f5', hash_img(mat2))
-    assert_equal('42e7443ffd389d15343d3c6bdc42f553', hash_img(mat3))
+    assert_in_delta(0, count_threshold(mat1, 0.1), 30)
+    assert_in_delta(0, count_threshold(mat2, 0.1), 30)
+    assert_in_delta(380, count_threshold(mat3, 0.1), 30)
 
     # Uncomment the following lines to show the images
     # snap(['original', mat0], ['pre_coner_detect', mat1],
