@@ -4192,9 +4192,26 @@ rb_dilate_bang(int argc, VALUE *argv, VALUE self)
   return self;
 }
 
+/*
+ * call-seq:
+ *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
+ *
+ * Performs advanced morphological transformations.
+ * <i>operation</i>
+ * Type of morphological operation, one of:
+ *   CV_MOP_OPEN - opening
+ *   CV_MOP_CLOSE - closing
+ *   CV_MOP_GRADIENT - morphological gradient
+ *   CV_MOP_TOPHAT - top hat
+ *   CV_MOP_BLACKHAT - black hat
+ */
 VALUE
-rb_morphology_internal(VALUE element, VALUE iteration, int operation, VALUE self)
+rb_morphology(int argc, VALUE *argv, VALUE self)
 {
+  VALUE element, iteration, operation_val;
+  rb_scan_args(argc, argv, "12", &operation_val, &element, &iteration);
+
+  int operation = CVMETHOD("MORPHOLOGICAL_OPERATION", operation_val, -1);
   CvArr* self_ptr = CVARR(self);
   CvSize size = cvGetSize(self_ptr);
   VALUE dest = new_mat_kind_object(size, self);
@@ -4212,28 +4229,8 @@ rb_morphology_internal(VALUE element, VALUE iteration, int operation, VALUE self
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-  return dest;
-}
 
-/*
- * call-seq:
- *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
- *
- * Performs advanced morphological transformations.
- * <i>operation</i>
- * Type of morphological operation, one of:
- *   CV_MOP_OPEN - opening
- *   CV_MOP_CLOSE - closing
- *   CV_MOP_GRADIENT - morphological gradient
- *   CV_MOP_TOPHAT - top hat
- *   CV_MOP_BLACKHAT - black hat
- */
-VALUE
-rb_morphology(int argc, VALUE *argv, VALUE self)
-{
-  VALUE element, iteration, operation;
-  rb_scan_args(argc, argv, "12", &operation, &element, &iteration);
-  return rb_morphology_internal(element, iteration, CVMETHOD("MORPHOLOGICAL_OPERATION", operation, -1), self);
+  return dest;
 }
 
 /*
