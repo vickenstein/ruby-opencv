@@ -1138,8 +1138,18 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat1 = mat0.pyr_up
     mat2 = mat0.pyr_up(:gaussian_5x5)
 
-    assert_equal('02430c6cf143d3d104e25bc829f1fa93', hash_img(mat1))
-    assert_equal('02430c6cf143d3d104e25bc829f1fa93', hash_img(mat2))
+    [mat1, mat2].each { |mat|
+      assert_equal(mat0.cols * 2, mat.cols)
+      assert_equal(mat0.rows * 2, mat.rows)
+      assert_equal(mat0.depth, mat.depth)
+      assert_equal(mat0.channel, mat.channel)
+      b, g, r = color_hists(mat)
+      assert_in_delta(27500000, b, 1000000)
+      assert_in_delta(26000000, g, 1000000)
+      assert_in_delta(47000000, r, 1000000)
+    }
+    # Uncomment the following lines to show the result
+    # snap mat0, mat1, mat2
 
     assert_raise(TypeError) {
       mat0.pyr_up(DUMMY_OBJ)

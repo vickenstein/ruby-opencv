@@ -152,5 +152,15 @@ class OpenCVTestCase < Test::Unit::TestCase
     }
     n
   end
+
+  def color_hists(mat)
+    hists = [0] * mat.channel
+    (mat.rows * mat.cols).times { |i|
+      hists.size.times { |c|
+        hists[c] += mat[i][c]
+      }
+    }
+    hists
+  end
 end
 
