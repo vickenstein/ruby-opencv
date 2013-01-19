@@ -23,7 +23,7 @@ VALUE rb_klass;
 int
 rb_font_option_line_type(VALUE font_option)
 {
-  VALUE line_type = LOOKUP_CVMETHOD(font_option, "line_type");
+  VALUE line_type = LOOKUP_HASH(font_option, "line_type");
   if (FIXNUM_P(line_type)) {
     return FIX2INT(line_type);
   }
@@ -79,7 +79,7 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
   VALUE face, font_option;
   rb_scan_args(argc, argv, "11", &face, &font_option);
   Check_Type(face, T_SYMBOL);
-  face = rb_hash_aref(rb_const_get(cCvFont::rb_class(), rb_intern("FACE")), face);
+  face = rb_hash_lookup(rb_const_get(cCvFont::rb_class(), rb_intern("FACE")), face);
   if (NIL_P(face)) {
     rb_raise(rb_eArgError, "undefined face.");
   }

@@ -439,48 +439,77 @@ class TestCvMat < OpenCVTestCase
   end
 
   def test_get_rows
-    m1 = create_cvmat(10, 20)
+    m1 = create_cvmat(10, 20) { |j, i, c| CvScalar.new(c) }
 
-    m2 = m1.get_rows(2)
-    assert_equal(1, m2.height)
-    assert_equal(m1.width, m2.width)
-    m1.width.times { |i|
-      assert_cvscalar_equal(m1[2, i], m2[i])
+    row = 2
+    m2 = m1.get_rows(row)
+    assert_equal(1, m2.rows)
+    assert_equal(m1.cols, m2.cols)
+    m1.cols.times { |i|
+      assert_cvscalar_equal(m1[row, i], m2[i])
     }
 
-    m2, m3 = m1.get_rows(1, 2)
-    [m2, m3].each { |m|
-      assert_equal(1, m.height)
-      assert_equal(m1.width, m.width)
+    row1 = 3..7
+    row2 = 2...8
+    [row1, row2].each { |row|
+      m3 = m1.get_rows(row)
+      w = (row.exclude_end?) ? row.last - row.begin : row.last - row.begin + 1
+      assert_equal(w, m3.rows)
+      assert_equal(m1.cols, m3.cols)
+
+      m3.rows.times { |j|
+        m3.cols.times { |i|
+          assert_cvscalar_equal(m1[row.begin + j, i], m3[j, i])
+        }
+      }
     }
-    m1.width.times { |i|
-      assert_cvscalar_equal(m1[1, i], m2[i])
-      assert_cvscalar_equal(m1[2, i], m3[i])
+
+    [row1, row2].each { |row|
+      delta = 2
+      m3 = m1.get_rows(row, 2)
+      w = (((row.exclude_end?) ? row.last - row.begin : row.last - row.begin + 1).to_f / delta).ceil
+      assert_equal(w, m3.rows)
+      assert_equal(m1.cols, m3.cols)
+
+      m3.rows.times { |j|
+        m3.cols.times { |i|
+          assert_cvscalar_equal(m1[row.begin + j * delta, i], m3[j, i])
+        }
+      }
     }
 
     assert_raise(TypeError) {
       m1.get_rows(DUMMY_OBJ)
     }
+    assert_raise(TypeError) {
+      m1.get_rows(1, DUMMY_OBJ)
+    }
   end
 
   def test_get_cols
-    m1 = create_cvmat(10, 20)
+    m1 = create_cvmat(10, 20) { |j, i, c| CvScalar.new(c) }
 
-    m2 = m1.get_cols(2)
-    assert_equal(1, m2.width)
-    assert_equal(m1.height, m2.height)
+    col = 2
+    m2 = m1.get_cols(col)
+    assert_equal(m1.rows, m2.rows)
+    assert_equal(1, m2.cols)
     m1.height.times { |j|
-      assert_cvscalar_equal(m1[j, 2], m2[j])
+      assert_cvscalar_equal(m1[j, col], m2[j])
     }
 
-    m2, m3 = m1.get_cols(1, 2)
-    [m2, m3].each { |m|
-      assert_equal(1, m.width)
-      assert_equal(m1.height, m.height)
-    }
-    m1.height.times { |j|
-      assert_cvscalar_equal(m1[j, 1], m2[j])
-      assert_cvscalar_equal(m1[j, 2], m3[j])
+    col1 = 3..7
+    col2 = 2...8
+    [col1, col2].each { |col|
+      m3 = m1.get_cols(col)
+      w = (col.exclude_end?) ? col.last - col.begin : col.last - col.begin + 1
+      assert_equal(m1.rows, m3.rows)
+      assert_equal(w, m3.cols)
+
+      m3.rows.times { |j|
+        m3.cols.times { |i|
+          assert_cvscalar_equal(m1[j, col.begin + i], m3[j, i])
+        }
+      }
     }
 
     assert_raise(TypeError) {

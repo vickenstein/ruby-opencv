@@ -16,49 +16,49 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVMAT
 
 #define DRAWING_OPTION(opt) rb_get_option_table(rb_klass, "DRAWING_OPTION", opt)
-#define DO_COLOR(opt) VALUE_TO_CVSCALAR(LOOKUP_CVMETHOD(opt, "color"))
-#define DO_THICKNESS(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "thickness"))
+#define DO_COLOR(opt) VALUE_TO_CVSCALAR(LOOKUP_HASH(opt, "color"))
+#define DO_THICKNESS(opt) NUM2INT(LOOKUP_HASH(opt, "thickness"))
 #define DO_LINE_TYPE(opt) rb_drawing_option_line_type(opt)
-#define DO_SHIFT(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "shift"))
-#define DO_IS_CLOSED(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "is_closed"))
+#define DO_SHIFT(opt) NUM2INT(LOOKUP_HASH(opt, "shift"))
+#define DO_IS_CLOSED(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "is_closed"))
 
 #define GOOD_FEATURES_TO_TRACK_OPTION(opt) rb_get_option_table(rb_klass, "GOOD_FEATURES_TO_TRACK_OPTION", opt)
-#define GF_MAX(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "max"))
-#define GF_MASK(opt) MASK(LOOKUP_CVMETHOD(opt, "mask"))
-#define GF_BLOCK_SIZE(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "block_size"))
-#define GF_USE_HARRIS(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "use_harris"))
-#define GF_K(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "k"))
+#define GF_MAX(opt) NUM2INT(LOOKUP_HASH(opt, "max"))
+#define GF_MASK(opt) MASK(LOOKUP_HASH(opt, "mask"))
+#define GF_BLOCK_SIZE(opt) NUM2INT(LOOKUP_HASH(opt, "block_size"))
+#define GF_USE_HARRIS(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "use_harris"))
+#define GF_K(opt) NUM2DBL(LOOKUP_HASH(opt, "k"))
 
 #define FLOOD_FILL_OPTION(opt) rb_get_option_table(rb_klass, "FLOOD_FILL_OPTION", opt)
-#define FF_CONNECTIVITY(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "connectivity"))
-#define FF_FIXED_RANGE(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "fixed_range"))
-#define FF_MASK_ONLY(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "mask_only"))
+#define FF_CONNECTIVITY(opt) NUM2INT(LOOKUP_HASH(opt, "connectivity"))
+#define FF_FIXED_RANGE(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "fixed_range"))
+#define FF_MASK_ONLY(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "mask_only"))
 
 #define FIND_CONTOURS_OPTION(opt) rb_get_option_table(rb_klass, "FIND_CONTOURS_OPTION", opt)
-#define FC_MODE(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "mode"))
-#define FC_METHOD(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "method"))
-#define FC_OFFSET(opt) VALUE_TO_CVPOINT(LOOKUP_CVMETHOD(opt, "offset"))
+#define FC_MODE(opt) NUM2INT(LOOKUP_HASH(opt, "mode"))
+#define FC_METHOD(opt) NUM2INT(LOOKUP_HASH(opt, "method"))
+#define FC_OFFSET(opt) VALUE_TO_CVPOINT(LOOKUP_HASH(opt, "offset"))
 
 #define OPTICAL_FLOW_HS_OPTION(opt) rb_get_option_table(rb_klass, "OPTICAL_FLOW_HS_OPTION", opt)
-#define HS_LAMBDA(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "lambda"))
-#define HS_CRITERIA(opt) VALUE_TO_CVTERMCRITERIA(LOOKUP_CVMETHOD(opt, "criteria"))
+#define HS_LAMBDA(opt) NUM2DBL(LOOKUP_HASH(opt, "lambda"))
+#define HS_CRITERIA(opt) VALUE_TO_CVTERMCRITERIA(LOOKUP_HASH(opt, "criteria"))
 
 #define OPTICAL_FLOW_BM_OPTION(opt) rb_get_option_table(rb_klass, "OPTICAL_FLOW_BM_OPTION", opt)
-#define BM_BLOCK_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "block_size"))
-#define BM_SHIFT_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "shift_size"))
-#define BM_MAX_RANGE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "max_range"))
+#define BM_BLOCK_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "block_size"))
+#define BM_SHIFT_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "shift_size"))
+#define BM_MAX_RANGE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "max_range"))
 
 #define FIND_FUNDAMENTAL_MAT_OPTION(opt) rb_get_option_table(rb_klass, "FIND_FUNDAMENTAL_MAT_OPTION", opt)
-#define FFM_WITH_STATUS(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "with_status"))
-#define FFM_MAXIMUM_DISTANCE(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "maximum_distance"))
-#define FFM_DESIRABLE_LEVEL(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "desirable_level"))
+#define FFM_WITH_STATUS(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "with_status"))
+#define FFM_MAXIMUM_DISTANCE(opt) NUM2DBL(LOOKUP_HASH(opt, "maximum_distance"))
+#define FFM_DESIRABLE_LEVEL(opt) NUM2DBL(LOOKUP_HASH(opt, "desirable_level"))
 
 VALUE rb_klass;
 
 int
 rb_drawing_option_line_type(VALUE drawing_option)
 {
-  VALUE line_type = LOOKUP_CVMETHOD(drawing_option, "line_type");
+  VALUE line_type = LOOKUP_HASH(drawing_option, "line_type");
   if (FIXNUM_P(line_type)) {
     return FIX2INT(line_type);
   }
@@ -444,8 +444,8 @@ rb_height(VALUE self)
 VALUE
 rb_depth(VALUE self)
 {
-  return rb_hash_aref(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
-		      INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
+  return rb_hash_lookup(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
+			INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
 }
 
 /*
@@ -741,44 +741,52 @@ rb_sub_rect(VALUE self, VALUE args)
   return DEPEND_OBJECT(rb_klass, mat, self);
 }
 
+void
+rb_get_range_index(VALUE index, int* start, int *end) {
+  if (rb_obj_is_kind_of(index, rb_cRange)) {
+    *start = NUM2INT(rb_funcall3(index, rb_intern("begin"), 0, NULL));
+    *end = NUM2INT(rb_funcall3(index, rb_intern("end"), 0, NULL));
+    if (rb_funcall3(index, rb_intern("exclude_end?"), 0, NULL) == Qfalse) {
+      (*end)++;
+    }
+  }
+  else {
+    *start = NUM2INT(index);
+    *end = *start + 1;
+  }
+}
+
 /*
  * Returns array of row or row span.
- * @overload get_rows(index)
+ * @overload get_rows(index, delta_row = 1)
  *   @param index [Integer] Zero-based index of the selected row
+ *   @param delta_row [Integer] Index step in the row span.
  *   @return [CvMat] Selected row
- * @overload get_rows(range)
+ * @overload get_rows(range, delta_row = 1)
  *   @param range [Range] Zero-based index range of the selected row
- *   @return [Array<CvMat>]Array of selected row
- * @opencv_func cvGetRow
+ *   @param delta_row [Integer] Index step in the row span.
+ *   @return [CvMat] Selected rows
  * @opencv_func cvGetRows
  */
 VALUE
-rb_get_rows(VALUE self, VALUE args)
+rb_get_rows(int argc, VALUE* argv, VALUE self)
 {
-  int len = RARRAY_LEN(args);
-  if (len < 1)
-    rb_raise(rb_eArgError, "wrong number of argument.(more than 1)");
-  VALUE ary = rb_ary_new2(len);
-  for (int i = 0; i < len; ++i) {
-    VALUE value = rb_ary_entry(args, i);
-    
-    CvMat* row = NULL;
-    try {
-      if (FIXNUM_P(value))
-	row = cvGetRow(CVARR(self), RB_CVALLOC(CvMat), FIX2INT(value));
-      else {
-	CvSlice slice = VALUE_TO_CVSLICE(value);
-	row = cvGetRows(CVARR(self), RB_CVALLOC(CvMat), slice.start_index, slice.end_index);
-      }
-    }
-    catch (cv::Exception& e) {
-      if (row != NULL)
-	cvReleaseMat(&row);
-      raise_cverror(e);
-    }
-    rb_ary_store(ary, i, DEPEND_OBJECT(rb_klass, row, self));
+  VALUE row_val, delta_val;
+  rb_scan_args(argc, argv, "11", &row_val, &delta_val);
+
+  int start, end;
+  rb_get_range_index(row_val, &start, &end);
+  int delta = NIL_P(delta_val) ? 1 : NUM2INT(delta_val);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetRows(CVARR(self), submat, start, end, delta);
   }
-  return RARRAY_LEN(ary) > 1 ? ary : rb_ary_entry(ary, 0);
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
 }
 
 /*
@@ -788,36 +796,24 @@ rb_get_rows(VALUE self, VALUE args)
  *   @return [CvMat] Selected column
  * @overload get_cols(range)
  *   @param range [Range] Zero-based index range of the selected column
- *   @return [Array<CvMat>]Array of selected column
- * @opencv_func cvGetCol
+ *   @return [CvMat] Selected columns
  * @opencv_func cvGetCols
  */
 VALUE
-rb_get_cols(VALUE self, VALUE args)
+rb_get_cols(VALUE self, VALUE col)
 {
-  int len = RARRAY_LEN(args);
-  if (len < 1)
-    rb_raise(rb_eArgError, "wrong number of argument.(more than 1)");
-  VALUE ary = rb_ary_new2(len);
-  for (int i = 0; i < len; ++i) {
-    VALUE value = rb_ary_entry(args, i);
-    CvMat* col = NULL;
-    try {
-      if (FIXNUM_P(value))
-	col = cvGetCol(CVARR(self), RB_CVALLOC(CvMat), FIX2INT(value));
-      else {
-	CvSlice slice = VALUE_TO_CVSLICE(value);
-	col = cvGetCols(CVARR(self), RB_CVALLOC(CvMat), slice.start_index, slice.end_index);
-      }
-    }
-    catch (cv::Exception& e) {
-      if (col != NULL)
-	cvReleaseMat(&col);
-      raise_cverror(e);
-    }
-    rb_ary_store(ary, i, DEPEND_OBJECT(rb_klass, col, self));
+  int start, end;
+  rb_get_range_index(col, &start, &end);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetCols(CVARR(self), submat, start, end);
   }
-  return RARRAY_LEN(ary) > 1 ? ary : rb_ary_entry(ary, 0);
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
 }
 
 /*
@@ -1319,8 +1315,8 @@ VALUE
 rb_reshape(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
-  VALUE channel = rb_hash_aref(hash, ID2SYM(rb_intern("channel")));
-  VALUE rows = rb_hash_aref(hash, ID2SYM(rb_intern("rows")));
+  VALUE channel = LOOKUP_HASH(hash, "channel");
+  VALUE rows = LOOKUP_HASH(hash, "rows");
   CvMat *mat = NULL;
   try {
     mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NIL_P(channel) ? 0 : NUM2INT(channel),
@@ -1576,9 +1572,9 @@ rb_convert_scale(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
   CvMat* self_ptr = CVMAT(self);
-  VALUE depth = rb_hash_aref(hash, ID2SYM(rb_intern("depth"))),
-    scale = rb_hash_aref(hash, ID2SYM(rb_intern("scale"))),
-    shift = rb_hash_aref(hash, ID2SYM(rb_intern("shift")));
+  VALUE depth = LOOKUP_HASH(hash, "depth");
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
 
   VALUE dest = Qnil;
   try {
@@ -1608,8 +1604,8 @@ rb_convert_scale_abs(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
   CvMat* self_ptr = CVMAT(self);
-  VALUE scale = rb_hash_aref(hash, ID2SYM(rb_intern("scale"))),
-    shift = rb_hash_aref(hash, ID2SYM(rb_intern("shift")));
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
   VALUE dest = Qnil;
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, CV_MAT_CN(CVMAT(self)->type));
@@ -2398,9 +2394,9 @@ rb_mul_transposed(int argc, VALUE *argv, VALUE self)
 
   if (rb_scan_args(argc, argv, "01", &options) > 0) {
     Check_Type(options, T_HASH);
-    _delta = LOOKUP_CVMETHOD(options, "delta");
-    _scale = LOOKUP_CVMETHOD(options, "scale");
-    _order = LOOKUP_CVMETHOD(options, "order");
+    _delta = LOOKUP_HASH(options, "delta");
+    _scale = LOOKUP_HASH(options, "scale");
+    _order = LOOKUP_HASH(options, "order");
   }
 
   CvArr* delta = NIL_P(_delta) ? NULL : CVARR_WITH_CHECK(_delta);
@@ -4000,9 +3996,26 @@ rb_dilate_bang(int argc, VALUE *argv, VALUE self)
   return self;
 }
 
+/*
+ * call-seq:
+ *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
+ *
+ * Performs advanced morphological transformations.
+ * <i>operation</i>
+ * Type of morphological operation, one of:
+ *   CV_MOP_OPEN - opening
+ *   CV_MOP_CLOSE - closing
+ *   CV_MOP_GRADIENT - morphological gradient
+ *   CV_MOP_TOPHAT - top hat
+ *   CV_MOP_BLACKHAT - black hat
+ */
 VALUE
-rb_morphology_internal(VALUE element, VALUE iteration, int operation, VALUE self)
+rb_morphology(int argc, VALUE *argv, VALUE self)
 {
+  VALUE element, iteration, operation_val;
+  rb_scan_args(argc, argv, "12", &operation_val, &element, &iteration);
+
+  int operation = CVMETHOD("MORPHOLOGICAL_OPERATION", operation_val, -1);
   CvArr* self_ptr = CVARR(self);
   CvSize size = cvGetSize(self_ptr);
   VALUE dest = new_mat_kind_object(size, self);
@@ -4020,28 +4033,8 @@ rb_morphology_internal(VALUE element, VALUE iteration, int operation, VALUE self
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-  return dest;
-}
 
-/*
- * call-seq:
- *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
- *
- * Performs advanced morphological transformations.
- * <i>operation</i>
- * Type of morphological operation, one of:
- *   CV_MOP_OPEN - opening
- *   CV_MOP_CLOSE - closing
- *   CV_MOP_GRADIENT - morphological gradient
- *   CV_MOP_TOPHAT - top hat
- *   CV_MOP_BLACKHAT - black hat
- */
-VALUE
-rb_morphology(int argc, VALUE *argv, VALUE self)
-{
-  VALUE element, iteration, operation;
-  rb_scan_args(argc, argv, "12", &operation, &element, &iteration);
-  return rb_morphology_internal(element, iteration, CVMETHOD("MORPHOLOGICAL_OPERATION", operation, -1), self);
+  return dest;
 }
 
 /*
@@ -4389,15 +4382,15 @@ rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
   double param1 = 5;
   if (!NIL_P(options)) {
     Check_Type(options, T_HASH);
-    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_CVMETHOD(options, "threshold_type"),
+    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_HASH(options, "threshold_type"),
 			      CV_THRESH_BINARY);
-    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_CVMETHOD(options, "adaptive_method"),
+    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_HASH(options, "adaptive_method"),
 			       CV_ADAPTIVE_THRESH_MEAN_C);
-    VALUE _block_size = LOOKUP_CVMETHOD(options, "block_size");
+    VALUE _block_size = LOOKUP_HASH(options, "block_size");
     if (!NIL_P(_block_size)) {
       block_size = NUM2INT(_block_size);
     }
-    VALUE _param1 = LOOKUP_CVMETHOD(options, "param1");
+    VALUE _param1 = LOOKUP_HASH(options, "param1");
     if (!NIL_P(_param1)) {
       param1 = NUM2INT(_param1);
     }
@@ -4768,42 +4761,6 @@ rb_draw_chessboard_corners_bang(VALUE self, VALUE pattern_size, VALUE corners, V
 
 /*
  * call-seq:
- *   pyr_segmentation(<i>level, threshold1, threshold2</i>) -> [cvmat, cvseq(include cvconnectedcomp)]
- *
- * Does image segmentation by pyramids.
- * The pyramid builds up to the level <i>level<i>.
- * The links between any pixel a on <i>level<i>i and
- * its candidate father pixel b on the adjacent level are established if
- *   p(c(a),c(b)) < threshold1. After the connected components are defined, they are joined into several clusters. Any two segments A and B belong to the same cluster, if
- *   p(c(A),c(B)) < threshold2. The input image has only one channel, then
- *   p(c^2,c^2)=|c^2-c^2|. If the input image has three channels (red, green and blue), then
- *   p(c^2,c^2)=0,3*(c^2 r-c^2 r)+0.59*(c^2 g-c^2 g)+0,11*(c^2 b-c^2 b) . There may be more than one connected component per a cluster.
- *
- * Return segmented image and sequence of connected components.
- * <b>support single-channel or 3-channel 8bit unsigned image only</b>
- */
-VALUE
-rb_pyr_segmentation(VALUE self, VALUE level, VALUE threshold1, VALUE threshold2)
-{
-  IplImage* self_ptr = IPLIMAGE(self);
-  CvSeq *comp = NULL;
-  VALUE storage = cCvMemStorage::new_object();
-  VALUE dest = Qnil;
-  try {
-    dest = cIplImage::new_object(cvGetSize(self_ptr), cvGetElemType(self_ptr));
-    cvPyrSegmentation(self_ptr, IPLIMAGE(dest), CVMEMSTORAGE(storage), &comp,
-		      NUM2INT(level), NUM2DBL(threshold1), NUM2DBL(threshold2));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  if (!comp)
-    comp = cvCreateSeq(CV_SEQ_CONNECTED_COMP, sizeof(CvSeq), sizeof(CvConnectedComp), CVMEMSTORAGE(storage));
-  return rb_ary_new3(2, dest, cCvSeq::new_sequence(cCvSeq::rb_class(), comp, cCvConnectedComp::rb_class(), storage));
-}
-
-/*
- * call-seq:
  *   pyr_mean_shift_filtering(<i>sp, sr[,max_level = 1][termcrit = CvTermCriteria.new(5,1)]</i>) -> cvmat
  *
  * Does meanshift image segmentation.
@@ -4877,7 +4834,7 @@ rb_watershed(VALUE self, VALUE markers)
 
 /*
  * call-seq:
- *   moments -> array(include CvMoments)
+ *   moments -> cvmoments
  *
  * Calculates moments.
  */
@@ -4886,14 +4843,10 @@ rb_moments(int argc, VALUE *argv, VALUE self)
 {
   VALUE is_binary;
   rb_scan_args(argc, argv, "01", &is_binary);
-  IplImage image = *IPLIMAGE(self);
-  VALUE moments = rb_ary_new();
+  CvArr *self_ptr = CVARR(self);
+  VALUE moments = Qnil;
   try {
-    int cn = CV_MAT_CN(cvGetElemType(CVARR(self)));
-    for (int i = 1; i <= cn; ++i) {
-      cvSetImageCOI(&image, i);
-      rb_ary_push(moments, cCvMoments::new_object(&image, TRUE_OR_FALSE(is_binary, 0)));
-    }
+    moments = cCvMoments::new_object(self_ptr, TRUE_OR_FALSE(is_binary, 0));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -5214,7 +5167,7 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
   VALUE _matches = rb_hash_new();
   for (size_t i=0; i<matches.size(); i++) {
     VALUE match = INT2FIX(matches[i].imgIdx);
-    VALUE count = rb_hash_aref(_matches, match);
+    VALUE count = rb_hash_lookup(_matches, match);
     if (NIL_P(count)) {
       count = INT2FIX(1);
     } else {
@@ -5787,8 +5740,8 @@ init_ruby_class()
   rb_define_method(rb_klass, "to_CvMat", RUBY_METHOD_FUNC(rb_to_CvMat), 0);
   rb_define_method(rb_klass, "sub_rect", RUBY_METHOD_FUNC(rb_sub_rect), -2);
   rb_define_alias(rb_klass, "subrect", "sub_rect");
-  rb_define_method(rb_klass, "get_rows", RUBY_METHOD_FUNC(rb_get_rows), -2);
-  rb_define_method(rb_klass, "get_cols", RUBY_METHOD_FUNC(rb_get_cols), -2);
+  rb_define_method(rb_klass, "get_rows", RUBY_METHOD_FUNC(rb_get_rows), -1);
+  rb_define_method(rb_klass, "get_cols", RUBY_METHOD_FUNC(rb_get_cols), 1);
   rb_define_method(rb_klass, "each_row", RUBY_METHOD_FUNC(rb_each_row), 0);
   rb_define_method(rb_klass, "each_col", RUBY_METHOD_FUNC(rb_each_col), 0);
   rb_define_alias(rb_klass, "each_column", "each_col");
@@ -5943,7 +5896,6 @@ init_ruby_class()
   rb_define_method(rb_klass, "draw_contours!", RUBY_METHOD_FUNC(rb_draw_contours_bang), -1);
   rb_define_method(rb_klass, "draw_chessboard_corners", RUBY_METHOD_FUNC(rb_draw_chessboard_corners), 3);
   rb_define_method(rb_klass, "draw_chessboard_corners!", RUBY_METHOD_FUNC(rb_draw_chessboard_corners_bang), 3);
-  rb_define_method(rb_klass, "pyr_segmentation", RUBY_METHOD_FUNC(rb_pyr_segmentation), 3);
   rb_define_method(rb_klass, "pyr_mean_shift_filtering", RUBY_METHOD_FUNC(rb_pyr_mean_shift_filtering), -1);
   rb_define_method(rb_klass, "watershed", RUBY_METHOD_FUNC(rb_watershed), 1);
 

@@ -60,7 +60,7 @@ define_ruby_class()
   rb_define_method(rb_klass, "set_coi", RUBY_METHOD_FUNC(rb_set_coi), 1);
   rb_define_alias(rb_klass, "coi=", "set_coi");
   rb_define_method(rb_klass, "reset_coi", RUBY_METHOD_FUNC(rb_reset_coi), 0); 
-
+  rb_define_method(rb_klass, "pyr_segmentation", RUBY_METHOD_FUNC(rb_pyr_segmentation), 3);
   rb_define_method(rb_klass, "smoothness", RUBY_METHOD_FUNC(rb_smoothness), -1);
 
   rb_define_singleton_method(rb_klass, "decode_image", RUBY_METHOD_FUNC(rb_decode_image), -1);
@@ -591,6 +591,42 @@ high_pass_range(const IplImage *pImage, float lostPercentage, int &outLow, int &
   outLow = (int)(lostPercentage * outHigh);
 }
 
+/*
+ * call-seq:
+ *   pyr_segmentation(<i>level, threshold1, threshold2</i>) -> [iplimage, cvseq(include cvconnectedcomp)]
+ *
+ * Does image segmentation by pyramids.
+ * The pyramid builds up to the level <i>level<i>.
+ * The links between any pixel a on <i>level<i>i and
+ * its candidate father pixel b on the adjacent level are established if
+ *   p(c(a),c(b)) < threshold1. After the connected components are defined, they are joined into several clusters. Any two segments A and B belong to the same cluster, if
+ *   p(c(A),c(B)) < threshold2. The input image has only one channel, then
+ *   p(c^2,c^2)=|c^2-c^2|. If the input image has three channels (red, green and blue), then
+ *   p(c^2,c^2)=0,3*(c^2 r-c^2 r)+0.59*(c^2 g-c^2 g)+0,11*(c^2 b-c^2 b) . There may be more than one connected component per a cluster.
+ *
+ * Return segmented image and sequence of connected components.
+ * <b>support single-channel or 3-channel 8bit unsigned image only</b>
+ */
+VALUE
+rb_pyr_segmentation(VALUE self, VALUE level, VALUE threshold1, VALUE threshold2)
+{
+  IplImage* self_ptr = IPLIMAGE(self);
+  CvSeq *comp = NULL;
+  VALUE storage = cCvMemStorage::new_object();
+  VALUE dest = Qnil;
+  try {
+    dest = cIplImage::new_object(cvGetSize(self_ptr), cvGetElemType(self_ptr));
+    cvPyrSegmentation(self_ptr, IPLIMAGE(dest), CVMEMSTORAGE(storage), &comp,
+		      NUM2INT(level), NUM2DBL(threshold1), NUM2DBL(threshold2));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  if (!comp) {
+    comp = cvCreateSeq(CV_SEQ_CONNECTED_COMP, sizeof(CvSeq), sizeof(CvConnectedComp), CVMEMSTORAGE(storage));
+  }
+  return rb_ary_new3(2, dest, cCvSeq::new_sequence(cCvSeq::rb_class(), comp, cCvConnectedComp::rb_class(), storage));
+}
 
 VALUE
 new_object(int width, int height, int type)

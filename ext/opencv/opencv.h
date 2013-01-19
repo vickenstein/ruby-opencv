@@ -147,8 +147,8 @@ extern "C" {
 
 #define IF_DEPTH(val, ifnone) NIL_P(val) ? ifnone : NUM2INT(val)
 
-#define REGISTER_CVMETHOD(hash, str, value) rb_hash_aset(hash, ID2SYM(rb_intern(str)), INT2FIX(value))
-#define LOOKUP_CVMETHOD(hash, key_as_cstr) (rb_hash_lookup(hash, ID2SYM(rb_intern(key_as_cstr))))
+#define REGISTER_HASH(hash, str, value) rb_hash_aset(hash, ID2SYM(rb_intern(str)), INT2FIX(value))
+#define LOOKUP_HASH(hash, key_as_cstr) (rb_hash_lookup(hash, ID2SYM(rb_intern(key_as_cstr))))
 
 #define maxint(a,b) ({int _a = (a), _b = (b); _a > _b ? _a : _b; })
 
@@ -264,7 +264,7 @@ CVMETHOD(const char *name, VALUE method, int ifnone = 0)
   case T_STRING:
     method = rb_str_intern(method);
   case T_SYMBOL:
-    value = rb_hash_aref(rb_const_get(rb_module_opencv(), rb_intern(name)), method);
+    value = rb_hash_lookup(rb_const_get(rb_module_opencv(), rb_intern(name)), method);
     return NIL_P(value) ? ifnone : FIX2INT(value);
   default:
     raise_typeerror(method, rb_cSymbol);

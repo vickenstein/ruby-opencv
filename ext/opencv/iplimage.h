@@ -38,6 +38,8 @@ VALUE rb_get_coi(VALUE self);
 VALUE rb_set_coi(VALUE self, VALUE coi);
 VALUE rb_reset_coi(VALUE self);
 
+VALUE rb_pyr_segmentation(VALUE self, VALUE level, VALUE threshold1, VALUE threshold2);
+
 VALUE rb_smoothness(int argc, VALUE *argv, VALUE self);
 typedef enum { SMOOTH = 1, BLANK = 2, MESSY = 3 } Smoothness;
 Smoothness compute_smoothness(const IplImage *pFourierImage, const double lowFreqRatio, const double blankDensity, const double messyDensity, const double highFreqRatio, double &outLowDensity, double &outHighDensity);

@@ -100,14 +100,14 @@ rb_detect_objects(int argc, VALUE *argv, VALUE self)
     storage_val = cCvMemStorage::new_object();
   }
   else {
-    scale_factor = IF_DBL(LOOKUP_CVMETHOD(options, "scale_factor"), 1.1);
-    flags = IF_INT(LOOKUP_CVMETHOD(options, "flags"), 0);
-    min_neighbors = IF_INT(LOOKUP_CVMETHOD(options, "min_neighbors"), 3);
-    VALUE min_size_val = LOOKUP_CVMETHOD(options, "min_size");
+    scale_factor = IF_DBL(LOOKUP_HASH(options, "scale_factor"), 1.1);
+    flags = IF_INT(LOOKUP_HASH(options, "flags"), 0);
+    min_neighbors = IF_INT(LOOKUP_HASH(options, "min_neighbors"), 3);
+    VALUE min_size_val = LOOKUP_HASH(options, "min_size");
     min_size = NIL_P(min_size_val) ? cvSize(0, 0) : VALUE_TO_CVSIZE(min_size_val);
-    VALUE max_size_val = LOOKUP_CVMETHOD(options, "max_size");
+    VALUE max_size_val = LOOKUP_HASH(options, "max_size");
     max_size = NIL_P(max_size_val) ? cvSize(0, 0) : VALUE_TO_CVSIZE(max_size_val);
-    storage_val = CHECK_CVMEMSTORAGE(LOOKUP_CVMETHOD(options, "storage"));
+    storage_val = CHECK_CVMEMSTORAGE(LOOKUP_HASH(options, "storage"));
   }
 
   VALUE result = Qnil;

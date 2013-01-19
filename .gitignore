@@ -22,3 +22,4 @@ videowriter_result.avi
 examples/contours/rotated-boxes-with-detected-bounding-rectangles.jpg
 Gemfile.lock
 .yardoc
+.RUBYLIBDIR.*

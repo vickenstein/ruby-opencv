@@ -143,5 +143,24 @@ class OpenCVTestCase < Test::Unit::TestCase
     }
     puts s.join("\n")
   end
+
+  def count_threshold(mat, threshold, &block)
+    n = 0
+    block = lambda { |a, b| a > b } unless block_given?
+    (mat.rows * mat.cols).times { |i|
+      n += 1 if block.call(mat[i][0], threshold)
+    }
+    n
+  end
+
+  def color_hists(mat)
+    hists = [0] * mat.channel
+    (mat.rows * mat.cols).times { |i|
+      hists.size.times { |c|
+        hists[c] += mat[i][c]
+      }
+    }
+    hists
+  end
 end
 

@@ -19,11 +19,11 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVFONT
 
 #define FONT_OPTION(op) rb_get_option_table(rb_klass, "FONT_OPTION", op)
-#define FO_ITALIC(op) TRUE_OR_FALSE(LOOKUP_CVMETHOD(op, "italic"))
-#define FO_HSCALE(op) NUM2DBL(LOOKUP_CVMETHOD(op, "hscale"))
-#define FO_VSCALE(op) NUM2DBL(LOOKUP_CVMETHOD(op, "vscale"))
-#define FO_SHEAR(op) NUM2DBL(LOOKUP_CVMETHOD(op, "shear"))
-#define FO_THICKNESS(op) NUM2INT(LOOKUP_CVMETHOD(op, "thickness"))
+#define FO_ITALIC(op) TRUE_OR_FALSE(LOOKUP_HASH(op, "italic"))
+#define FO_HSCALE(op) NUM2DBL(LOOKUP_HASH(op, "hscale"))
+#define FO_VSCALE(op) NUM2DBL(LOOKUP_HASH(op, "vscale"))
+#define FO_SHEAR(op) NUM2DBL(LOOKUP_HASH(op, "shear"))
+#define FO_THICKNESS(op) NUM2INT(LOOKUP_HASH(op, "thickness"))
 #define FO_LINE_TYPE(op) rb_font_option_line_type(op)
 
 VALUE rb_class();

@@ -115,9 +115,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat2 = mat0.pre_corner_detect(3)
     mat3 = mat0.pre_corner_detect(5)
 
-    assert_equal('1ec909dfa2e497c7f454e39aefd764f5', hash_img(mat1))
-    assert_equal('1ec909dfa2e497c7f454e39aefd764f5', hash_img(mat2))
-    assert_equal('42e7443ffd389d15343d3c6bdc42f553', hash_img(mat3))
+    assert_in_delta(0, count_threshold(mat1, 0.1), 30)
+    assert_in_delta(0, count_threshold(mat2, 0.1), 30)
+    assert_in_delta(380, count_threshold(mat3, 0.1), 30)
 
     # Uncomment the following lines to show the images
     # snap(['original', mat0], ['pre_coner_detect', mat1],
@@ -165,10 +165,14 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat3 = mat0.corner_harris(3, 3, 0.04)
     mat4 = mat0.corner_harris(3, 7, 0.01)
 
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat1))
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat2))
-    assert_equal('fbb4e04c86f906c83fe17fd148675f90', hash_img(mat3))
-    assert_equal('6515d75f6223806f077cebc7b3927a13', hash_img(mat4))
+    [mat1, mat2, mat3].each { |mat|
+      assert_equal(mat0.rows, mat.rows)
+      assert_equal(mat0.cols, mat.cols)
+      assert_in_delta(0, count_threshold(mat, 10), 10)
+    }
+    assert_equal(mat0.rows, mat4.rows)
+    assert_equal(mat0.cols, mat4.cols)
+    assert_in_delta(90, count_threshold(mat4, 10), 10)
 
     # Uncomment the following lines to show the images
     # snap(['original', mat0], ['corner_harris(3)', mat1], ['corner_harris(3,3)', mat2],
@@ -558,14 +562,26 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat0 = CvMat.load(FILENAME_FRUITS, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
 
     mat1 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40)
-    assert_equal('d0425614b2f6e63ab2b6ef6637b4efcb', hash_img(mat1))
-    mat1 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
+    mat2 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
                           CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS)
-    assert_equal('d0425614b2f6e63ab2b6ef6637b4efcb', hash_img(mat1))
-    
-    mat2 = mat1.log_polar(mat0.size, CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
+    mat3 = mat1.log_polar(mat0.size, CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
                           CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS | CV_WARP_INVERSE_MAP)
-    assert_equal('52587e593fec1b0383731be53147e8cd', hash_img(mat2))
+
+    [mat1, mat2].each { |mat|
+      assert_equal(mat0.depth, mat.depth)
+      assert_equal(mat0.channel, mat.channel)
+      b, g, r =  color_hists(mat)
+      assert_in_delta(4000000, b, 100000)
+      assert_in_delta(5860000, g, 100000)
+      assert_in_delta(7700000, r, 100000)
+    }
+
+    b, g, r =  color_hists(mat3)
+    assert_equal(mat0.depth, mat3.depth)
+    assert_equal(mat0.channel, mat3.channel)
+    assert_in_delta(11200000, b, 1000000)
+    assert_in_delta(20800000, g, 1000000)
+    assert_in_delta(26900000, r, 1000000)
 
     # Uncomment the following line to show the results
     # snap mat0, mat1, mat2
@@ -1134,8 +1150,18 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat1 = mat0.pyr_up
     mat2 = mat0.pyr_up(:gaussian_5x5)
 
-    assert_equal('02430c6cf143d3d104e25bc829f1fa93', hash_img(mat1))
-    assert_equal('02430c6cf143d3d104e25bc829f1fa93', hash_img(mat2))
+    [mat1, mat2].each { |mat|
+      assert_equal(mat0.cols * 2, mat.cols)
+      assert_equal(mat0.rows * 2, mat.rows)
+      assert_equal(mat0.depth, mat.depth)
+      assert_equal(mat0.channel, mat.channel)
+      b, g, r = color_hists(mat)
+      assert_in_delta(27500000, b, 1000000)
+      assert_in_delta(26000000, g, 1000000)
+      assert_in_delta(47000000, r, 1000000)
+    }
+    # Uncomment the following lines to show the result
+    # snap mat0, mat1, mat2
 
     assert_raise(TypeError) {
       mat0.pyr_up(DUMMY_OBJ)
@@ -1316,53 +1342,18 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     }
   end
 
-  def test_pyr_segmentation
-    mat0 = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    mat1, seq1 = mat0.pyr_segmentation(4, 255, 50)
-    assert_equal('ebd9bad0bbc90b1d4a25289b7d59c958', hash_img(mat1))
-    assert_equal(5, seq1.total)
-
-    img0 = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    img0.set_roi(CvRect.new(0, 0, 256, 512))
-    img2, seq2 = img0.pyr_segmentation(2, 255, 50)
-    assert_equal('963b26f51b14f175fbbf128e9b9e979f', hash_img(img2))
-    assert_equal(11, seq2.total)
-
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(-1, 255, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(1000, 255, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(4, -1, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(4, 255, -1)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(DUMMY_OBJ, 255, 50)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(4, DUMMY_OBJ, 50)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(4, 255, DUMMY_OBJ)
-    }
-    assert_raise(CvBadDepth) {
-      IplImage.new(10, 10, :cv32f, 2).pyr_segmentation(4, 255, 50)
-    }
-  end
-
   def test_pyr_mean_shift_filtering
     mat0 = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
     mat1 = mat0.pyr_mean_shift_filtering(30, 30)
     mat2 = mat0.pyr_mean_shift_filtering(30, 30, 2)
     mat3 = mat0.pyr_mean_shift_filtering(30, 30, nil, CvTermCriteria.new(3, 0.01))
 
-    assert_equal('6887e96bc5dfd552f76ac5411b394775', hash_img(mat1))
-    assert_equal('3cd9c4983fcabeafa04be200d5e08841', hash_img(mat2))
-    assert_equal('e37f0157f93fe2a98312ae6b768e8295', hash_img(mat3))
+    [mat1, mat2, mat3].each { |mat|
+      b, g, r = color_hists(mat)
+      assert_in_delta(6900000, b, 100000)
+      assert_in_delta(6500000, g, 100000)
+      assert_in_delta(11800000, r, 100000)
+    }
 
     assert_raise(TypeError) {
       mat0.pyr_mean_shift_filtering(DUMMY_OBJ, 30)
@@ -1405,9 +1396,7 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     moments2 = mat.moments(false)
     moments3 = mat.moments(true)
 
-    [moments1, moments2].each { |moments|
-      assert_equal(1, moments.size)
-      m = moments[0]
+    [moments1, moments2].each { |m|
       assert_in_delta(2221056, m.spatial(0, 0), 0.1)
       assert_in_delta(2221056, m.central(0, 0), 0.1)
       assert_in_delta(1, m.normalized_central(0, 0), 0.1)
@@ -1446,9 +1435,7 @@ class TestCvMat_imageprocessing < OpenCVTestCase
       assert_in_delta(0.000671, m.inv_sqrt_m00, 0.000001)
     }
 
-    assert_equal(1, moments3.size)
-    m = moments3[0]
-
+    m = moments3
     assert_in_delta(10240, m.spatial(0, 0), 0.1)
     assert_in_delta(10240, m.central(0, 0), 0.1)
     assert_in_delta(1, m.normalized_central(0, 0), 0.1)
@@ -1594,11 +1581,11 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
     [CV_INPAINT_NS, :ns].each { |method|
       result_ns = mat.inpaint(method, mask, 10)
-      assert_equal('d3df4dda8642c83512fb417ffa5e1457', hash_img(result_ns))
+      assert_in_delta(14000, count_threshold(result_ns, 128), 1000)
     }
     [CV_INPAINT_TELEA, :telea].each { |method|
       result_telea = mat.inpaint(method, mask, 10)
-      assert_equal('d45bec22d03067578703f2ec68567167', hash_img(result_telea))
+      assert_in_delta(13500, count_threshold(result_telea, 128), 1000)
     }
 
     # Uncomment the following lines to show the results
@@ -1639,43 +1626,59 @@ class TestCvMat_imageprocessing < OpenCVTestCase
   def test_match_template
     mat = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
     templ = CvMat.load(FILENAME_LENA_EYES, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    
+
+    expected_pt = CvPoint.new(100, 120)
+
     # sqdiff
     result = mat.match_template(templ)
-    assert_equal('88663ec44be797ca883fc87bb6d7c09b', hash_img(result))
+    pt = result.min_max_loc[2]
+    assert_in_delta(expected_pt.x, pt.x, 20)
+    assert_in_delta(expected_pt.y, pt.y, 20)
+
     [CV_TM_SQDIFF, :sqdiff].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('88663ec44be797ca883fc87bb6d7c09b', hash_img(result))
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # sqdiff_normed
     [CV_TM_SQDIFF_NORMED, :sqdiff_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('75c812f87184b2ccd8f83b70a8436356', hash_img(result))
+      pt =  result.min_max_loc[2]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # ccorr
     [CV_TM_CCORR, :ccorr].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('6ebe7e48edf8fc64bcc0fd7f1e96555c', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(110, pt.x, 20)
+      assert_in_delta(60, pt.y, 20)
     }
 
     # ccorr_normed
     [CV_TM_CCORR_NORMED, :ccorr_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('4cf8ebcec870f8295d615a9aa345ae4d', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # ccoeff
     [CV_TM_CCOEFF, :ccoeff].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('248a391c5a1e1dbcf7a19f3310b5cd7a', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
     
     # ccoeff_normed
     [CV_TM_CCOEFF_NORMED, :ccoeff_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('27a4e9b45ed648848f0498356bd2c5b5', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # Uncomment the following lines to show the result
@@ -1684,7 +1687,6 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     # pt2 = CvPoint.new(pt1.x + templ.width, pt1.y + templ.height)
     # mat.rectangle!(pt1, pt2, :color => CvColor::Black, :thickness => 3)
     # snap mat, templ, result
-
 
     assert_raise(TypeError) {
       mat.match_template(DUMMY_OBJ)
@@ -1836,30 +1838,30 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
     [curr.optical_flow_hs(prev, nil, nil, :lambda => 0.0005, :criteria => CvTermCriteria.new(1, 0.001)),
      curr.optical_flow_hs(prev)].each { |velx, vely|
-      assert_equal('d437cd896365c509b5d16fd5f2d7e498', hash_img(velx))
-      assert_equal('36ccbcafcd58b4d07dab058fb60eede6', hash_img(vely))
+      assert_in_delta(60, count_threshold(velx, 1), 20)
+      assert_in_delta(50, count_threshold(vely, 1), 20)
     }
 
     velx, vely = curr.optical_flow_hs(prev, nil, nil, :lambda => 0.001)
-    assert_equal('6a0133bcfa5057ef3d607429753d1f27', hash_img(velx))
-    assert_equal('dffbc0e267b08f3ca0098f27ecf61f6e', hash_img(vely))
+    assert_in_delta(60, count_threshold(velx, 1), 20)
+    assert_in_delta(50, count_threshold(vely, 1), 20)
 
     velx, vely = curr.optical_flow_hs(prev, nil, nil, :criteria => CvTermCriteria.new(10, 0.01))
-    assert_equal('5dc2bb2aaee70383da8b12c99cbf388b', hash_img(velx))
-    assert_equal('b53cec7a363ba7491cde61540813b827', hash_img(vely))
+    assert_in_delta(130, count_threshold(velx, 1), 20)
+    assert_in_delta(110, count_threshold(vely, 1), 20)
 
     prev_velx, prev_vely = curr.optical_flow_hs(prev)
     velx, vely = curr.optical_flow_hs(prev, prev_velx, prev_vely)
-    assert_equal('08b50f3d4cb4cbbe443fada293e6af02', hash_img(velx))
-    assert_equal('4d302c8267388995ec85a4a26da5ffcc', hash_img(vely))
+    assert_in_delta(70, count_threshold(velx, 1), 20)
+    assert_in_delta(60, count_threshold(vely, 1), 20)
 
     velx, vely = curr.optical_flow_hs(prev, prev_velx, prev_vely, :lambda => 0.001)
-    assert_equal('8bb08ee394719a70e24bfb8b428662cd', hash_img(velx))
-    assert_equal('f6c09e73160f0792e4527cdeea0e5573', hash_img(vely))
+    assert_in_delta(80, count_threshold(velx, 1), 20)
+    assert_in_delta(70, count_threshold(vely, 1), 20)
 
     velx, vely = curr.optical_flow_hs(prev, prev_velx, prev_vely, :criteria => CvTermCriteria.new(10, 0.01))
-    assert_equal('c32a8483e3aec3cd6c33bceeefb8d2f2', hash_img(velx))
-    assert_equal('da33e266aece70ed69dcf074acd8fd4e', hash_img(vely))
+    assert_in_delta(150, count_threshold(velx, 1), 20)
+    assert_in_delta(130, count_threshold(vely, 1), 20)
     
     assert_raise(TypeError) {
       curr.optical_flow_hs(DUMMY_OBJ)
@@ -1896,12 +1898,12 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     }
     
     velx, vely = curr.optical_flow_lk(prev, CvSize.new(3, 3))
-    assert_equal('13333362f0daf6ad732006bd2a32e177', hash_img(velx))
-    assert_equal('45dc42034ab606dd61e34a5adc6a1c1b', hash_img(vely))
+    assert_in_delta(100, count_threshold(velx, 1), 20)
+    assert_in_delta(90, count_threshold(vely, 1), 20)
 
     velx, vely = curr.optical_flow_lk(prev, CvSize.new(5, 5))
-    assert_equal('d83c57805f9c074d0ad33a7522a75952', hash_img(velx))
-    assert_equal('df8fb2010b00d89090e7d9653781a68d', hash_img(vely))
+    assert_in_delta(180, count_threshold(velx, 1), 20)
+    assert_in_delta(150, count_threshold(vely, 1), 20)
 
     assert_raise(TypeError) {
       curr.optical_flow_lk(DUMMY_OBJ, CvSize.new(3, 3))
@@ -1934,26 +1936,26 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     [curr.optical_flow_bm(prev, nil, nil, :block_size => CvSize.new(4, 4),
                           :shift_size => CvSize.new(1, 1), :max_range => CvSize.new(4, 4)),
      curr.optical_flow_bm(prev)].each { |velx, vely|
-      assert_equal('08e73a6fa9af7684a5eddc4f30fd46e7', hash_img(velx))
-      assert_equal('aabaf1b7393b950c2297f567b6f57d5d', hash_img(vely))
+      assert_in_delta(350, count_threshold(velx, 1), 30)
+      assert_in_delta(250, count_threshold(vely, 1), 30)
     }
-    
+
     velx, vely = curr.optical_flow_bm(prev, nil, nil, :block_size => CvSize.new(3, 3))
-    assert_equal('fe540dc1f0aec2d70b774286eafa3602', hash_img(velx))
-    assert_equal('c7cc0f055fe4708396ba6046c0f1c6b5', hash_img(vely))
+    assert_in_delta(280, count_threshold(velx, 1), 30)
+    assert_in_delta(200, count_threshold(vely, 1), 30)
 
     velx, vely = curr.optical_flow_bm(prev, nil, nil, :shift_size => CvSize.new(2, 2))
-    assert_equal('00ad7854afb6eb4e46f0fb31c312c5eb', hash_img(velx))
-    assert_equal('33215ec0bfa7f6b1424d6fadb2a48e0f', hash_img(vely))
+    assert_in_delta(80, count_threshold(velx, 1), 30)
+    assert_in_delta(60, count_threshold(vely, 1), 30)
 
     velx, vely = curr.optical_flow_bm(prev, nil, nil, :max_range => CvSize.new(5, 5))
-    assert_equal('ac10837eeee45fd80a24695cfaf9cfc7', hash_img(velx))
-    assert_equal('8c7011c26ac53eaf1fae1aa9324e5979', hash_img(vely))
+    assert_in_delta(400, count_threshold(velx, 1), 30)
+    assert_in_delta(300, count_threshold(vely, 1), 30)
     
     prev_velx, prev_vely = curr.optical_flow_bm(prev)
     velx, vely = curr.optical_flow_bm(prev, prev_velx, prev_vely)
-    assert_equal('6ad6b7a5c935379c0df4b9ec5666f3de', hash_img(velx))
-    assert_equal('b317b0b9d4fdb0e5cd40beb0dd4143b4', hash_img(vely))
+    assert_in_delta(350, count_threshold(velx, 1), 30)
+    assert_in_delta(270, count_threshold(vely, 1), 30)
 
     assert_raise(TypeError) {
       curr.optical_flow_bm(DUMMY_OBJ)

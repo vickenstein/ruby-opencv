@@ -58,7 +58,7 @@ rb_open(int argc, VALUE *argv, VALUE self)
       capture = cvCaptureFromCAM(FIX2INT(device));
       break;
     case T_SYMBOL: {
-      VALUE cap_index = rb_hash_aref(rb_const_get(rb_class(), rb_intern("INTERFACE")), device);
+      VALUE cap_index = rb_hash_lookup(rb_const_get(rb_class(), rb_intern("INTERFACE")), device);
       if (NIL_P(cap_index))
         rb_raise(rb_eArgError, "undefined interface.");
       capture = cvCaptureFromCAM(NUM2INT(cap_index));
