@@ -1,4 +1,3 @@
-.gitignore
 Gemfile
 History.txt
 License.txt
@@ -12,6 +11,7 @@ examples/contours/bitmap-contours-with-labels.png
 examples/contours/bitmap-contours.png
 examples/contours/bounding-box-detect-canny.rb
 examples/contours/contour_retrieval_modes.rb
+examples/contours/rotated-boxes-with-detected-bounding-rectangles.jpg
 examples/contours/rotated-boxes.jpg
 examples/convexhull.rb
 examples/face_detect.rb
@@ -22,10 +22,18 @@ examples/inpaint.rb
 examples/lenna-rotated.jpg
 examples/lenna.jpg
 examples/match_kdtree.rb
+examples/matching_to_many_images.rb
+examples/matching_to_many_images/query.png
+examples/matching_to_many_images/train/1.png
+examples/matching_to_many_images/train/2.png
+examples/matching_to_many_images/train/3.png
+examples/matching_to_many_images/train/trainImages.txt
 examples/paint.rb
 examples/snake.rb
 examples/stuff.jpg
 examples/tiffany.jpg
+ext/opencv/GPATH
+ext/opencv/GSYMS
 ext/opencv/curve.cpp
 ext/opencv/curve.h
 ext/opencv/cvavgcomp.cpp
@@ -126,8 +134,9 @@ images/CvMat_sobel.png
 images/CvMat_sub_rect.png
 images/CvSeq_relationmap.png
 images/face_detect_from_lena.jpg
-opencv.gemspec
+ruby-opencv.gemspec
 test/helper.rb
+test/log.txt
 test/runner.rb
 test/samples/airplane.jpg
 test/samples/baboon.jpg
@@ -144,6 +153,7 @@ test/samples/blank7.jpg
 test/samples/blank8.jpg
 test/samples/blank9.jpg
 test/samples/cat.jpg
+test/samples/chessboard.jpg
 test/samples/contours.jpg
 test/samples/fruits.jpg
 test/samples/haarcascade_frontalface_alt.xml.gz
@@ -192,6 +202,7 @@ test/test_cvmat.rb
 test/test_cvmat_drawing.rb
 test/test_cvmat_dxt.rb
 test/test_cvmat_imageprocessing.rb
+test/test_cvmat_matching.rb
 test/test_cvmoments.rb
 test/test_cvpoint.rb
 test/test_cvpoint2d32f.rb
@@ -215,3 +226,4 @@ test/test_pointset.rb
 test/test_preliminary.rb
 test/test_trackbar.rb
 test/test_window.rb
+test/videowriter_result.avi
