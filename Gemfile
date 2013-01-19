@@ -1,5 +1,8 @@
 source :gemcutter
 
-gem "hoe"
-gem "hoe-gemspec"
-gem "rake-compiler"
+group :development do
+  gem "hoe"
+  gem "hoe-gemspec"
+  gem "rake-compiler"
+end
+
