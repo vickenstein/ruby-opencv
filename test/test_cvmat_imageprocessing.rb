@@ -562,14 +562,26 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat0 = CvMat.load(FILENAME_FRUITS, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
 
     mat1 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40)
-    assert_equal('d0425614b2f6e63ab2b6ef6637b4efcb', hash_img(mat1))
-    mat1 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
+    mat2 = mat0.log_polar(CvSize.new(255, 255), CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
                           CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS)
-    assert_equal('d0425614b2f6e63ab2b6ef6637b4efcb', hash_img(mat1))
-    
-    mat2 = mat1.log_polar(mat0.size, CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
+    mat3 = mat1.log_polar(mat0.size, CvPoint2D32f.new(mat0.width / 2, mat0.height / 2), 40,
                           CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS | CV_WARP_INVERSE_MAP)
-    assert_equal('52587e593fec1b0383731be53147e8cd', hash_img(mat2))
+
+    [mat1, mat2].each { |mat|
+      assert_equal(mat0.depth, mat.depth)
+      assert_equal(mat0.channel, mat.channel)
+      b, g, r =  color_hists(mat)
+      assert_in_delta(4000000, b, 100000)
+      assert_in_delta(5860000, g, 100000)
+      assert_in_delta(7700000, r, 100000)
+    }
+
+    b, g, r =  color_hists(mat3)
+    assert_equal(mat0.depth, mat3.depth)
+    assert_equal(mat0.channel, mat3.channel)
+    assert_in_delta(11200000, b, 1000000)
+    assert_in_delta(20800000, g, 1000000)
+    assert_in_delta(26900000, r, 1000000)
 
     # Uncomment the following line to show the results
     # snap mat0, mat1, mat2
