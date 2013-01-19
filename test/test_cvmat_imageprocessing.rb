@@ -1336,9 +1336,12 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat2 = mat0.pyr_mean_shift_filtering(30, 30, 2)
     mat3 = mat0.pyr_mean_shift_filtering(30, 30, nil, CvTermCriteria.new(3, 0.01))
 
-    assert_equal('6887e96bc5dfd552f76ac5411b394775', hash_img(mat1))
-    assert_equal('3cd9c4983fcabeafa04be200d5e08841', hash_img(mat2))
-    assert_equal('e37f0157f93fe2a98312ae6b768e8295', hash_img(mat3))
+    [mat1, mat2, mat3].each { |mat|
+      b, g, r = color_hists(mat)
+      assert_in_delta(6900000, b, 100000)
+      assert_in_delta(6500000, g, 100000)
+      assert_in_delta(11800000, r, 100000)
+    }
 
     assert_raise(TypeError) {
       mat0.pyr_mean_shift_filtering(DUMMY_OBJ, 30)
