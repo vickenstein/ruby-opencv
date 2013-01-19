@@ -225,8 +225,8 @@ void define_ruby_class()
   rb_define_method(rb_klass, "to_CvMat", RUBY_METHOD_FUNC(rb_to_CvMat), 0);
   rb_define_method(rb_klass, "sub_rect", RUBY_METHOD_FUNC(rb_sub_rect), -2);
   rb_define_alias(rb_klass, "subrect", "sub_rect");
-  rb_define_method(rb_klass, "get_rows", RUBY_METHOD_FUNC(rb_get_rows), -2);
-  rb_define_method(rb_klass, "get_cols", RUBY_METHOD_FUNC(rb_get_cols), -2);
+  rb_define_method(rb_klass, "get_rows", RUBY_METHOD_FUNC(rb_get_rows), -1);
+  rb_define_method(rb_klass, "get_cols", RUBY_METHOD_FUNC(rb_get_cols), 1);
   rb_define_method(rb_klass, "each_row", RUBY_METHOD_FUNC(rb_each_row), 0);
   rb_define_method(rb_klass, "each_col", RUBY_METHOD_FUNC(rb_each_col), 0);
   rb_define_alias(rb_klass, "each_column", "each_col");
@@ -1058,77 +1058,71 @@ rb_sub_rect(VALUE self, VALUE args)
   return DEPEND_OBJECT(rb_klass, mat, self);
 }
 
-/*
- * call-seq:
- *   get_rows(<i>n</i>)            -> Return row
- *   get_rows(<i>n1, n2, ...</i>)  -> Return Array of row
- *
- * Return row(or rows) of matrix.
- * argument should be Fixnum or CvSlice compatible object.
- */
-VALUE
-rb_get_rows(VALUE self, VALUE args)
-{
-  int len = RARRAY_LEN(args);
-  if (len < 1)
-    rb_raise(rb_eArgError, "wrong number of argument.(more than 1)");
-  VALUE ary = rb_ary_new2(len);
-  for (int i = 0; i < len; ++i) {
-    VALUE value = rb_ary_entry(args, i);
-    
-    CvMat* row = NULL;
-    try {
-      if (FIXNUM_P(value))
-	row = cvGetRow(CVARR(self), RB_CVALLOC(CvMat), FIX2INT(value));
-      else {
-	CvSlice slice = VALUE_TO_CVSLICE(value);
-	row = cvGetRows(CVARR(self), RB_CVALLOC(CvMat), slice.start_index, slice.end_index);
-      }
+void
+rb_get_range_index(VALUE index, int* start, int *end) {
+  if (rb_obj_is_kind_of(index, rb_cRange)) {
+    *start = NUM2INT(rb_funcall3(index, rb_intern("begin"), 0, NULL));
+    *end = NUM2INT(rb_funcall3(index, rb_intern("end"), 0, NULL));
+    if (rb_funcall3(index, rb_intern("exclude_end?"), 0, NULL) == Qfalse) {
+      (*end)++;
     }
-    catch (cv::Exception& e) {
-      if (row != NULL)
-	cvReleaseMat(&row);
-      raise_cverror(e);
-    }
-    rb_ary_store(ary, i, DEPEND_OBJECT(rb_klass, row, self));
   }
-  return RARRAY_LEN(ary) > 1 ? ary : rb_ary_entry(ary, 0);
+  else {
+    *start = NUM2INT(index);
+    *end = *start + 1;
+  }
 }
 
 /*
  * call-seq:
- *   get_cols(<i>n</i>)            -> Return column
- *   get_cols(<i>n1, n2, ...</i>)  -> Return Array of columns
+ *   get_rows(row, delta_row = 1) -> cvmat
  *
- * Return column(or columns) of matrix.
- * argument should be Fixnum or CvSlice compatible object.
+ * Return row(or rows) of matrix.
+ * argument <tt>row</tt> should be Fixnum or Range object.
  */
 VALUE
-rb_get_cols(VALUE self, VALUE args)
+rb_get_rows(int argc, VALUE* argv, VALUE self)
 {
-  int len = RARRAY_LEN(args);
-  if (len < 1)
-    rb_raise(rb_eArgError, "wrong number of argument.(more than 1)");
-  VALUE ary = rb_ary_new2(len);
-  for (int i = 0; i < len; ++i) {
-    VALUE value = rb_ary_entry(args, i);
-    CvMat* col = NULL;
-    try {
-      if (FIXNUM_P(value))
-	col = cvGetCol(CVARR(self), RB_CVALLOC(CvMat), FIX2INT(value));
-      else {
-	CvSlice slice = VALUE_TO_CVSLICE(value);
-	col = cvGetCols(CVARR(self), RB_CVALLOC(CvMat), slice.start_index, slice.end_index);
-      }
-    }
-    catch (cv::Exception& e) {
-      if (col != NULL)
-	cvReleaseMat(&col);
-      raise_cverror(e);
-    }
-    rb_ary_store(ary, i, DEPEND_OBJECT(rb_klass, col, self));
+  VALUE row_val, delta_val;
+  rb_scan_args(argc, argv, "11", &row_val, &delta_val);
+
+  int start, end;
+  rb_get_range_index(row_val, &start, &end);
+  int delta = NIL_P(delta_val) ? 1 : NUM2INT(delta_val);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetRows(CVARR(self), submat, start, end, delta);
   }
-  return RARRAY_LEN(ary) > 1 ? ary : rb_ary_entry(ary, 0);
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
+}
+
+/*
+ * call-seq:
+ *   get_cols(col) -> cvmat
+ *
+ * Return column(or columns) of matrix.
+ * argument <tt>col</tt> should be Fixnum or Range object.
+ */
+VALUE
+rb_get_cols(VALUE self, VALUE col)
+{
+  int start, end;
+  rb_get_range_index(col, &start, &end);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetCols(CVARR(self), submat, start, end);
+  }
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
 }
 
 /*
