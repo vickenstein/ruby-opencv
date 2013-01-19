@@ -1556,11 +1556,11 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
     [CV_INPAINT_NS, :ns].each { |method|
       result_ns = mat.inpaint(method, mask, 10)
-      assert_equal('d3df4dda8642c83512fb417ffa5e1457', hash_img(result_ns))
+      assert_in_delta(14000, count_threshold(result_ns, 128), 1000)
     }
     [CV_INPAINT_TELEA, :telea].each { |method|
       result_telea = mat.inpaint(method, mask, 10)
-      assert_equal('d45bec22d03067578703f2ec68567167', hash_img(result_telea))
+      assert_in_delta(13500, count_threshold(result_telea, 128), 1000)
     }
 
     # Uncomment the following lines to show the results
