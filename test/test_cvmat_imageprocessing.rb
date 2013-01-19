@@ -1316,44 +1316,6 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     }
   end
 
-  def test_pyr_segmentation
-    mat0 = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    mat1, seq1 = mat0.pyr_segmentation(4, 255, 50)
-    assert_equal('ebd9bad0bbc90b1d4a25289b7d59c958', hash_img(mat1))
-    assert_equal(5, seq1.total)
-
-    img0 = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    img0.set_roi(CvRect.new(0, 0, 256, 512))
-    img2, seq2 = img0.pyr_segmentation(2, 255, 50)
-    assert_equal('963b26f51b14f175fbbf128e9b9e979f', hash_img(img2))
-    assert_equal(11, seq2.total)
-
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(-1, 255, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(1000, 255, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(4, -1, 50)
-    }
-    assert_raise(CvStsAssert) {
-      img0.pyr_segmentation(4, 255, -1)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(DUMMY_OBJ, 255, 50)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(4, DUMMY_OBJ, 50)
-    }
-    assert_raise(TypeError) {
-      img0.pyr_segmentation(4, 255, DUMMY_OBJ)
-    }
-    assert_raise(CvBadDepth) {
-      IplImage.new(10, 10, :cv32f, 2).pyr_segmentation(4, 255, 50)
-    }
-  end
-
   def test_pyr_mean_shift_filtering
     mat0 = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
     mat1 = mat0.pyr_mean_shift_filtering(30, 30)

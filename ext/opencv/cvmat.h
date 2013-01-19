@@ -204,7 +204,6 @@ VALUE rb_draw_contours(int argc, VALUE *argv, VALUE self);
 VALUE rb_draw_contours_bang(int argc, VALUE *argv, VALUE self);
 VALUE rb_draw_chessboard_corners(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found);
 VALUE rb_draw_chessboard_corners_bang(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found);
-VALUE rb_pyr_segmentation(VALUE self, VALUE level, VALUE threshold1, VALUE threshold2);
 VALUE rb_pyr_mean_shift_filtering(int argc, VALUE *argv, VALUE self);
 VALUE rb_watershed(VALUE self, VALUE markers);
 VALUE rb_moments(int argc, VALUE *argv, VALUE self);
