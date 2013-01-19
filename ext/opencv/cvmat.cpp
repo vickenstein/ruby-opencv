@@ -46,49 +46,49 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVMAT
 
 #define DRAWING_OPTION(opt) rb_get_option_table(rb_klass, "DRAWING_OPTION", opt)
-#define DO_COLOR(opt) VALUE_TO_CVSCALAR(LOOKUP_CVMETHOD(opt, "color"))
-#define DO_THICKNESS(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "thickness"))
+#define DO_COLOR(opt) VALUE_TO_CVSCALAR(LOOKUP_HASH(opt, "color"))
+#define DO_THICKNESS(opt) NUM2INT(LOOKUP_HASH(opt, "thickness"))
 #define DO_LINE_TYPE(opt) rb_drawing_option_line_type(opt)
-#define DO_SHIFT(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "shift"))
-#define DO_IS_CLOSED(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "is_closed"))
+#define DO_SHIFT(opt) NUM2INT(LOOKUP_HASH(opt, "shift"))
+#define DO_IS_CLOSED(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "is_closed"))
 
 #define GOOD_FEATURES_TO_TRACK_OPTION(opt) rb_get_option_table(rb_klass, "GOOD_FEATURES_TO_TRACK_OPTION", opt)
-#define GF_MAX(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "max"))
-#define GF_MASK(opt) MASK(LOOKUP_CVMETHOD(opt, "mask"))
-#define GF_BLOCK_SIZE(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "block_size"))
-#define GF_USE_HARRIS(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "use_harris"))
-#define GF_K(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "k"))
+#define GF_MAX(opt) NUM2INT(LOOKUP_HASH(opt, "max"))
+#define GF_MASK(opt) MASK(LOOKUP_HASH(opt, "mask"))
+#define GF_BLOCK_SIZE(opt) NUM2INT(LOOKUP_HASH(opt, "block_size"))
+#define GF_USE_HARRIS(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "use_harris"))
+#define GF_K(opt) NUM2DBL(LOOKUP_HASH(opt, "k"))
 
 #define FLOOD_FILL_OPTION(opt) rb_get_option_table(rb_klass, "FLOOD_FILL_OPTION", opt)
-#define FF_CONNECTIVITY(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "connectivity"))
-#define FF_FIXED_RANGE(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "fixed_range"))
-#define FF_MASK_ONLY(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "mask_only"))
+#define FF_CONNECTIVITY(opt) NUM2INT(LOOKUP_HASH(opt, "connectivity"))
+#define FF_FIXED_RANGE(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "fixed_range"))
+#define FF_MASK_ONLY(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "mask_only"))
 
 #define FIND_CONTOURS_OPTION(opt) rb_get_option_table(rb_klass, "FIND_CONTOURS_OPTION", opt)
-#define FC_MODE(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "mode"))
-#define FC_METHOD(opt) NUM2INT(LOOKUP_CVMETHOD(opt, "method"))
-#define FC_OFFSET(opt) VALUE_TO_CVPOINT(LOOKUP_CVMETHOD(opt, "offset"))
+#define FC_MODE(opt) NUM2INT(LOOKUP_HASH(opt, "mode"))
+#define FC_METHOD(opt) NUM2INT(LOOKUP_HASH(opt, "method"))
+#define FC_OFFSET(opt) VALUE_TO_CVPOINT(LOOKUP_HASH(opt, "offset"))
 
 #define OPTICAL_FLOW_HS_OPTION(opt) rb_get_option_table(rb_klass, "OPTICAL_FLOW_HS_OPTION", opt)
-#define HS_LAMBDA(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "lambda"))
-#define HS_CRITERIA(opt) VALUE_TO_CVTERMCRITERIA(LOOKUP_CVMETHOD(opt, "criteria"))
+#define HS_LAMBDA(opt) NUM2DBL(LOOKUP_HASH(opt, "lambda"))
+#define HS_CRITERIA(opt) VALUE_TO_CVTERMCRITERIA(LOOKUP_HASH(opt, "criteria"))
 
 #define OPTICAL_FLOW_BM_OPTION(opt) rb_get_option_table(rb_klass, "OPTICAL_FLOW_BM_OPTION", opt)
-#define BM_BLOCK_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "block_size"))
-#define BM_SHIFT_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "shift_size"))
-#define BM_MAX_RANGE(opt) VALUE_TO_CVSIZE(LOOKUP_CVMETHOD(opt, "max_range"))
+#define BM_BLOCK_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "block_size"))
+#define BM_SHIFT_SIZE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "shift_size"))
+#define BM_MAX_RANGE(opt) VALUE_TO_CVSIZE(LOOKUP_HASH(opt, "max_range"))
 
 #define FIND_FUNDAMENTAL_MAT_OPTION(opt) rb_get_option_table(rb_klass, "FIND_FUNDAMENTAL_MAT_OPTION", opt)
-#define FFM_WITH_STATUS(opt) TRUE_OR_FALSE(LOOKUP_CVMETHOD(opt, "with_status"))
-#define FFM_MAXIMUM_DISTANCE(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "maximum_distance"))
-#define FFM_DESIRABLE_LEVEL(opt) NUM2DBL(LOOKUP_CVMETHOD(opt, "desirable_level"))
+#define FFM_WITH_STATUS(opt) TRUE_OR_FALSE(LOOKUP_HASH(opt, "with_status"))
+#define FFM_MAXIMUM_DISTANCE(opt) NUM2DBL(LOOKUP_HASH(opt, "maximum_distance"))
+#define FFM_DESIRABLE_LEVEL(opt) NUM2DBL(LOOKUP_HASH(opt, "desirable_level"))
 
 VALUE rb_klass;
 
 int
 rb_drawing_option_line_type(VALUE drawing_option)
 {
-  VALUE line_type = LOOKUP_CVMETHOD(drawing_option, "line_type");
+  VALUE line_type = LOOKUP_HASH(drawing_option, "line_type");
   if (FIXNUM_P(line_type)) {
     return FIX2INT(line_type);
   }
@@ -2676,9 +2676,9 @@ rb_mul_transposed(int argc, VALUE *argv, VALUE self)
 
   if (rb_scan_args(argc, argv, "01", &options) > 0) {
     Check_Type(options, T_HASH);
-    _delta = LOOKUP_CVMETHOD(options, "delta");
-    _scale = LOOKUP_CVMETHOD(options, "scale");
-    _order = LOOKUP_CVMETHOD(options, "order");
+    _delta = LOOKUP_HASH(options, "delta");
+    _scale = LOOKUP_HASH(options, "scale");
+    _order = LOOKUP_HASH(options, "order");
   }
 
   CvArr* delta = NIL_P(_delta) ? NULL : CVARR_WITH_CHECK(_delta);
@@ -4582,15 +4582,15 @@ rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
   double param1 = 5;
   if (!NIL_P(options)) {
     Check_Type(options, T_HASH);
-    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_CVMETHOD(options, "threshold_type"),
+    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_HASH(options, "threshold_type"),
 			      CV_THRESH_BINARY);
-    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_CVMETHOD(options, "adaptive_method"),
+    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_HASH(options, "adaptive_method"),
 			       CV_ADAPTIVE_THRESH_MEAN_C);
-    VALUE _block_size = LOOKUP_CVMETHOD(options, "block_size");
+    VALUE _block_size = LOOKUP_HASH(options, "block_size");
     if (!NIL_P(_block_size)) {
       block_size = NUM2INT(_block_size);
     }
-    VALUE _param1 = LOOKUP_CVMETHOD(options, "param1");
+    VALUE _param1 = LOOKUP_HASH(options, "param1");
     if (!NIL_P(_param1)) {
       param1 = NUM2INT(_param1);
     }

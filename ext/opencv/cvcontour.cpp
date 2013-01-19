@@ -18,9 +18,9 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVCONTOUR
 
 #define APPROX_POLY_OPTION(op) rb_get_option_table(rb_klass, "APPROX_OPTION", op)
-#define APPROX_POLY_METHOD(op) CVMETHOD("APPROX_POLY_METHOD", LOOKUP_CVMETHOD(op, "method"), CV_POLY_APPROX_DP)
-#define APPROX_POLY_ACCURACY(op) NUM2DBL(LOOKUP_CVMETHOD(op, "accuracy"))
-#define APPROX_POLY_RECURSIVE(op) TRUE_OR_FALSE(LOOKUP_CVMETHOD(op, "recursive"))
+#define APPROX_POLY_METHOD(op) CVMETHOD("APPROX_POLY_METHOD", LOOKUP_HASH(op, "method"), CV_POLY_APPROX_DP)
+#define APPROX_POLY_ACCURACY(op) NUM2DBL(LOOKUP_HASH(op, "accuracy"))
+#define APPROX_POLY_RECURSIVE(op) TRUE_OR_FALSE(LOOKUP_HASH(op, "recursive"))
 
 VALUE rb_allocate(VALUE klass);
 void cvcontour_free(void *ptr);

@@ -147,8 +147,8 @@ extern "C" {
 
 #define IF_DEPTH(val, ifnone) NIL_P(val) ? ifnone : NUM2INT(val)
 
-#define REGISTER_CVMETHOD(hash, str, value) rb_hash_aset(hash, ID2SYM(rb_intern(str)), INT2FIX(value))
-#define LOOKUP_CVMETHOD(hash, key_as_cstr) (rb_hash_lookup(hash, ID2SYM(rb_intern(key_as_cstr))))
+#define REGISTER_HASH(hash, str, value) rb_hash_aset(hash, ID2SYM(rb_intern(str)), INT2FIX(value))
+#define LOOKUP_HASH(hash, key_as_cstr) (rb_hash_lookup(hash, ID2SYM(rb_intern(key_as_cstr))))
 
 #define maxint(a,b) ({int _a = (a), _b = (b); _a > _b ? _a : _b; })
 

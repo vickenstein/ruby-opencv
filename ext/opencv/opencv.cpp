@@ -341,129 +341,129 @@ define_ruby_module()
   VALUE inversion_method = rb_hash_new();
   /* {:lu, :svd, :svd_sym(:svd_symmetric)}: Inversion method */
   rb_define_const(rb_module, "INVERSION_METHOD", inversion_method);
-  REGISTER_CVMETHOD(inversion_method, "lu", CV_LU);
-  REGISTER_CVMETHOD(inversion_method, "svd", CV_SVD);
-  REGISTER_CVMETHOD(inversion_method, "svd_sym", CV_SVD_SYM);
-  REGISTER_CVMETHOD(inversion_method, "svd_symmetric", CV_SVD_SYM);
+  REGISTER_HASH(inversion_method, "lu", CV_LU);
+  REGISTER_HASH(inversion_method, "svd", CV_SVD);
+  REGISTER_HASH(inversion_method, "svd_sym", CV_SVD_SYM);
+  REGISTER_HASH(inversion_method, "svd_symmetric", CV_SVD_SYM);
     
   VALUE homography_calc_method = rb_hash_new();
   /* {:all, :ransac, :lmeds}: Methods used to computed homography matrix */
   rb_define_const(rb_module, "HOMOGRAPHY_CALC_METHOD", homography_calc_method);
-  REGISTER_CVMETHOD(homography_calc_method, "all", 0);
-  REGISTER_CVMETHOD(homography_calc_method, "ransac", CV_RANSAC);
-  REGISTER_CVMETHOD(homography_calc_method, "lmeds", CV_LMEDS);
+  REGISTER_HASH(homography_calc_method, "all", 0);
+  REGISTER_HASH(homography_calc_method, "ransac", CV_RANSAC);
+  REGISTER_HASH(homography_calc_method, "lmeds", CV_LMEDS);
 
   VALUE depth = rb_hash_new();
   /* {:cv8u, :cv8s, :cv16u, :cv16s, :cv32s, :cv32f, :cv64f}: Depth of each pixel. */
   rb_define_const(rb_module, "DEPTH", depth);
-  REGISTER_CVMETHOD(depth, "cv8u", CV_8U);
-  REGISTER_CVMETHOD(depth, "cv8s", CV_8S);
-  REGISTER_CVMETHOD(depth, "cv16u", CV_16U);
-  REGISTER_CVMETHOD(depth, "cv16s", CV_16S);
-  REGISTER_CVMETHOD(depth, "cv32s", CV_32S);
-  REGISTER_CVMETHOD(depth, "cv32f", CV_32F);
-  REGISTER_CVMETHOD(depth, "cv64f", CV_64F);
+  REGISTER_HASH(depth, "cv8u", CV_8U);
+  REGISTER_HASH(depth, "cv8s", CV_8S);
+  REGISTER_HASH(depth, "cv16u", CV_16U);
+  REGISTER_HASH(depth, "cv16s", CV_16S);
+  REGISTER_HASH(depth, "cv32s", CV_32S);
+  REGISTER_HASH(depth, "cv32f", CV_32F);
+  REGISTER_HASH(depth, "cv64f", CV_64F);
   
   VALUE connectivity = rb_hash_new();
   /* {:aa(:anti_alias)}: Determined by the closeness of pixel values */
   rb_define_const(rb_module, "CONNECTIVITY", connectivity);
-  REGISTER_CVMETHOD(connectivity, "aa", CV_AA);
-  REGISTER_CVMETHOD(connectivity, "anti_alias", CV_AA);
+  REGISTER_HASH(connectivity, "aa", CV_AA);
+  REGISTER_HASH(connectivity, "anti_alias", CV_AA);
 
   VALUE structuring_element_shape = rb_hash_new();
   /* {:rect, :cross, :ellipse, :custom}: Shape of the structuring elements */
   rb_define_const(rb_module, "STRUCTURING_ELEMENT_SHAPE", structuring_element_shape);
-  REGISTER_CVMETHOD(structuring_element_shape, "rect", CV_SHAPE_RECT);
-  REGISTER_CVMETHOD(structuring_element_shape, "cross", CV_SHAPE_CROSS);
-  REGISTER_CVMETHOD(structuring_element_shape, "ellipse", CV_SHAPE_ELLIPSE);
-  REGISTER_CVMETHOD(structuring_element_shape, "custom", CV_SHAPE_CUSTOM);
+  REGISTER_HASH(structuring_element_shape, "rect", CV_SHAPE_RECT);
+  REGISTER_HASH(structuring_element_shape, "cross", CV_SHAPE_CROSS);
+  REGISTER_HASH(structuring_element_shape, "ellipse", CV_SHAPE_ELLIPSE);
+  REGISTER_HASH(structuring_element_shape, "custom", CV_SHAPE_CUSTOM);
 
   VALUE retrieval_mode = rb_hash_new();
   /* {:external, :list, :ccomp, :tree}: Retrieval mode */
   rb_define_const(rb_module, "RETRIEVAL_MODE", retrieval_mode);
-  REGISTER_CVMETHOD(retrieval_mode, "external", CV_RETR_EXTERNAL);
-  REGISTER_CVMETHOD(retrieval_mode, "list", CV_RETR_LIST);
-  REGISTER_CVMETHOD(retrieval_mode, "ccomp", CV_RETR_CCOMP);
-  REGISTER_CVMETHOD(retrieval_mode, "tree", CV_RETR_TREE);
+  REGISTER_HASH(retrieval_mode, "external", CV_RETR_EXTERNAL);
+  REGISTER_HASH(retrieval_mode, "list", CV_RETR_LIST);
+  REGISTER_HASH(retrieval_mode, "ccomp", CV_RETR_CCOMP);
+  REGISTER_HASH(retrieval_mode, "tree", CV_RETR_TREE);
 
   VALUE approx_chain_method = rb_hash_new();
   /* {:code, :approx_none, :approx_simple, :apporx_tc89_11, :approx_tc89_kcos}: Approximation method */
   rb_define_const(rb_module, "APPROX_CHAIN_METHOD", approx_chain_method);
-  REGISTER_CVMETHOD(approx_chain_method, "code", CV_CHAIN_CODE);
-  REGISTER_CVMETHOD(approx_chain_method, "approx_none", CV_CHAIN_APPROX_NONE);
-  REGISTER_CVMETHOD(approx_chain_method, "approx_simple", CV_CHAIN_APPROX_SIMPLE);
-  REGISTER_CVMETHOD(approx_chain_method, "approx_tc89_l1", CV_CHAIN_APPROX_TC89_L1);
-  REGISTER_CVMETHOD(approx_chain_method, "approx_tc89_kcos", CV_CHAIN_APPROX_TC89_KCOS);
+  REGISTER_HASH(approx_chain_method, "code", CV_CHAIN_CODE);
+  REGISTER_HASH(approx_chain_method, "approx_none", CV_CHAIN_APPROX_NONE);
+  REGISTER_HASH(approx_chain_method, "approx_simple", CV_CHAIN_APPROX_SIMPLE);
+  REGISTER_HASH(approx_chain_method, "approx_tc89_l1", CV_CHAIN_APPROX_TC89_L1);
+  REGISTER_HASH(approx_chain_method, "approx_tc89_kcos", CV_CHAIN_APPROX_TC89_KCOS);
   
   VALUE approx_poly_method = rb_hash_new();
   /* {:dp}: Approximation method (polygon) */
   rb_define_const(rb_module, "APPROX_POLY_METHOD", approx_poly_method);
-  REGISTER_CVMETHOD(approx_poly_method, "dp", CV_POLY_APPROX_DP);
+  REGISTER_HASH(approx_poly_method, "dp", CV_POLY_APPROX_DP);
 
   VALUE match_template_method = rb_hash_new();
   /* {:sqdiff, :sqdiff_normed, :ccorr, :ccorr_normed, :ccoeff, :ccoeff_normed}: Match template method */
   rb_define_const(rb_module, "MATCH_TEMPLATE_METHOD", match_template_method);
-  REGISTER_CVMETHOD(match_template_method, "sqdiff", CV_TM_SQDIFF);
-  REGISTER_CVMETHOD(match_template_method, "sqdiff_normed", CV_TM_SQDIFF_NORMED);
-  REGISTER_CVMETHOD(match_template_method, "ccorr", CV_TM_CCORR);
-  REGISTER_CVMETHOD(match_template_method, "ccorr_normed", CV_TM_CCORR_NORMED);
-  REGISTER_CVMETHOD(match_template_method, "ccoeff", CV_TM_CCOEFF);
-  REGISTER_CVMETHOD(match_template_method, "ccoeff_normed", CV_TM_CCOEFF_NORMED);
+  REGISTER_HASH(match_template_method, "sqdiff", CV_TM_SQDIFF);
+  REGISTER_HASH(match_template_method, "sqdiff_normed", CV_TM_SQDIFF_NORMED);
+  REGISTER_HASH(match_template_method, "ccorr", CV_TM_CCORR);
+  REGISTER_HASH(match_template_method, "ccorr_normed", CV_TM_CCORR_NORMED);
+  REGISTER_HASH(match_template_method, "ccoeff", CV_TM_CCOEFF);
+  REGISTER_HASH(match_template_method, "ccoeff_normed", CV_TM_CCOEFF_NORMED);
 
   VALUE morphological_operation = rb_hash_new();
   /* {:open, :close, :gradient, :tophat, :blackhat}: Types of morphological operations */
   rb_define_const(rb_module, "MORPHOLOGICAL_OPERATION", morphological_operation);
-  REGISTER_CVMETHOD(morphological_operation, "open", CV_MOP_OPEN);
-  REGISTER_CVMETHOD(morphological_operation, "close", CV_MOP_CLOSE);
-  REGISTER_CVMETHOD(morphological_operation, "gradient", CV_MOP_GRADIENT);
-  REGISTER_CVMETHOD(morphological_operation, "tophat", CV_MOP_TOPHAT);
-  REGISTER_CVMETHOD(morphological_operation, "blackhat", CV_MOP_BLACKHAT);
+  REGISTER_HASH(morphological_operation, "open", CV_MOP_OPEN);
+  REGISTER_HASH(morphological_operation, "close", CV_MOP_CLOSE);
+  REGISTER_HASH(morphological_operation, "gradient", CV_MOP_GRADIENT);
+  REGISTER_HASH(morphological_operation, "tophat", CV_MOP_TOPHAT);
+  REGISTER_HASH(morphological_operation, "blackhat", CV_MOP_BLACKHAT);
 
   VALUE smoothing_type = rb_hash_new();
   /* {:blur_no_scale, :blur, :gaussian, :median, :bilateral}: Types of smoothing */
   rb_define_const(rb_module, "SMOOTHING_TYPE", smoothing_type);
-  REGISTER_CVMETHOD(smoothing_type, "blur_no_scale", CV_BLUR_NO_SCALE);
-  REGISTER_CVMETHOD(smoothing_type, "blur", CV_BLUR);
-  REGISTER_CVMETHOD(smoothing_type, "gaussian", CV_GAUSSIAN);
-  REGISTER_CVMETHOD(smoothing_type, "median", CV_MEDIAN);
-  REGISTER_CVMETHOD(smoothing_type, "bilateral", CV_BILATERAL);
+  REGISTER_HASH(smoothing_type, "blur_no_scale", CV_BLUR_NO_SCALE);
+  REGISTER_HASH(smoothing_type, "blur", CV_BLUR);
+  REGISTER_HASH(smoothing_type, "gaussian", CV_GAUSSIAN);
+  REGISTER_HASH(smoothing_type, "median", CV_MEDIAN);
+  REGISTER_HASH(smoothing_type, "bilateral", CV_BILATERAL);
 
   VALUE adaptive_method = rb_hash_new();
   /* {:mean_c, :gaussian_c}: Adaptive thresholding algorithm */
   rb_define_const(rb_module, "ADAPTIVE_METHOD", adaptive_method);
-  REGISTER_CVMETHOD(adaptive_method, "mean_c", CV_ADAPTIVE_THRESH_MEAN_C);
-  REGISTER_CVMETHOD(adaptive_method, "gaussian_c", CV_ADAPTIVE_THRESH_GAUSSIAN_C);
+  REGISTER_HASH(adaptive_method, "mean_c", CV_ADAPTIVE_THRESH_MEAN_C);
+  REGISTER_HASH(adaptive_method, "gaussian_c", CV_ADAPTIVE_THRESH_GAUSSIAN_C);
 
   VALUE threshold_type = rb_hash_new();
   /* {:binary, :binary_inv, :trunc, :tozero, :tozero_inv, :otsu} : Thresholding types */
   rb_define_const(rb_module, "THRESHOLD_TYPE", threshold_type);
-  REGISTER_CVMETHOD(threshold_type, "binary", CV_THRESH_BINARY);
-  REGISTER_CVMETHOD(threshold_type, "binary_inv", CV_THRESH_BINARY_INV);
-  REGISTER_CVMETHOD(threshold_type, "trunc", CV_THRESH_TRUNC);
-  REGISTER_CVMETHOD(threshold_type, "tozero", CV_THRESH_TOZERO);
-  REGISTER_CVMETHOD(threshold_type, "tozero_inv", CV_THRESH_TOZERO_INV);
-  REGISTER_CVMETHOD(threshold_type, "otsu", CV_THRESH_OTSU);
+  REGISTER_HASH(threshold_type, "binary", CV_THRESH_BINARY);
+  REGISTER_HASH(threshold_type, "binary_inv", CV_THRESH_BINARY_INV);
+  REGISTER_HASH(threshold_type, "trunc", CV_THRESH_TRUNC);
+  REGISTER_HASH(threshold_type, "tozero", CV_THRESH_TOZERO);
+  REGISTER_HASH(threshold_type, "tozero_inv", CV_THRESH_TOZERO_INV);
+  REGISTER_HASH(threshold_type, "otsu", CV_THRESH_OTSU);
 
   VALUE hough_transform_method = rb_hash_new();
   /* {:standard, :probabilistic, :multi_scale} : Hough transform method */
   rb_define_const(rb_module, "HOUGH_TRANSFORM_METHOD", hough_transform_method);
-  REGISTER_CVMETHOD(hough_transform_method, "standard", CV_HOUGH_STANDARD);
-  REGISTER_CVMETHOD(hough_transform_method, "probabilistic", CV_HOUGH_PROBABILISTIC);
-  REGISTER_CVMETHOD(hough_transform_method, "multi_scale", CV_HOUGH_MULTI_SCALE);
-  REGISTER_CVMETHOD(hough_transform_method, "gradient", CV_HOUGH_GRADIENT);
+  REGISTER_HASH(hough_transform_method, "standard", CV_HOUGH_STANDARD);
+  REGISTER_HASH(hough_transform_method, "probabilistic", CV_HOUGH_PROBABILISTIC);
+  REGISTER_HASH(hough_transform_method, "multi_scale", CV_HOUGH_MULTI_SCALE);
+  REGISTER_HASH(hough_transform_method, "gradient", CV_HOUGH_GRADIENT);
 
   VALUE inpaint_method = rb_hash_new();
   /* {:ns, :telea} : Inpaint method */
   rb_define_const(rb_module, "INPAINT_METHOD", inpaint_method);
-  REGISTER_CVMETHOD(inpaint_method, "ns", CV_INPAINT_NS);
-  REGISTER_CVMETHOD(inpaint_method, "telea", CV_INPAINT_TELEA);
+  REGISTER_HASH(inpaint_method, "ns", CV_INPAINT_NS);
+  REGISTER_HASH(inpaint_method, "telea", CV_INPAINT_TELEA);
 
   VALUE comparison_method = rb_hash_new();
   /* Comparison method */
   rb_define_const(rb_module, "COMPARISON_METHOD", comparison_method);
-  REGISTER_CVMETHOD(comparison_method, "i1", CV_CONTOURS_MATCH_I1);
-  REGISTER_CVMETHOD(comparison_method, "i2", CV_CONTOURS_MATCH_I2);
-  REGISTER_CVMETHOD(comparison_method, "i3", CV_CONTOURS_MATCH_I3);
+  REGISTER_HASH(comparison_method, "i1", CV_CONTOURS_MATCH_I1);
+  REGISTER_HASH(comparison_method, "i2", CV_CONTOURS_MATCH_I2);
+  REGISTER_HASH(comparison_method, "i3", CV_CONTOURS_MATCH_I3);
 
   /* color convert methods */
   rb_define_module_function(rb_module, "BGR2BGRA", RUBY_METHOD_FUNC(rb_BGR2BGRA), 1);
