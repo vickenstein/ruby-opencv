@@ -1601,43 +1601,59 @@ class TestCvMat_imageprocessing < OpenCVTestCase
   def test_match_template
     mat = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
     templ = CvMat.load(FILENAME_LENA_EYES, CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-    
+
+    expected_pt = CvPoint.new(100, 120)
+
     # sqdiff
     result = mat.match_template(templ)
-    assert_equal('88663ec44be797ca883fc87bb6d7c09b', hash_img(result))
+    pt = result.min_max_loc[2]
+    assert_in_delta(expected_pt.x, pt.x, 20)
+    assert_in_delta(expected_pt.y, pt.y, 20)
+
     [CV_TM_SQDIFF, :sqdiff].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('88663ec44be797ca883fc87bb6d7c09b', hash_img(result))
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # sqdiff_normed
     [CV_TM_SQDIFF_NORMED, :sqdiff_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('75c812f87184b2ccd8f83b70a8436356', hash_img(result))
+      pt =  result.min_max_loc[2]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # ccorr
     [CV_TM_CCORR, :ccorr].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('6ebe7e48edf8fc64bcc0fd7f1e96555c', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(110, pt.x, 20)
+      assert_in_delta(60, pt.y, 20)
     }
 
     # ccorr_normed
     [CV_TM_CCORR_NORMED, :ccorr_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('4cf8ebcec870f8295d615a9aa345ae4d', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # ccoeff
     [CV_TM_CCOEFF, :ccoeff].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('248a391c5a1e1dbcf7a19f3310b5cd7a', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
     
     # ccoeff_normed
     [CV_TM_CCOEFF_NORMED, :ccoeff_normed].each { |method|
       result = mat.match_template(templ, method)
-      assert_equal('27a4e9b45ed648848f0498356bd2c5b5', hash_img(result))
+      pt =  result.min_max_loc[3]
+      assert_in_delta(expected_pt.x, pt.x, 20)
+      assert_in_delta(expected_pt.y, pt.y, 20)
     }
 
     # Uncomment the following lines to show the result
@@ -1646,7 +1662,6 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     # pt2 = CvPoint.new(pt1.x + templ.width, pt1.y + templ.height)
     # mat.rectangle!(pt1, pt2, :color => CvColor::Black, :thickness => 3)
     # snap mat, templ, result
-
 
     assert_raise(TypeError) {
       mat.match_template(DUMMY_OBJ)
