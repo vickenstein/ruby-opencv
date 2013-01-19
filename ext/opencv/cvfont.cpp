@@ -135,7 +135,7 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
   VALUE face, font_option;
   rb_scan_args(argc, argv, "11", &face, &font_option);
   Check_Type(face, T_SYMBOL);
-  face = rb_hash_aref(rb_const_get(cCvFont::rb_class(), rb_intern("FACE")), face);
+  face = rb_hash_lookup(rb_const_get(cCvFont::rb_class(), rb_intern("FACE")), face);
   if (NIL_P(face)) {
     rb_raise(rb_eArgError, "undefined face.");
   }

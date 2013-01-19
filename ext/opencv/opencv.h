@@ -264,7 +264,7 @@ CVMETHOD(const char *name, VALUE method, int ifnone = 0)
   case T_STRING:
     method = rb_str_intern(method);
   case T_SYMBOL:
-    value = rb_hash_aref(rb_const_get(rb_module_opencv(), rb_intern(name)), method);
+    value = rb_hash_lookup(rb_const_get(rb_module_opencv(), rb_intern(name)), method);
     return NIL_P(value) ? ifnone : FIX2INT(value);
   default:
     raise_typeerror(method, rb_cSymbol);

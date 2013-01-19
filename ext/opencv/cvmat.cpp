@@ -753,8 +753,8 @@ rb_height(VALUE self)
 VALUE
 rb_depth(VALUE self)
 {
-  return rb_hash_aref(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
-		      INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
+  return rb_hash_lookup(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
+			INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
 }
 
 /*
@@ -1612,8 +1612,8 @@ VALUE
 rb_reshape(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
-  VALUE channel = rb_hash_aref(hash, ID2SYM(rb_intern("channel")));
-  VALUE rows = rb_hash_aref(hash, ID2SYM(rb_intern("rows")));
+  VALUE channel = LOOKUP_HASH(hash, "channel");
+  VALUE rows = LOOKUP_HASH(hash, "rows");
   CvMat *mat = NULL;
   try {
     mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NIL_P(channel) ? 0 : NUM2INT(channel),
@@ -1869,9 +1869,9 @@ rb_convert_scale(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
   CvMat* self_ptr = CVMAT(self);
-  VALUE depth = rb_hash_aref(hash, ID2SYM(rb_intern("depth"))),
-    scale = rb_hash_aref(hash, ID2SYM(rb_intern("scale"))),
-    shift = rb_hash_aref(hash, ID2SYM(rb_intern("shift")));
+  VALUE depth = LOOKUP_HASH(hash, "depth");
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
 
   VALUE dest = Qnil;
   try {
@@ -1899,8 +1899,8 @@ rb_convert_scale_abs(VALUE self, VALUE hash)
 {
   Check_Type(hash, T_HASH);
   CvMat* self_ptr = CVMAT(self);
-  VALUE scale = rb_hash_aref(hash, ID2SYM(rb_intern("scale"))),
-    shift = rb_hash_aref(hash, ID2SYM(rb_intern("shift")));
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
   VALUE dest = Qnil;
   try {
     dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, CV_MAT_CN(CVMAT(self)->type));
@@ -5407,7 +5407,7 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
   VALUE _matches = rb_hash_new();
   for (size_t i=0; i<matches.size(); i++) {
     VALUE match = INT2FIX(matches[i].imgIdx);
-    VALUE count = rb_hash_aref(_matches, match);
+    VALUE count = rb_hash_lookup(_matches, match);
     if (NIL_P(count)) {
       count = INT2FIX(1);
     } else {
