@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.6.20130120080339"
+  s.version = "0.0.8.pre"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["lsxi", "ser1zw", "pcting"]
-  s.date = "2013-01-19"
+  s.date = "2013-01-26"
   s.description = "OpenCV wrapper for Ruby"
   s.email = ["masakazu.yonekura@gmail.com", "azariahsawtikes@gmail.com", "pcting@gmail.com"]
   s.extensions = ["extconf.rb"]
@@ -27,17 +27,17 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<rdoc>, ["~> 3.10"])
       s.add_development_dependency(%q<rake-compiler>, [">= 0"])
       s.add_development_dependency(%q<hoe-gemspec>, [">= 0"])
-      s.add_development_dependency(%q<hoe>, ["~> 3.4"])
+      s.add_development_dependency(%q<hoe>, ["~> 3.5"])
     else
       s.add_dependency(%q<rdoc>, ["~> 3.10"])
       s.add_dependency(%q<rake-compiler>, [">= 0"])
       s.add_dependency(%q<hoe-gemspec>, [">= 0"])
-      s.add_dependency(%q<hoe>, ["~> 3.4"])
+      s.add_dependency(%q<hoe>, ["~> 3.5"])
     end
   else
     s.add_dependency(%q<rdoc>, ["~> 3.10"])
     s.add_dependency(%q<rake-compiler>, [">= 0"])
     s.add_dependency(%q<hoe-gemspec>, [">= 0"])
-    s.add_dependency(%q<hoe>, ["~> 3.4"])
+    s.add_dependency(%q<hoe>, ["~> 3.5"])
   end
 end
