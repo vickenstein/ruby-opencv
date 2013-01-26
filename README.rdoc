@@ -22,7 +22,7 @@ OpenCV wrapper for Ruby
   * Ruby/OpenCV relies on the OpenCV library http://opencv.willowgarage.com/wiki/InstallGuide
 
 * Microsoft Visual C++ (for mswin32)
-  * http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express
+  * http://www.microsoft.com/visualstudio/eng/downloads#d-2010-express
 
 * MinGW and MSYS (for mingw32)
   * gcc, g++ and MSYS are needed.
