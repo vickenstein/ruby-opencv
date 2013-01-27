@@ -1,6 +1,6 @@
 # DEVELOPER'S NOTE
 
-## Requirement for develop ruby-opencv
+## Requirement to develop ruby-opencv
 
 * OpenCV
 * Git
@@ -43,7 +43,7 @@ $ gem compile ruby-opencv-*.gem
 **ruby-opencv-x.y.z-x86-mswin32.gem** when you use mswin32.
 
 
-## Install Ruby/OpenCV manually
+## Install ruby-opencv manually
 ### Linux/Mac
 
 ```
