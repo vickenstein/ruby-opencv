@@ -12,7 +12,7 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
   s.developer('ser1zw', 'azariahsawtikes@gmail.com')
   s.developer('pcting', 'pcting@gmail.com')
 
-  s.readme_file  = 'README.rdoc'
+  s.readme_file  = 'README.md'
   s.history_file = 'History.txt'
   s.spec_extras = { :extensions => ['extconf.rb'] }
   s.test_globs = ['test/test_*.rb']

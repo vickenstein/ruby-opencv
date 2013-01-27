@@ -1,9 +1,10 @@
 .gitignore
+DEVELOPERS_NOTE.md
 Gemfile
 History.txt
 License.txt
 Manifest.txt
-README.rdoc
+README.md
 Rakefile
 examples/alpha_blend.rb
 examples/box.png
