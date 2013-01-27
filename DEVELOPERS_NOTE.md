@@ -28,6 +28,8 @@ $ git clone git://github.com/ruby-opencv/ruby-opencv.git
 $ cd ruby-opencv
 $ git checkout master
 $ bundle install
+$ git ls-files > Manifest.txt
+$ rake gem:spec
 $ rake gem
 ```
 **ruby-opencv-x.y.z.gem** will be created in pkg/ directory.
