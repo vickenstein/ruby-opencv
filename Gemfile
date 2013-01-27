@@ -1,6 +1,9 @@
 source :gemcutter
 
-gem "hoe"
-gem "hoe-gemspec"
-gem "rake-compiler"
-gem "yard"
+group :development do
+  gem "hoe"
+  gem "hoe-gemspec"
+  gem "rake-compiler"
+  gem "gem-compile"
+end
+

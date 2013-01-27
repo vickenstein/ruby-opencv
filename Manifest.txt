@@ -1,9 +1,10 @@
 .gitignore
+DEVELOPERS_NOTE.md
 Gemfile
 History.txt
 License.txt
 Manifest.txt
-README.rdoc
+README.md
 Rakefile
 examples/alpha_blend.rb
 examples/box.png
@@ -22,6 +23,12 @@ examples/inpaint.rb
 examples/lenna-rotated.jpg
 examples/lenna.jpg
 examples/match_kdtree.rb
+examples/matching_to_many_images.rb
+examples/matching_to_many_images/query.png
+examples/matching_to_many_images/train/1.png
+examples/matching_to_many_images/train/2.png
+examples/matching_to_many_images/train/3.png
+examples/matching_to_many_images/train/trainImages.txt
 examples/paint.rb
 examples/snake.rb
 examples/stuff.jpg
@@ -126,7 +133,7 @@ images/CvMat_sobel.png
 images/CvMat_sub_rect.png
 images/CvSeq_relationmap.png
 images/face_detect_from_lena.jpg
-opencv.gemspec
+ruby-opencv.gemspec
 test/helper.rb
 test/runner.rb
 test/samples/airplane.jpg
@@ -144,6 +151,7 @@ test/samples/blank7.jpg
 test/samples/blank8.jpg
 test/samples/blank9.jpg
 test/samples/cat.jpg
+test/samples/chessboard.jpg
 test/samples/contours.jpg
 test/samples/fruits.jpg
 test/samples/haarcascade_frontalface_alt.xml.gz
@@ -192,6 +200,7 @@ test/test_cvmat.rb
 test/test_cvmat_drawing.rb
 test/test_cvmat_dxt.rb
 test/test_cvmat_imageprocessing.rb
+test/test_cvmat_matching.rb
 test/test_cvmoments.rb
 test/test_cvpoint.rb
 test/test_cvpoint2d32f.rb
