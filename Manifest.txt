@@ -1,3 +1,4 @@
+.gitignore
 Gemfile
 History.txt
 License.txt
@@ -11,7 +12,6 @@ examples/contours/bitmap-contours-with-labels.png
 examples/contours/bitmap-contours.png
 examples/contours/bounding-box-detect-canny.rb
 examples/contours/contour_retrieval_modes.rb
-examples/contours/rotated-boxes-with-detected-bounding-rectangles.jpg
 examples/contours/rotated-boxes.jpg
 examples/convexhull.rb
 examples/face_detect.rb
@@ -32,8 +32,6 @@ examples/paint.rb
 examples/snake.rb
 examples/stuff.jpg
 examples/tiffany.jpg
-ext/opencv/GPATH
-ext/opencv/GSYMS
 ext/opencv/curve.cpp
 ext/opencv/curve.h
 ext/opencv/cvavgcomp.cpp
@@ -136,7 +134,6 @@ images/CvSeq_relationmap.png
 images/face_detect_from_lena.jpg
 ruby-opencv.gemspec
 test/helper.rb
-test/log.txt
 test/runner.rb
 test/samples/airplane.jpg
 test/samples/baboon.jpg
@@ -226,4 +223,3 @@ test/test_pointset.rb
 test/test_preliminary.rb
 test/test_trackbar.rb
 test/test_window.rb
-test/videowriter_result.avi
