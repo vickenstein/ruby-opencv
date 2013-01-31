@@ -3766,20 +3766,26 @@ rb_warp_affine(int argc, VALUE *argv, VALUE self)
   return dest;
 }
 
-
 /*
- * call-seq:
- *   CvMat.find_homograpy(<i>src_points, dst_points[,method = :all][,ransac_reproj_threshold = 0][,get_status = nil]</i>) -> cvmat
- * 
- * Finds the perspective transformation between two planes.
- * <i>src_points:</i> Coordinates of the points in the original plane, 2xN, Nx2, 3xN or Nx3 1-channel array (the latter two are for representation in homogeneous coordinates), where N is the number of points. 1xN or Nx1 2- or 3-channel array can also be passed.
- * <i>dst_points:</i> Point coordinates in the destination plane, 2xN, Nx2, 3xN or Nx3 1-channel, or 1xN or Nx1 2- or 3-channel array.
- * <i>method:</i> The method used to computed homography matrix; one of the following symbols:
- *     :all - a regular method using all the points
- *     :ransac - RANSAC-based robust method
- *     :lmeds - Least-Median robust method
- * <i>ransac_reproj_threshold:</i> The maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). If src_points and dst_points are measured in pixels, it usually makes sense to set this parameter somewhere in the range 1 to 10.
- * <i>get_status</i> If true, the optional output mask set by a robust method (:ransac or :lmeds) is returned additionally.
+ * Finds a perspective transformation between two planes.
+ *
+ * @overload find_homograpy(src_points, dst_points ,method = :all, ransac_reproj_threshold = 0, get_mask = nil)
+ * @param src_points [CvMat] Coordinates of the points in the original plane.
+ * @param dst_points [CvMat] Coordinates of the points in the target plane.
+ * @param method [Symbol] Method used to computed a homography matrix. The following methods are possible:
+ *   * <tt>:all</tt> - a regular method using all the points
+ *   * <tt>:ransac</tt> - RANSAC-based robust method
+ *   * <tt>:lmeds</tt> - Least-Median robust method
+ * @param ransac_reproj_threshold [Number] Maximum allowed reprojection error to treat a point pair as
+ *   an inlier (used in the RANSAC method only).
+ * @param get_mask [Boolean] If <tt>true</tt>, the optional output mask set by
+ *   a robust method (<tt>:ransac</tt> or <tt>:lmeds</tt>) is returned additionally.
+ * @return [CvMat, Array<CvMat>] The perspective transformation <tt>H</tt> between the source and the destination
+ *   planes in <tt>CvMat</tt>.
+ *   If <tt>method</tt> is <tt>:ransac</tt> or <tt>:lmeds</tt> and <tt>get_mask</tt> is <tt>true</tt>, the output mask
+ *   is also returned in the form of an array <tt>[H, output_mask]</tt>.
+ * @scope class
+ * @opencv_func cvFindHomography
  */
 VALUE
 rb_find_homograpy(int argc, VALUE *argv, VALUE self)
@@ -3817,19 +3823,16 @@ rb_find_homograpy(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   CvMat.rotation_matrix2D(<i>center,angle,scale</i>) -> cvmat
+ * Calculates an affine matrix of 2D rotation.
  *
- * Create new affine matrix of 2D rotation (2x3 32bit floating-point matrix).
- * <i>center</i> is center of rotation (x, y).
- * <i>angle</i> is rotation angle in degrees.
- * Positive values mean counter-clockwise rotation
- * (the coordinate origin is assumed at top-left corner).
- * <i>scale</i> is isotropic scale factor.
- *
- *  [ a b | (1 - a) * center.x - b * center.y  ]
- *  [-b a | (b * center.x + (1 + a) * center.y ]
- *  where a = scale * cos(angle), b = scale * sin(angle)
+ * @overload rotation_matrix2D(center, angle, scale)
+ * @param center [CvPoint2D32f] Center of the rotation in the source image.
+ * @param angle [Number] Rotation angle in degrees. Positive values mean counter-clockwise rotation
+ *   (the coordinate origin is assumed to be the top-left corner).
+ * @param scale [Number] Isotropic scale factor.
+ * @return [CvMat] The output affine transformation, 2x3 floating-point matrix.
+ * @scope class
+ * @opencv_func cv2DRotationMatrix
  */
 VALUE
 rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
@@ -3845,10 +3848,15 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
 }
 
 /*
- * call-seq:
- *   warp_perspective(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0])</i>) -> cvmat
+ * Applies a perspective transformation to an image.
  *
- * Applies perspective transformation to the image.
+ * @overload warp_perspective(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ * @param map_matrix [CvMat] 3x3 transformation matrix.
+ * @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *   and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @return [CvMat] Output image.
+ * @opencv_func cvWarpPerspective
  */
 VALUE
 rb_warp_perspective(int argc, VALUE *argv, VALUE self)
@@ -3871,14 +3879,19 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   remap(<i>mapx,mapy[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0]</i>) -> cvmat
+ * Applies a generic geometrical transformation to an image.
  *
- * Applies generic geometrical transformation to the image.
- * Transforms source image using the specified map:
- *   dst(x,y)<-src(mapx(x,y),mapy(x,y))
- * Similar to other geometrical transformations, some interpolation method (specified by user) is used to
- * extract pixels with non-integer coordinates.
+ * @overload remap(mapx, mapy, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ * @param mapx [CvMat] The first map of either <tt>(x,y)</tt> points or just x values having the type
+ *   <tt>CV_16SC2</tt>, <tt>CV_32FC1</tt>, or <tt>CV_32FC2</tt>.
+ * @param mapy [CvMat] The second map of y values having the type <tt>CV_16UC1</tt>, <tt>CV_32FC1</tt>, or none
+ *   (empty map if <tt>mapx</tt> is <tt>(x,y)</tt> points), respectively.
+ * @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *   and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @return [CvMat] Output image.
+ * @return [CvMat] Destination image.
+ * @opencv_func cvRemap
  */
 VALUE
 rb_remap(int argc, VALUE *argv, VALUE self)
@@ -3901,10 +3914,18 @@ rb_remap(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   log_polar(<i>size, center, magnitude[ ,flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS]</i>)
+ * Remaps an image to log-polar space.
  *
- * Remaps image to log-polar space.
+ * @overload log_polar(size, center, magnitude, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS)
+ * @param size [CvSize] Size of the destination image.
+ * @param center [CvPoint2D32f] The transformation center; where the output precision is maximal.
+ * @param magnitude [Number] Magnitude scale parameter.
+ * @param flags [Integer] A combination of interpolation methods and the following optional flags:
+ *   * <tt>CV_WARP_FILL_OUTLIERS</tt> - fills all of the destination image pixels. If some of them
+ *     correspond to outliers in the source image, they are set to zero.
+ *   * <tt>CV_WARP_INVERSE_MAP</tt> - performs inverse transformation.
+ * @return [CvMat] Destination image.
+ * @opencv_func cvLogPolar
  */
 VALUE
 rb_log_polar(int argc, VALUE *argv, VALUE self)
