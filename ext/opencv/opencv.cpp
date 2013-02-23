@@ -706,6 +706,9 @@ extern "C" {
     mOpenCV::cCvConnectedComp::define_ruby_class();
     mOpenCV::cCvAvgComp::define_ruby_class();
     mOpenCV::cCvHaarClassifierCascade::define_ruby_class();
+
+    mOpenCV::cEigenFaces::define_ruby_class();
+
     mOpenCV::mGUI::define_ruby_module();
     mOpenCV::mGUI::cWindow::define_ruby_class();
     mOpenCV::mGUI::cTrackbar::define_ruby_class();

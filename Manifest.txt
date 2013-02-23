@@ -109,6 +109,8 @@ ext/opencv/cvutils.cpp
 ext/opencv/cvutils.h
 ext/opencv/cvvideowriter.cpp
 ext/opencv/cvvideowriter.h
+ext/opencv/eigenfaces.cpp
+ext/opencv/eigenfaces.h
 ext/opencv/gui.cpp
 ext/opencv/gui.h
 ext/opencv/iplconvkernel.cpp
@@ -216,6 +218,7 @@ test/test_cvsurfpoint.rb
 test/test_cvtermcriteria.rb
 test/test_cvtwopoints.rb
 test/test_cvvideowriter.rb
+test/test_eigenfaces.rb
 test/test_iplconvkernel.rb
 test/test_iplimage.rb
 test/test_mouseevent.rb

@@ -130,6 +130,8 @@ extern "C" {
 
 #include "cvfeaturetree.h"
 
+#include "eigenfaces.h"
+
 // GUI
 #include "gui.h"
 #include "window.h"
