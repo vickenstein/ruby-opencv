@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 require 'test/unit'
 require 'digest/md5'
 require 'opencv'

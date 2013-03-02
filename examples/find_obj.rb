@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 
 # A Demo Ruby/OpenCV Implementation of SURF
 # See https://code.ros.org/trac/opencv/browser/tags/2.3.1/opencv/samples/c/find_obj.cpp

@@ -1,4 +1,4 @@
-# -*- mode: ruby; coding: utf-8-unix -*-
+# -*- mode: ruby; coding: utf-8 -*-
 require 'rubygems'
 require './lib/opencv/psyched_yaml'
 require 'hoe'

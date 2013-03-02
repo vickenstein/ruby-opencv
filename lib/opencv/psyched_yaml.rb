@@ -1,4 +1,4 @@
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 # Psych loader for avoiding loading problem
 # (borrowed from Bundler 1.1.rc.7 https://github.com/carlhuda/bundler/blob/v1.1.rc.7/lib/bundler/psyched_yaml.rb )
 #
