@@ -1,6 +1,6 @@
 # -*- mode: ruby; coding: utf-8-unix -*-
 require 'rubygems'
-require './ext/opencv/lib/opencv/psyched_yaml'
+require './lib/opencv/psyched_yaml'
 require 'hoe'
 require 'rake/extensiontask'
 
@@ -14,7 +14,7 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
 
   s.readme_file  = 'README.md'
   s.history_file = 'History.txt'
-  s.spec_extras = { :extensions => ['extconf.rb'] }
+  s.spec_extras = { :extensions => ['ext/opencv/extconf.rb'] }
   s.test_globs = ['test/test_*.rb']
   s.urls = ['https://github.com/ruby-opencv/ruby-opencv/']
 

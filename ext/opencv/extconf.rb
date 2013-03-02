@@ -71,5 +71,5 @@ have_header("stdarg.h")
 $CFLAGS << " -I#{File.dirname(__FILE__)}/ext/opencv"
 
 # Create Makefile
-create_makefile("opencv", "./ext/opencv")
+create_makefile('opencv')
 
