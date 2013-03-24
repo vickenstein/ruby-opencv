@@ -70,8 +70,10 @@ opencv_headers.each {|header|
 }
 have_header("stdarg.h")
 
-$warnflags.slice!('-Wdeclaration-after-statement')
-$warnflags.slice!('-Wimplicit-function-declaration')
+if $warnflags
+  $warnflags.slice!('-Wdeclaration-after-statement')
+  $warnflags.slice!('-Wimplicit-function-declaration')
+end
 
 # Quick fix for 1.8.7
 $CFLAGS << " -I#{File.dirname(__FILE__)}/ext/opencv"
