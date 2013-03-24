@@ -52,7 +52,7 @@ $ gem compile ruby-opencv-*.gem
 $ git clone git://github.com/ruby-opencv/ruby-opencv.git
 $ cd ruby-opencv
 $ git checkout master
-$ ruby extconf.rb --with-opencv-dir=/path/to/opencvdir
+$ ruby ext/opencv/extconf.rb --with-opencv-dir=/path/to/opencvdir
 $ make
 $ make install
 ```
@@ -68,7 +68,7 @@ Run the following commands on [**Visual Studio Command Prompt**](http://msdn.mic
 $ git clone git://github.com/ruby-opencv/ruby-opencv.git
 $ cd ruby-opencv
 $ git checkout master
-$ ruby extconf.rb --with-opencv-dir=C:\path\to\opencvdir\install  # for your own built OpenCV library
+$ ruby ext/opencv/extconf.rb --with-opencv-dir=C:\path\to\opencvdir\install  # for your own built OpenCV library
 $ nmake
 $ nmake install
 ```
@@ -76,7 +76,7 @@ $ nmake install
 To use pre-built OpenCV libraries, set the following option to extconf.rb.
 
 ```
-$ ruby extconf.rb --with-opencv-include=C:\path\to\opencvdir\build\include --with-opencv-lib=C:\path\to\opencvdir\build\x86\vc10\lib
+$ ruby ext/opencv/extconf.rb --with-opencv-include=C:\path\to\opencvdir\build\include --with-opencv-lib=C:\path\to\opencvdir\build\x86\vc10\lib
 ```
 
 
@@ -88,7 +88,7 @@ Run the following commands on **MSYS console**.
 $ git clone git://github.com/ruby-opencv/ruby-opencv.git
 $ cd ruby-opencv
 $ git checkout master
-$ ruby extconf.rb --with-opencv-dir=/C/path/to/opencvdir/install  # for your own built OpenCV library
+$ ruby ext/opencv/extconf.rb --with-opencv-dir=/C/path/to/opencvdir/install  # for your own built OpenCV library
 $ make
 $ make install
 ```
@@ -96,7 +96,7 @@ $ make install
 To use pre-built OpenCV libraries, set the following option to extconf.rb.
 
 ```
-$ ruby extconf.rb --with-opencv-include=/c/path/to/opencvdir/build/include --with-opencv-lib=/c/path/to/opencvdir/build/x86/mingw/lib
+$ ruby ext/opencv/extconf.rb --with-opencv-include=/c/path/to/opencvdir/build/include --with-opencv-lib=/c/path/to/opencvdir/build/x86/mingw/lib
 ```
 
 

@@ -13,6 +13,9 @@ def cv_version_suffix(incdir)
   major + minor + subminor
 end
 
+# Quick fix for 2.0.0
+# @libdir_basename is set to nil and dir_config() sets invalid libdir '${opencv-dir}/' when --with-opencv-dir option passed.
+@libdir_basename ||= 'lib'
 incdir, libdir = dir_config("opencv", "/usr/local/include", "/usr/local/lib")
 dir_config("libxml2", "/usr/include", "/usr/lib")
 
@@ -67,9 +70,12 @@ opencv_headers.each {|header|
 }
 have_header("stdarg.h")
 
+$warnflags.slice!('-Wdeclaration-after-statement')
+$warnflags.slice!('-Wimplicit-function-declaration')
+
 # Quick fix for 1.8.7
 $CFLAGS << " -I#{File.dirname(__FILE__)}/ext/opencv"
 
 # Create Makefile
-create_makefile("opencv", "./ext/opencv")
+create_makefile('opencv')
 
