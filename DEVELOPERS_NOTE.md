@@ -14,7 +14,6 @@
   * [hoe](https://github.com/seattlerb/hoe)
   * [hoe-gemspec](https://github.com/flavorjones/hoe-gemspec)
   * [rake-compiler](https://github.com/luislavena/rake-compiler)
-  * [gem-compile](https://github.com/frsyuki/gem-compile)
 
 
 ## Create ruby-opencv gem
