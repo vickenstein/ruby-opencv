@@ -5,9 +5,9 @@ def cv_version_suffix(incdir)
   major, minor, subminor = nil, nil, nil
   open("#{incdir}/opencv2/core/version.hpp", 'r') { |f|
     f.read.lines.each { |line|
-      major = $1.to_s if line =~ /\A#define\s+CV_MAJOR_VERSION\s+(\d+)\s*\Z/
-      minor = $1.to_s if line =~ /\A#define\s+CV_MINOR_VERSION\s+(\d+)\s*\Z/
-      subminor = $1.to_s if line =~ /\A#define\s+CV_SUBMINOR_VERSION\s+(\d+)\s*\Z/
+      major = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_EPOCH|CV_MAJOR_VERSION)\s+(\d+)\s*\Z/
+      minor = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_MAJOR|CV_MINOR_VERSION)\s+(\d+)\s*\Z/
+      subminor = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_MINOR|CV_SUBMINOR_VERSION)\s+(\d+)\s*\Z/
     }
   }
   major + minor + subminor
@@ -70,8 +70,10 @@ opencv_headers.each {|header|
 }
 have_header("stdarg.h")
 
-$warnflags.slice!('-Wdeclaration-after-statement')
-$warnflags.slice!('-Wimplicit-function-declaration')
+if $warnflags
+  $warnflags.slice!('-Wdeclaration-after-statement')
+  $warnflags.slice!('-Wimplicit-function-declaration')
+end
 
 # Quick fix for 1.8.7
 $CFLAGS << " -I#{File.dirname(__FILE__)}/ext/opencv"
