@@ -16,7 +16,20 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
 
   s.readme_file  = 'README.md'
   s.history_file = 'History.txt'
-  s.spec_extras = { :extensions => ['ext/opencv/extconf.rb'] }
+
+  s.spec_extras = {}
+  if RUBY_PLATFORM =~ /mingw|mswin/
+    s.spec_extras[:platform] = Gem::Platform::CURRENT
+    s.spec_extras[:files] = proc { |files|
+      Dir.glob("lib/[0-9].[0-9]").each { |dir|
+        so_file = File.join(dir, 'opencv.so')
+        files << so_file if File.exists? so_file
+      }
+    }
+  else
+    s.spec_extras[:extensions] = ['ext/opencv/extconf.rb']
+  end
+
   s.test_globs = ['test/test_*.rb']
   s.urls = ['https://github.com/ruby-opencv/ruby-opencv/']
 
