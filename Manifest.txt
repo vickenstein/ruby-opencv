@@ -6,6 +6,7 @@ License.txt
 Manifest.txt
 README.md
 Rakefile
+config.yml
 examples/alpha_blend.rb
 examples/box.png
 examples/box_in_scene.png
