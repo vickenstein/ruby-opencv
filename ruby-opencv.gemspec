@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.9.pre.20130505043027"
+  s.version = "0.0.9.pre2.20130505044041"
 
   s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.authors = ["lsxi", "ser1zw", "pcting"]
