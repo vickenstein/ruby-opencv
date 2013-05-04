@@ -47,36 +47,27 @@ task 'gem:precompile' => ['gem'] do
   installer = Gem::Installer.new(gemfile)
   installer.unpack(target_dir)
 
-  rubies = ENV['RUBIES'] ? ENV['RUBIES'].split(',') : [Gem.ruby]
-  args = ENV['EXT_OPTS'] ? ENV['EXT_OPTS'].split(',') : []
-
   gemspec = installer.spec
   extension = gemspec.extensions[0]
   gemspec.extensions.clear
-  gemspec.platform = ENV['PLATFORM'] || Gem::Platform::CURRENT
+
+  config = ENV['CONFIG'] ?  YAML.load_file(ENV['CONFIG']) : {}
+  rubies = config['rubies'] || [Gem.ruby]
+  args = config['extopts'] || []
+  gemspec.platform = config['platform'] || Gem::Platform::CURRENT
 
   multi = rubies.size > 1
   rubies.each { |ruby|
-    results = []
-
-    # Convert MinGW's drive letters to Windows' ones
-    #   e.g. /c/ruby/bin/ruby.exe => c:/ruby/bin/ruby.exe
-    ruby.gsub!(/^\/([a-zA-Z])\//, '\1:/')
-
     lib_dir = 'lib'
     if multi
       major, minor, _ = `#{ruby} -e "print RUBY_VERSION"`.chomp.split('.')
       lib_dir = File.join(lib_dir, [major, minor].join('.'))
     end
 
-    target_platform = `#{ruby} -e "print RUBY_PLATFORM"`
-    # Convert MinGW's drive letters to Windows' ones
-    #   e.g. --with-opencv-dir=/c/path/to/opencv => --with-opencv-dir=c:/path/to/opencv
-    args.map! { |a| a.gsub(/=\/([a-zA-Z])\//, '=\1:/') } if target_platform =~ /mingw/
-
-    make_cmd = (target_platform =~ /mswin/) ? 'nmake' : 'make'
+    make_cmd = (`#{ruby} -e "print RUBY_PLATFORM"` =~ /mswin/) ? 'nmake' : 'make'
     Dir.chdir(target_dir) {
       cmd = [ruby, extension, *args].join(' ')
+      results = []
       Gem::Ext::ExtConfBuilder.run(cmd, results)
       Gem::Ext::ExtConfBuilder.make('', results)
 
