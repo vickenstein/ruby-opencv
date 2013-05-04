@@ -18,7 +18,7 @@
 
 ## Create ruby-opencv gem
 Run the following commands.
-When you use mingw32, use **MSYS console**, or when you use mswin32, 
+When you use mingw32, use **MSYS console**, or when you use mswin32,
 use [**Visual Studio Command Prompt**](http://msdn.microsoft.com/en-us/library/ms229859.aspx)
 instead of cmd.exe.
 
@@ -31,16 +31,34 @@ $ git ls-files > Manifest.txt
 $ rake gem:spec
 $ rake gem
 ```
-**ruby-opencv-x.y.z.gem** will be created in pkg/ directory.
+**ruby-opencv-x.y.z.gem** will be created in **pkg** directory.
 
-To create pre-build binaries, run the following commands in Windows.
+To create pre-build binaries, create a config file firstly:
+
+```yml
+# config.yml
+platform: mingw32
+rubies:
+  - C:/ruby-1.9.3-p392-mingw32/bin/ruby.exe
+  - C:/ruby-2.0.0-p0-mingw32/bin/ruby.exe
+extopts:
+  - --with-opencv-include=C:/opencv/build/include
+  - --with-opencv-lib=C:/opencv/build/x86/mingw/lib
+```
+
+Entries are below:
+
+- **platform**: Target platform (e.g. mingw32, mswin32)
+- **rubies**: Array of target versions of ruby's paths (You can create fat gems if you specify multiple versions of ruby)
+- **extopts**: Array of options to be passed to **extconf.rb**
+
+Then, run the following command:
 
 ```
-$ cd pkg
-$ gem compile ruby-opencv-*.gem
+$ rake gem:precompile CONFIG=config.yml
 ```
 
-**ruby-opencv-x.y.z-x86-mingw32.gem** will be created when you use mingw32, or
+**ruby-opencv-x.y.z-mingw32.gem** will be created when you use mingw32, or
 **ruby-opencv-x.y.z-x86-mswin32.gem** when you use mswin32.
 
 
