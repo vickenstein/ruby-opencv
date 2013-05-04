@@ -1,3 +1,3 @@
 module OpenCV
-  VERSION = '0.0.9.pre2'
+  VERSION = '0.0.9'
 end

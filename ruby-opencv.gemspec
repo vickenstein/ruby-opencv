@@ -2,9 +2,9 @@
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.9.pre2.20130505044041"
+  s.version = "0.0.9.20130505072136"
 
-  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["lsxi", "ser1zw", "pcting"]
   s.date = "2013-05-04"
   s.description = "ruby-opencv is a wrapper of OpenCV for Ruby. It helps you to write computer vision programs (e.g. detecting faces from pictures) with Ruby."
