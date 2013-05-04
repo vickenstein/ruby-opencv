@@ -1,8 +1,13 @@
 # -*- mode: ruby; coding: utf-8 -*-
 require 'rubygems'
-require './lib/opencv/psyched_yaml'
+require "rubygems/ext"
+require "rubygems/installer"
 require 'hoe'
 require 'rake/extensiontask'
+require 'fileutils'
+require './lib/opencv/psyched_yaml'
+
+SO_FILE = 'opencv.so'
 
 Hoe.plugin :gemspec
 
@@ -17,18 +22,7 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
   s.readme_file  = 'README.md'
   s.history_file = 'History.txt'
 
-  s.spec_extras = {}
-  if RUBY_PLATFORM =~ /mingw|mswin/
-    s.spec_extras[:platform] = Gem::Platform::CURRENT
-    s.spec_extras[:files] = proc { |files|
-      Dir.glob("lib/[0-9].[0-9]").each { |dir|
-        so_file = File.join(dir, 'opencv.so')
-        files << so_file if File.exists? so_file
-      }
-    }
-  else
-    s.spec_extras[:extensions] = ['ext/opencv/extconf.rb']
-  end
+  s.spec_extras = { :extensions => ['ext/opencv/extconf.rb'] }
 
   s.test_globs = ['test/test_*.rb']
   s.urls = ['https://github.com/ruby-opencv/ruby-opencv/']
@@ -36,12 +30,59 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
   s.extra_dev_deps << ['rake-compiler', '>= 0'] << ['hoe-gemspec']
 
   Rake::ExtensionTask.new('opencv', spec) do |ext|
-    ext.lib_dir = File.join('lib', 'opencv')
+    ext.lib_dir = 'lib'
   end
 end
 
 hoespec.spec.files.delete('.gemtest')
 
 Rake::Task[:test].prerequisites << :compile
+
+desc 'Create a pre-compiled gem'
+task 'gem:precompile' => ['gem'] do
+  tmp_dir = Dir.mktmpdir('tmp', '.')
+  gemfile = Dir.glob("pkg/*.gem")[0]
+  target_dir = File.join(tmp_dir, File.basename(gemfile, '.gem'))
+
+  installer = Gem::Installer.new(gemfile)
+  installer.unpack(target_dir)
+
+  rubies = ENV['RUBIES'] ? ENV['RUBIES'].split(',') : [Gem.ruby]
+  args = ENV['EXT_OPTS'] ? ENV['EXT_OPTS'].split(',') : []
+
+  gemspec = installer.spec
+  extension = gemspec.extensions[0]
+  gemspec.extensions.clear
+  gemspec.platform = ENV['PLATFORM'] || Gem::Platform::CURRENT
+
+  multi = rubies.size > 1
+  rubies.each { |ruby|
+    results = []
+    lib_dir = 'lib'
+    if multi
+      major, minor, _ = `#{ruby} -e "print RUBY_VERSION"`.chomp.split('.')
+      lib_dir = File.join(lib_dir, [major, minor].join('.'))
+    end
+    make_cmd = (`#{ruby} -e "print RUBY_PLATFORM"` =~ /mswin/) ? 'nmake' : 'make'
+    Dir.chdir(target_dir) {
+      cmd = [ruby, extension, *args].join(' ')
+      Gem::Ext::ExtConfBuilder.run(cmd, results)
+      Gem::Ext::ExtConfBuilder.make('', results)
+
+      FileUtils.mkdir_p lib_dir
+      FileUtils.mv SO_FILE, lib_dir
+      sh "#{make_cmd} clean"
+    }
+
+    gemspec.files << File.join(lib_dir, SO_FILE)
+  }
+
+  Dir.chdir(target_dir) {
+    gemfile = Gem::Package.build(gemspec)
+    FileUtils.mv gemfile, File.dirname(__FILE__)
+  }
+
+  FileUtils.rm_rf tmp_dir
+end
 
 # vim: syntax=ruby
