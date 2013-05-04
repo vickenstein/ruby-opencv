@@ -58,12 +58,23 @@ task 'gem:precompile' => ['gem'] do
   multi = rubies.size > 1
   rubies.each { |ruby|
     results = []
+
+    # Convert MinGW's drive letters to Windows' ones
+    #   e.g. /c/ruby/bin/ruby.exe => c:/ruby/bin/ruby.exe
+    ruby.gsub!(/^\/([a-zA-Z])\//, '\1:/')
+
     lib_dir = 'lib'
     if multi
       major, minor, _ = `#{ruby} -e "print RUBY_VERSION"`.chomp.split('.')
       lib_dir = File.join(lib_dir, [major, minor].join('.'))
     end
-    make_cmd = (`#{ruby} -e "print RUBY_PLATFORM"` =~ /mswin/) ? 'nmake' : 'make'
+
+    target_platform = `#{ruby} -e "print RUBY_PLATFORM"`
+    # Convert MinGW's drive letters to Windows' ones
+    #   e.g. --with-opencv-dir=/c/path/to/opencv => --with-opencv-dir=c:/path/to/opencv
+    args.map! { |a| a.gsub(/=\/([a-zA-Z])\//, '=\1:/') } if target_platform =~ /mingw/
+
+    make_cmd = (target_platform =~ /mswin/) ? 'nmake' : 'make'
     Dir.chdir(target_dir) {
       cmd = [ruby, extension, *args].join(' ')
       Gem::Ext::ExtConfBuilder.run(cmd, results)
