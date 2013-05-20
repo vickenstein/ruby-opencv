@@ -120,6 +120,28 @@ rb_predict(VALUE self, VALUE src)
   return INT2NUM(label);
 }
 
+/*
+ * call-seq:
+ *   save(filename)
+ *
+ * Saves this model to a given filename, either as XML or YAML.
+ */
+VALUE
+rb_save(VALUE self, VALUE filename)
+{
+  Check_Type(filename, T_STRING);
+  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
+  try {
+    char* s = StringValueCStr(filename);
+    self_ptr->save(std::string(s));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return Qnil;
+}
+
 void
 define_ruby_class()
 {
@@ -136,6 +158,7 @@ define_ruby_class()
   rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
   rb_define_method(rb_klass, "train", RUBY_METHOD_FUNC(rb_train), 2);
   rb_define_method(rb_klass, "predict", RUBY_METHOD_FUNC(rb_predict), 1);
+  rb_define_method(rb_klass, "save", RUBY_METHOD_FUNC(rb_save), 1);
 }
 
 __NAMESPACE_END_EIGENFACES

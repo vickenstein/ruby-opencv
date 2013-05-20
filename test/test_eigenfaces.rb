@@ -2,6 +2,7 @@
 # -*- mode: ruby; coding: utf-8-unix -*- 
 require 'test/unit'
 require 'opencv'
+require 'date'
 require File.expand_path(File.dirname(__FILE__)) + '/helper'
 
 include OpenCV
@@ -48,6 +49,19 @@ class TestEigenFaces < OpenCVTestCase
     assert_raise(TypeError) {
       @eigenfaces.predict(DUMMY_OBJ)
     }
+  end
+
+  def test_save
+    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
+    label = 1
+    @eigenfaces.train([img], [label])
+    filename = "eigenfaces_save-#{DateTime.now.strftime('%Y%m%d%H%M%S')}.xml"
+    begin
+      @eigenfaces.save(filename)
+      assert(File.exist? filename)
+    ensure
+      File.delete filename
+    end
   end
 end
 
