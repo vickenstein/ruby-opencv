@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 
 # A sample of matching SURF feature points using kd-tree
 # See http://tech.groups.yahoo.com/group/OpenCV/message/62318
