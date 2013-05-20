@@ -63,5 +63,14 @@ class TestEigenFaces < OpenCVTestCase
       File.delete filename
     end
   end
+
+  def test_load
+    assert_nothing_raised {
+      @eigenfaces.load('eigenfaces_save.xml')
+    }
+    assert_raise(TypeError) {
+      @eigenfaces.load(DUMMY_OBJ)
+    }
+  end
 end
 

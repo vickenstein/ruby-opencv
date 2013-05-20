@@ -25,6 +25,7 @@ VALUE rb_allocate(VALUE klass);
 VALUE rb_initialize(int argc, VALUE argv[], VALUE self);
 VALUE rb_train(VALUE self, VALUE src, VALUE labels);
 VALUE rb_save(VALUE self, VALUE filename);
+VALUE rb_load(VALUE self, VALUE filename);
 
 __NAMESPACE_END_EIGENFACES
 
