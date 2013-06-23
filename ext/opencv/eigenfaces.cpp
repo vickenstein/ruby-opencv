@@ -61,109 +61,6 @@ rb_initialize(int argc, VALUE argv[], VALUE self)
   return self;
 }
 
-/*
- * call-seq:
- *   train(src, labels)
- *
- * Trains a FaceRecognizer with given data and associated labels.
- */
-VALUE
-rb_train(VALUE self, VALUE src, VALUE labels)
-{
-  Check_Type(src, T_ARRAY);
-  Check_Type(labels, T_ARRAY);
-
-  VALUE *src_ptr = RARRAY_PTR(src);
-  int src_size = RARRAY_LEN(src);
-  std::vector<cv::Mat> images;
-  for (int i = 0; i < src_size; i++) {
-    images.push_back(cv::Mat(CVMAT_WITH_CHECK(src_ptr[i])));
-  }
-
-  VALUE *labels_ptr = RARRAY_PTR(labels);
-  int labels_size = RARRAY_LEN(labels);
-  std::vector<int> local_labels;
-  for (int i = 0; i < labels_size; i++) {
-    local_labels.push_back(NUM2INT(labels_ptr[i]));
-  }
-
-  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
-  try {
-    self_ptr->train(images, local_labels);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return Qnil;
-}
-
-/*
- * call-seq:
- *   predict(src)
- * 
- * Predicts a label and associated confidence (e.g. distance) for a given input image.
- */
-VALUE
-rb_predict(VALUE self, VALUE src)
-{
-  cv::Mat mat = cv::Mat(CVMAT_WITH_CHECK(src));
-  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
-  int label;
-  try {
-    label = self_ptr->predict(mat);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return INT2NUM(label);
-}
-
-/*
- * call-seq:
- *   save(filename)
- *
- * Saves this model to a given filename, either as XML or YAML.
- */
-VALUE
-rb_save(VALUE self, VALUE filename)
-{
-  Check_Type(filename, T_STRING);
-  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
-  try {
-    char* s = StringValueCStr(filename);
-    self_ptr->save(std::string(s));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return Qnil;
-}
-
-/*
- * call-seq:
- *   load(filename)
- *
- * Loads a FaceRecognizer and its model state.
- */
-VALUE
-rb_load(VALUE self, VALUE filename)
-{
-  Check_Type(filename, T_STRING);
-  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
-  try {
-    char* s = StringValueCStr(filename);
-    self_ptr->load(std::string(s));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return Qnil;
-}
-
 void
 define_ruby_class()
 {
@@ -175,13 +72,9 @@ define_ruby_class()
    * note: this comment is used by rdoc.
    */
   VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "EigenFaces", rb_cObject);
+  rb_klass = rb_define_class_under(opencv, "EigenFaces", cFaceRecognizer::rb_class());
   rb_define_alloc_func(rb_klass, rb_allocate);
   rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "train", RUBY_METHOD_FUNC(rb_train), 2);
-  rb_define_method(rb_klass, "predict", RUBY_METHOD_FUNC(rb_predict), 1);
-  rb_define_method(rb_klass, "save", RUBY_METHOD_FUNC(rb_save), 1);
-  rb_define_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load), 1);
 }
 
 __NAMESPACE_END_EIGENFACES
