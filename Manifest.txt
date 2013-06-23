@@ -113,6 +113,8 @@ ext/opencv/cvvideowriter.h
 ext/opencv/eigenfaces.cpp
 ext/opencv/eigenfaces.h
 ext/opencv/extconf.rb
+ext/opencv/facerecognizer.cpp
+ext/opencv/facerecognizer.h
 ext/opencv/gui.cpp
 ext/opencv/gui.h
 ext/opencv/iplconvkernel.cpp
@@ -137,8 +139,7 @@ lib/opencv.rb
 lib/opencv/psyched_yaml.rb
 lib/opencv/version.rb
 ruby-opencv.gemspec
-ruby-opencv.gemspec
-ruby-opencv.gemspec
+test/eigenfaces_save.xml
 test/helper.rb
 test/runner.rb
 test/samples/airplane.jpg
