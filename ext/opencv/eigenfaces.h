@@ -1,6 +1,6 @@
 /************************************************************
 
-   eigenfacerecognizer.h
+   eigenfaces.h
 
    $Author: ser1zw $
 
