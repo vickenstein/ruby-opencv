@@ -5261,11 +5261,11 @@ rb_match_template(int argc, VALUE *argv, VALUE self)
  * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
  *
  * A - object1, B - object2:
- * * method=CV_CONTOUR_MATCH_I1
+ * * method=CV_CONTOURS_MATCH_I1
  *     I1(A,B)=sumi=1..7abs(1/mAi - 1/mBi)
- * * method=CV_CONTOUR_MATCH_I2
+ * * method=CV_CONTOURS_MATCH_I2
  *     I2(A,B)=sumi=1..7abs(mAi - mBi)
- * * method=CV_CONTOUR_MATCH_I3
+ * * method=CV_CONTOURS_MATCH_I3
  *     I3(A,B)=sumi=1..7abs(mAi - mBi)/abs(mAi)
  */
 VALUE
