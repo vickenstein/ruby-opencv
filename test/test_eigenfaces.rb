@@ -11,6 +11,10 @@ include OpenCV
 class TestEigenFaces < OpenCVTestCase
   def setup
     @eigenfaces = EigenFaces.new
+
+    @eigenfaces_trained = EigenFaces.new
+    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
+    @eigenfaces_trained.train([img], [1])
   end
 
   def test_initialize
@@ -73,6 +77,20 @@ class TestEigenFaces < OpenCVTestCase
     }
     assert_raise(TypeError) {
       @eigenfaces.load(DUMMY_OBJ)
+    }
+  end
+
+  def test_name
+    assert_equal('FaceRecognizer.Eigenfaces', @eigenfaces.name)
+  end
+
+  def test_get_mat
+    mat = @eigenfaces_trained.get_mat('eigenvalues')
+    assert_not_nil(mat)
+    assert_equal(CvMat, mat.class)
+
+    assert_raise(TypeError) {
+      @eigenfaces_trained.get_mat(DUMMY_OBJ)
     }
   end
 end

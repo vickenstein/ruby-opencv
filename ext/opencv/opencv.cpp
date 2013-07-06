@@ -707,6 +707,7 @@ extern "C" {
     mOpenCV::cCvAvgComp::define_ruby_class();
     mOpenCV::cCvHaarClassifierCascade::define_ruby_class();
 
+    mOpenCV::cAlgorithm::define_ruby_class();
     mOpenCV::cFaceRecognizer::define_ruby_class();
     mOpenCV::cEigenFaces::define_ruby_class();
 

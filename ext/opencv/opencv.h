@@ -130,6 +130,7 @@ extern "C" {
 
 #include "cvfeaturetree.h"
 
+#include "algorithm.h"
 #include "facerecognizer.h"
 #include "eigenfaces.h"
 

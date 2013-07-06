@@ -138,7 +138,7 @@ define_ruby_class()
    * note: this comment is used by rdoc.
    */
   VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "FaceRecognizer", rb_cObject);
+  rb_klass = rb_define_class_under(opencv, "FaceRecognizer", cAlgorithm::rb_class());
   rb_define_method(rb_klass, "train", RUBY_METHOD_FUNC(rb_train), 2);
   rb_define_method(rb_klass, "predict", RUBY_METHOD_FUNC(rb_predict), 1);
   rb_define_method(rb_klass, "save", RUBY_METHOD_FUNC(rb_save), 1);
