@@ -34,6 +34,8 @@ examples/paint.rb
 examples/snake.rb
 examples/stuff.jpg
 examples/tiffany.jpg
+ext/opencv/algorithm.cpp
+ext/opencv/algorithm.h
 ext/opencv/curve.cpp
 ext/opencv/curve.h
 ext/opencv/cvavgcomp.cpp
