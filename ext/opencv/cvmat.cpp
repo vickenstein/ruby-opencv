@@ -3945,9 +3945,9 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, flags_val, option, fill_value;
+  VALUE map_matrix, flags_val, fill_value;
   VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fill_value) < 4)
+  if (rb_scan_args(argc, argv, "12", &map_matrix, &flags_val, &fill_value) < 3)
     fill_value = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
