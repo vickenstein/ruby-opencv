@@ -3945,9 +3945,9 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, flags_val, option, fill_value;
+  VALUE map_matrix, flags_val, fill_value;
   VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fill_value) < 4)
+  if (rb_scan_args(argc, argv, "12", &map_matrix, &flags_val, &fill_value) < 3)
     fill_value = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
@@ -4755,7 +4755,7 @@ rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
   try {
     CvSize size = cvGetSize(self_ptr);
     // TODO: Change argument format to set mask
-    mask = new_object(size.width + 2, size.height + 2, CV_MAKETYPE(CV_8U, 1));
+    mask = new_object(size.height + 2, size.width + 2, CV_MAKETYPE(CV_8U, 1));
     CvMat* mask_ptr = CVMAT(mask);
     cvSetZero(mask_ptr);
     cvFloodFill(self_ptr,
@@ -5261,11 +5261,11 @@ rb_match_template(int argc, VALUE *argv, VALUE self)
  * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
  *
  * A - object1, B - object2:
- * * method=CV_CONTOUR_MATCH_I1
+ * * method=CV_CONTOURS_MATCH_I1
  *     I1(A,B)=sumi=1..7abs(1/mAi - 1/mBi)
- * * method=CV_CONTOUR_MATCH_I2
+ * * method=CV_CONTOURS_MATCH_I2
  *     I2(A,B)=sumi=1..7abs(mAi - mBi)
- * * method=CV_CONTOUR_MATCH_I3
+ * * method=CV_CONTOURS_MATCH_I3
  *     I3(A,B)=sumi=1..7abs(mAi - mBi)/abs(mAi)
  */
 VALUE
