@@ -166,6 +166,11 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_MINOR_VERSION", INT2FIX(CV_MINOR_VERSION));
   rb_define_const(rb_module, "CV_SUBMINOR_VERSION", INT2FIX(CV_SUBMINOR_VERSION));
 
+  rb_define_const(rb_module, "CV_VERSION_EPOCH", INT2FIX(CV_VERSION_EPOCH));
+  rb_define_const(rb_module, "CV_VERSION_MAJOR", INT2FIX(CV_VERSION_MAJOR));
+  rb_define_const(rb_module, "CV_VERSION_MINOR", INT2FIX(CV_VERSION_MINOR));
+  rb_define_const(rb_module, "CV_VERSION_REVISION", INT2FIX(CV_VERSION_REVISION));
+
   /* 0: 8bit unsigned */
   rb_define_const(rb_module, "CV_8U", INT2FIX(CV_8U));
   /* 1: 8bit signed */
