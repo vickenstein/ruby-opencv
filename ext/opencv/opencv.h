@@ -133,6 +133,7 @@ extern "C" {
 #include "algorithm.h"
 #include "facerecognizer.h"
 #include "eigenfaces.h"
+#include "fisherfaces.h"
 
 // GUI
 #include "gui.h"
