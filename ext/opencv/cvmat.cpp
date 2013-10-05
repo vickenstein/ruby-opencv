@@ -392,6 +392,7 @@ void define_ruby_class()
   rb_define_method(rb_klass, "inpaint", RUBY_METHOD_FUNC(rb_inpaint), 3);
 
   rb_define_method(rb_klass, "equalize_hist", RUBY_METHOD_FUNC(rb_equalize_hist), 0);
+  rb_define_method(rb_klass, "apply_color_map", RUBY_METHOD_FUNC(rb_apply_color_map), 1);
   rb_define_method(rb_klass, "match_template", RUBY_METHOD_FUNC(rb_match_template), -1);
   rb_define_method(rb_klass, "match_shapes", RUBY_METHOD_FUNC(rb_match_shapes), -1);
   rb_define_method(rb_klass, "match_descriptors", RUBY_METHOD_FUNC(rb_match_descriptors), -1);
@@ -5196,6 +5197,34 @@ rb_equalize_hist(VALUE self)
     raise_cverror(e);
   }
   return dest;
+}
+
+/*
+ * call-seq:
+ *   apply_color_map(colormap) -> cvmat
+ *
+ * Applies a GNU Octave/MATLAB equivalent colormap on a given image.
+ *
+ * Parameters:
+ *   colormap - The colormap to apply.
+ */
+VALUE
+rb_apply_color_map(VALUE self, VALUE colormap)
+{
+  cv::Mat dst_mat;
+  cv::Mat self_mat(CVMAT(self));
+  try {
+    cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  CvMat tmp = dst_mat;
+  VALUE dst = new_object(tmp.rows, tmp.cols, tmp.type);
+  cvCopy(&tmp, CVMAT(dst));
+
+  return dst;
 }
 
 /*

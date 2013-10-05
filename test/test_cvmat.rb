@@ -2943,5 +2943,28 @@ class TestCvMat < OpenCVTestCase
       CvMat.compute_correspond_epilines(mat1, 1, DUMMY_OBJ)
     }
   end
+
+  def test_apply_color_map
+    mat = CvMat.new(64, 256, :cv8u, 1)
+    mat.cols.times { |c|
+      mat.rows.times { |r|
+        mat[r, c] = c
+      }
+    }
+
+    results = []
+    [COLORMAP_AUTUMN, COLORMAP_BONE, COLORMAP_JET, COLORMAP_WINTER,
+     COLORMAP_RAINBOW, COLORMAP_OCEAN, COLORMAP_SUMMER, COLORMAP_SPRING,
+     COLORMAP_COOL, COLORMAP_HSV, COLORMAP_PINK, COLORMAP_HOT].each { |colormap|
+      cmap = mat.apply_color_map(colormap)
+      assert_equal(CvMat, cmap.class)
+      assert_equal(mat.rows, cmap.rows)
+      assert_equal(mat.cols, cmap.cols)
+      results << cmap
+    }
+
+    # Uncomment the following line to show the result
+    # snap *results
+  end
 end
 

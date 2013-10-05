@@ -342,6 +342,19 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_CALIB_CB_FILTER_QUADS", INT2FIX(CV_CALIB_CB_FILTER_QUADS));
   rb_define_const(rb_module, "CV_CALIB_CB_FAST_CHECK", INT2FIX(CV_CALIB_CB_FAST_CHECK));
 
+  /* Color map for cv::applyColorMap */
+  rb_define_const(rb_module, "COLORMAP_AUTUMN", INT2FIX(cv::COLORMAP_AUTUMN));
+  rb_define_const(rb_module, "COLORMAP_BONE", INT2FIX(cv::COLORMAP_BONE));
+  rb_define_const(rb_module, "COLORMAP_JET", INT2FIX(cv::COLORMAP_JET));
+  rb_define_const(rb_module, "COLORMAP_WINTER", INT2FIX(cv::COLORMAP_WINTER));
+  rb_define_const(rb_module, "COLORMAP_RAINBOW", INT2FIX(cv::COLORMAP_RAINBOW));
+  rb_define_const(rb_module, "COLORMAP_OCEAN", INT2FIX(cv::COLORMAP_OCEAN));
+  rb_define_const(rb_module, "COLORMAP_SUMMER", INT2FIX(cv::COLORMAP_SUMMER));
+  rb_define_const(rb_module, "COLORMAP_SPRING", INT2FIX(cv::COLORMAP_SPRING));
+  rb_define_const(rb_module, "COLORMAP_COOL", INT2FIX(cv::COLORMAP_COOL));
+  rb_define_const(rb_module, "COLORMAP_HSV", INT2FIX(cv::COLORMAP_HSV));
+  rb_define_const(rb_module, "COLORMAP_PINK", INT2FIX(cv::COLORMAP_PINK));
+  rb_define_const(rb_module, "COLORMAP_HOT", INT2FIX(cv::COLORMAP_HOT));
 
   VALUE inversion_method = rb_hash_new();
   /* {:lu, :svd, :svd_sym(:svd_symmetric)}: Inversion method */

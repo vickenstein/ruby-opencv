@@ -214,6 +214,9 @@ VALUE rb_dist_transform(int argc, VALUE *argv, VALUE self);
 VALUE rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius);
 
 VALUE rb_equalize_hist(VALUE self);
+
+VALUE rb_apply_color_map(VALUE self, VALUE colormap);
+
 /* Matching*/
 VALUE rb_match_template(int argc, VALUE *argv, VALUE self);
 VALUE rb_match_shapes(int argc, VALUE *argv, VALUE self);
