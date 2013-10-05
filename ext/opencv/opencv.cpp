@@ -185,7 +185,37 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_32F", INT2FIX(CV_32F));
   /* 6: 64bit floating-point */
   rb_define_const(rb_module, "CV_64F", INT2FIX(CV_64F));
-  
+
+  /* Other depth */
+  rb_define_const(rb_module, "CV_8UC1", INT2FIX(CV_8UC1));
+  rb_define_const(rb_module, "CV_8UC2", INT2FIX(CV_8UC2));
+  rb_define_const(rb_module, "CV_8UC3", INT2FIX(CV_8UC3));
+  rb_define_const(rb_module, "CV_8UC4", INT2FIX(CV_8UC4));
+  rb_define_const(rb_module, "CV_8SC1", INT2FIX(CV_8SC1));
+  rb_define_const(rb_module, "CV_8SC2", INT2FIX(CV_8SC2));
+  rb_define_const(rb_module, "CV_8SC3", INT2FIX(CV_8SC3));
+  rb_define_const(rb_module, "CV_8SC4", INT2FIX(CV_8SC4));
+  rb_define_const(rb_module, "CV_16UC1", INT2FIX(CV_16UC1));
+  rb_define_const(rb_module, "CV_16UC2", INT2FIX(CV_16UC2));
+  rb_define_const(rb_module, "CV_16UC3", INT2FIX(CV_16UC3));
+  rb_define_const(rb_module, "CV_16UC4", INT2FIX(CV_16UC4));
+  rb_define_const(rb_module, "CV_16SC1", INT2FIX(CV_16SC1));
+  rb_define_const(rb_module, "CV_16SC2", INT2FIX(CV_16SC2));
+  rb_define_const(rb_module, "CV_16SC3", INT2FIX(CV_16SC3));
+  rb_define_const(rb_module, "CV_16SC4", INT2FIX(CV_16SC4));
+  rb_define_const(rb_module, "CV_32SC1", INT2FIX(CV_32SC1));
+  rb_define_const(rb_module, "CV_32SC2", INT2FIX(CV_32SC2));
+  rb_define_const(rb_module, "CV_32SC3", INT2FIX(CV_32SC3));
+  rb_define_const(rb_module, "CV_32SC4", INT2FIX(CV_32SC4));
+  rb_define_const(rb_module, "CV_32FC1", INT2FIX(CV_32FC1));
+  rb_define_const(rb_module, "CV_32FC2", INT2FIX(CV_32FC2));
+  rb_define_const(rb_module, "CV_32FC3", INT2FIX(CV_32FC3));
+  rb_define_const(rb_module, "CV_32FC4", INT2FIX(CV_32FC4));
+  rb_define_const(rb_module, "CV_64FC1", INT2FIX(CV_64FC1));
+  rb_define_const(rb_module, "CV_64FC2", INT2FIX(CV_64FC2));
+  rb_define_const(rb_module, "CV_64FC3", INT2FIX(CV_64FC3));
+  rb_define_const(rb_module, "CV_64FC4", INT2FIX(CV_64FC4));
+
   /* Color types of loaded images */
   rb_define_const(rb_module, "CV_LOAD_IMAGE_UNCHANGED", INT2FIX(CV_LOAD_IMAGE_UNCHANGED));
   rb_define_const(rb_module, "CV_LOAD_IMAGE_GRAYSCALE", INT2FIX(CV_LOAD_IMAGE_GRAYSCALE));
