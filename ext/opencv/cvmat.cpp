@@ -2379,38 +2379,50 @@ rb_abs_diff(VALUE self, VALUE val)
 
 /*
  * call-seq:
- *   normalize(...) -> cvmat
+ *   normalize(alpha=1, beta=0, norm_type=NORM_L2, dtype=-1, mask=nil) -> cvmat
  *
- * Normalizes the norm or value range of an array
+ * Normalizes the norm or value range of an array.
+ *
+ * Parameters:
+ *   * alpha - norm value to normalize to or the lower range boundary in case of the range normalization.
+ *   * beta - upper range boundary in case of the range normalization; it is not used for the norm normalization.
+ *   * norm_type - normalization type.
+ *   * dtype - when negative, the output array has the same type as src; otherwise, it has the same number of channels as src and the depth
+ *   * mask - optional operation mask.
  */
 VALUE
 rb_normalize(int argc, VALUE *argv, VALUE self)
 {
-  VALUE alphaVal, betaVal, normTypeVal, maskVal;
-  rb_scan_args(argc, argv, "04", &alphaVal, &betaVal, &normTypeVal, &maskVal);
-  
-  const double alpha = alphaVal != Qnil ? NUM2DBL(alphaVal) : 1.0;
-  const double beta = betaVal != Qnil ? NUM2DBL(betaVal) : 0.0;
-  const int normType = normTypeVal != Qnil ? NUM2INT(normTypeVal) : cv::NORM_L2;
-  
-  VALUE dest = new_mat_kind_object(cvGetSize(CVARR(self)), self);
+  VALUE alpha_val, beta_val, norm_type_val, dtype_val, mask_val;
+  rb_scan_args(argc, argv, "05", &alpha_val, &beta_val, &norm_type_val, &dtype_val, &mask_val);
+
+  double alpha = NIL_P(alpha_val) ? 1.0 : NUM2DBL(alpha_val);
+  double beta = NIL_P(beta_val) ? 0.0 : NUM2DBL(beta_val);
+  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
+  int dtype = NIL_P(dtype_val) ? -1 : NUM2INT(dtype_val);
+  VALUE dst;
+
   try {
-    const cv::Mat selfMat(CVMAT(self));
-    cv::Mat destMat(CVMAT(dest));
-    
-    if (NIL_P(maskVal)) {
-      cv::normalize(selfMat, destMat, alpha, beta, normType);
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat dst_mat;
+
+    if (NIL_P(mask_val)) {
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype);
     }
     else {
-      cv::Mat maskMat(MASK(maskVal));
-      cv::normalize(selfMat, destMat, alpha, beta, normType, -1, maskMat);
+      cv::Mat mask(MASK(mask_val));
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype, mask);
     }
-    
-  } catch (cv::Exception& e) {
+    dst = new_mat_kind_object(cvGetSize(CVARR(self)), self, dst_mat.depth(), dst_mat.channels());
+
+    CvMat tmp = dst_mat;
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
     raise_cverror(e);
   }
 
-  return dest;
+  return dst;
 }
 
 /*

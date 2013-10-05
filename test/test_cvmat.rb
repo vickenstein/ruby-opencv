@@ -2053,10 +2053,16 @@ class TestCvMat < OpenCVTestCase
       assert_in_delta(x, mminmax[i][0], 0.001)
     }
 
+    minf = mat.normalize(1, 0, CV_NORM_INF, CV_32FC3)
+    expected = [0.0, 0.333, 0.666, 1.0]
+    expected.each_with_index { |x, i|
+      assert_in_delta(x, minf[i][0], 0.001)
+    }
+
     mask = mat.to_8u.zero
     mask[0, 0] = CvScalar.new(255, 0, 0)
     mask[1, 0] = CvScalar.new(255, 0, 0)
-    minf = mat.normalize(1, 0, CV_NORM_INF, mask)
+    minf = mat.normalize(1, 0, CV_NORM_INF, -1, mask)
     expected = [0.0, 0.0, 1.0, 0.0]
     expected.each_with_index { |x, i|
       assert_in_delta(x, minf[i][0], 0.001)
