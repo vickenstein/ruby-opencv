@@ -2969,6 +2969,10 @@ class TestCvMat < OpenCVTestCase
       results << cmap
     }
 
+    assert_raise(TypeError) {
+      mat.apply_color_map(DUMMY_OBJ)
+    }
+
     # Uncomment the following line to show the result
     # snap *results
   end

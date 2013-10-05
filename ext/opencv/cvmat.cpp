@@ -5223,18 +5223,19 @@ rb_equalize_hist(VALUE self)
 VALUE
 rb_apply_color_map(VALUE self, VALUE colormap)
 {
-  cv::Mat dst_mat;
-  cv::Mat self_mat(CVMAT(self));
+  VALUE dst;
   try {
+    cv::Mat dst_mat;
+    cv::Mat self_mat(CVMAT(self));
+
     cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
+    CvMat tmp = dst_mat;
+    dst = new_object(tmp.rows, tmp.cols, tmp.type);
+    cvCopy(&tmp, CVMAT(dst));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-
-  CvMat tmp = dst_mat;
-  VALUE dst = new_object(tmp.rows, tmp.cols, tmp.type);
-  cvCopy(&tmp, CVMAT(dst));
 
   return dst;
 }
