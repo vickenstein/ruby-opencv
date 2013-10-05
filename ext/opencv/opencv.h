@@ -134,6 +134,7 @@ extern "C" {
 #include "facerecognizer.h"
 #include "eigenfaces.h"
 #include "fisherfaces.h"
+#include "lbph.h"
 
 // GUI
 #include "gui.h"

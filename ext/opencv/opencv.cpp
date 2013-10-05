@@ -759,6 +759,7 @@ extern "C" {
     mOpenCV::cFaceRecognizer::define_ruby_class();
     mOpenCV::cEigenFaces::define_ruby_class();
     mOpenCV::cFisherFaces::define_ruby_class();
+    mOpenCV::cLBPH::define_ruby_class();
 
     mOpenCV::mGUI::define_ruby_module();
     mOpenCV::mGUI::cWindow::define_ruby_class();
