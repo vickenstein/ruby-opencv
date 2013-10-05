@@ -412,6 +412,9 @@ void define_ruby_class()
 
   rb_define_method(rb_klass, "extract_surf", RUBY_METHOD_FUNC(rb_extract_surf), -1);
 
+  rb_define_method(rb_klass, "subspace_project", RUBY_METHOD_FUNC(rb_subspace_project), 2);
+  rb_define_method(rb_klass, "subspace_reconstruct", RUBY_METHOD_FUNC(rb_subspace_reconstruct), 2);
+
   rb_define_method(rb_klass, "save_image", RUBY_METHOD_FUNC(rb_save_image), -1);
   rb_define_alias(rb_klass, "save", "save_image");
 
@@ -5840,6 +5843,55 @@ rb_extract_surf(int argc, VALUE *argv, VALUE self)
   }
   
   return rb_assoc_new(_keypoints, _descriptors);
+}
+
+
+/*
+ * call-seq:
+ *   subspace_project(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_project(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE projection;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat pmat = cv::subspaceProject(w_mat, mean_mat, self_mat);
+    projection = new_object(pmat.rows, pmat.cols, pmat.type());
+    CvMat tmp = pmat;
+    cvCopy(&tmp, CVMAT(projection));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return projection;
+}
+
+/*
+ * call-seq:
+ *   subspace_reconstruct(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE result;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat rmat = cv::subspaceReconstruct(w_mat, mean_mat, self_mat);
+    result = new_object(rmat.rows, rmat.cols, rmat.type());
+    CvMat tmp = rmat;
+    cvCopy(&tmp, CVMAT(result));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return result;
 }
 
 VALUE

@@ -2976,5 +2976,27 @@ class TestCvMat < OpenCVTestCase
     # Uncomment the following line to show the result
     # snap *results
   end
+
+  def test_subspace_project
+    w = CvMat.new(10, 20, :cv32f, 1)
+    mean = CvMat.new(w.rows, 1, :cv32f, 1)
+    mat = CvMat.new(w.cols, w.rows, :cv32f, 1)
+    result = mat.subspace_project(w, mean)
+
+    assert_equal(CvMat, result.class)
+    assert_equal(w.cols, result.rows)
+    assert_equal(w.cols, result.cols)
+  end
+
+  def test_subspace_reconstruct
+    w = CvMat.new(10, 20, :cv32f, 1)
+    mean = CvMat.new(w.rows, 1, :cv32f, 1)
+    mat = CvMat.new(w.cols, w.cols, :cv32f, 1)
+    result = mat.subspace_reconstruct(w, mean)
+
+    assert_equal(CvMat, result.class)
+    assert_equal(w.cols, result.rows)
+    assert_equal(w.rows, result.cols)
+  end
 end
 

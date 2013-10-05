@@ -239,6 +239,9 @@ VALUE rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_imag
 /* Feature detection and description */
 VALUE rb_extract_surf(int argc, VALUE *argv, VALUE self);
 
+VALUE rb_subspace_project(VALUE self, VALUE w, VALUE mean);
+VALUE rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean);
+
 // HighGUI function
 VALUE rb_save_image(int argc, VALUE *argv, VALUE self);
 
