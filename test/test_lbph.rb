@@ -25,19 +25,15 @@ class TestLBPH < OpenCVTestCase
     assert_raise(TypeError) {
       LBPH.new(DUMMY_OBJ)
     }
-
     assert_raise(TypeError) {
       LBPH.new(1, DUMMY_OBJ)
     }
-
     assert_raise(TypeError) {
       LBPH.new(1, 2, DUMMY_OBJ)
     }
-
     assert_raise(TypeError) {
       LBPH.new(1, 2, 3, DUMMY_OBJ)
     }
-
     assert_raise(TypeError) {
       LBPH.new(1, 2, 3, 4, DUMMY_OBJ)
     }
@@ -87,6 +83,67 @@ class TestLBPH < OpenCVTestCase
 
   def test_name
     assert_equal('FaceRecognizer.LBPH', @lbph.name)
+  end
+
+  def test_get_int
+    assert_equal(1, @lbph.get_int('radius'))
+    assert_equal(8, @lbph.get_int('neighbors'))
+    assert_equal(8, @lbph.get_int('grid_x'))
+    assert_equal(8, @lbph.get_int('grid_y'))
+
+    assert_raise(TypeError) {
+      @lbph.get_int(DUMMY_OBJ)
+    }
+  end
+
+  def test_get_double
+    assert_equal(Float::MAX, @lbph.get_double('threshold'))
+
+    assert_raise(TypeError) {
+      @lbph.get_double(DUMMY_OBJ)
+    }
+  end
+
+  def test_get_matvector
+    histgrams = @lbph_trained.get_matvector('histograms')
+    assert_equal(Array, histgrams.class)
+    assert_equal(2, histgrams.size)
+    assert_equal(CvMat, histgrams[0].class)
+
+    assert_raise(TypeError) {
+      @lbph.get_matvector(DUMMY_OBJ)
+    }
+  end
+
+  def test_set_int
+    @lbph.set_int('radius', 2)
+    @lbph.set_int('neighbors', 3)
+    @lbph.set_int('grid_x', 4)
+    @lbph.set_int('grid_y', 5)
+
+    assert_equal(2, @lbph.get_int('radius'))
+    assert_equal(3, @lbph.get_int('neighbors'))
+    assert_equal(4, @lbph.get_int('grid_x'))
+    assert_equal(5, @lbph.get_int('grid_y'))
+
+    assert_raise(TypeError) {
+      @lbph.set_int(DUMMY_OBJ, 1)
+    }
+    assert_raise(TypeError) {
+      @lbph.set_int('radius', DUMMY_OBJ)
+    }
+  end
+
+  def test_set_double
+    @lbph.set_double('threshold', 1.0)
+    assert_in_delta(1.0, @lbph.get_double('threshold'), 0.001)
+
+    assert_raise(TypeError) {
+      @lbph.set_double(DUMMY_OBJ, 1.0)
+    }
+    assert_raise(TypeError) {
+      @lbph.set_double('threshold', DUMMY_OBJ)
+    }
   end
 end
 

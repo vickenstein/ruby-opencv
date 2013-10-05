@@ -27,7 +27,7 @@ rb_class()
 VALUE
 rb_set_int(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   try {
     ALGORITHM(self)->setInt(StringValueCStr(parameter), NUM2INT(value));
   }
@@ -41,7 +41,7 @@ rb_set_int(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_double(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   try {
     ALGORITHM(self)->setDouble(StringValueCStr(parameter), NUM2DBL(value));
   }
@@ -55,7 +55,7 @@ rb_set_double(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_bool(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   try {
     bool val = TRUE_OR_FALSE(value) ? true : false;
     ALGORITHM(self)->setBool(StringValueCStr(parameter), val);
@@ -70,8 +70,8 @@ rb_set_bool(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_string(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
-  Check_Type(T_STRING, value);
+  Check_Type(parameter, T_STRING);
+  Check_Type(value, T_STRING);
   try {
     ALGORITHM(self)->setString(StringValueCStr(parameter), StringValueCStr(value));
   }
@@ -85,7 +85,7 @@ rb_set_string(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_mat(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   try {
     CvMat* val = CVMAT_WITH_CHECK(value);
     cv::Mat mat(val);
@@ -101,8 +101,8 @@ rb_set_mat(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_matvector(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
-  Check_Type(T_ARRAY, value);
+  Check_Type(parameter, T_STRING);
+  Check_Type(value, T_ARRAY);
   try {
     long len = RARRAY_LEN(value);
     VALUE* value_ptr = RARRAY_PTR(value);
@@ -124,7 +124,7 @@ rb_set_matvector(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_set_algorithm(VALUE self, VALUE parameter, VALUE value)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   try {
     ALGORITHM(self)->setAlgorithm(StringValueCStr(parameter), ALGORITHM(value));
   }
@@ -139,7 +139,7 @@ rb_set_algorithm(VALUE self, VALUE parameter, VALUE value)
 VALUE
 rb_get_int(VALUE self, VALUE parameter)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   int value = 0;
   try {
     value = ALGORITHM(self)->getInt(StringValueCStr(parameter));
@@ -154,7 +154,7 @@ rb_get_int(VALUE self, VALUE parameter)
 VALUE
 rb_get_double(VALUE self, VALUE parameter)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   double value = 0.0;
   try {
     value = ALGORITHM(self)->getDouble(StringValueCStr(parameter));
@@ -163,13 +163,13 @@ rb_get_double(VALUE self, VALUE parameter)
     raise_cverror(e);
   }
 
-  return NUM2DBL(value);
+  return DBL2NUM(value);
 }
 
 VALUE
 rb_get_bool(VALUE self, VALUE parameter)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   bool value = false;
   try {
     value = ALGORITHM(self)->getBool(StringValueCStr(parameter));
@@ -184,7 +184,7 @@ rb_get_bool(VALUE self, VALUE parameter)
 VALUE
 rb_get_string(VALUE self, VALUE parameter)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   std::string value = "";
   try {
     value = ALGORITHM(self)->getString(StringValueCStr(parameter));
@@ -217,7 +217,7 @@ rb_get_mat(VALUE self, VALUE parameter)
 VALUE
 rb_get_matvector(VALUE self, VALUE parameter)
 {
-  Check_Type(T_STRING, parameter);
+  Check_Type(parameter, T_STRING);
   VALUE array = Qnil;
   try {
     std::vector<cv::Mat> value = ALGORITHM(self)->getMatVector(StringValueCStr(parameter));
