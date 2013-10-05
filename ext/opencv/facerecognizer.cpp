@@ -18,15 +18,17 @@ __NAMESPACE_BEGIN_FACERECOGNIZER
 
 VALUE rb_klass;
 
-std::map<long, cv::Ptr<cv::FaceRecognizer> > ptr_guard_map;
+std::map< long, cv::Ptr<cv::FaceRecognizer> > ptr_guard_map;
 
 void
-guard_facerecognizer(void* data_ptr, cv::Ptr<cv::FaceRecognizer> ptr) {
+guard_facerecognizer(void* data_ptr, cv::Ptr<cv::FaceRecognizer> ptr)
+{
   ptr_guard_map[(long)data_ptr] = ptr;
 }
 
 void
-release_facerecognizer(void *ptr) {
+release_facerecognizer(void *ptr)
+{
   long key = (long)ptr;
   ptr_guard_map[key].release();
   ptr_guard_map.erase(key);

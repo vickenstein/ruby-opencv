@@ -17,25 +17,11 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_EIGENFACES
 
 VALUE rb_klass;
-std::map<long, cv::Ptr<cv::FaceRecognizer> > ptr_guard_map;
 
 VALUE
 rb_class()
 {
   return rb_klass;
-}
-
-void
-release_facerecognizer(void *ptr) {
-  long key = (long)ptr;
-  ptr_guard_map[key].release();
-  ptr_guard_map.erase(key);
-}
-
-VALUE
-rb_allocate(VALUE klass)
-{
-  return Data_Wrap_Struct(klass, 0, release_facerecognizer, NULL);
 }
 
 /* 
@@ -55,8 +41,7 @@ rb_initialize(int argc, VALUE argv[], VALUE self)
   cv::Ptr<cv::FaceRecognizer> ptr = cv::createEigenFaceRecognizer(num_components, threshold);
   DATA_PTR(self) = ptr;
 
-  long key = (long)(DATA_PTR(self));
-  ptr_guard_map[key] = ptr; // To avoid cv::Ptr's GC
+  cFaceRecognizer::guard_facerecognizer(DATA_PTR(self), ptr);
 
   return self;
 }
@@ -73,7 +58,7 @@ define_ruby_class()
    */
   VALUE opencv = rb_module_opencv();
   rb_klass = rb_define_class_under(opencv, "EigenFaces", cFaceRecognizer::rb_class());
-  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_alloc_func(rb_klass, cFaceRecognizer::allocate_facerecognizer);
   rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
 }
 
