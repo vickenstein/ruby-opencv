@@ -254,7 +254,7 @@ void define_ruby_class()
   rb_define_method(rb_klass, "range", RUBY_METHOD_FUNC(rb_range), 2);
   rb_define_method(rb_klass, "range!", RUBY_METHOD_FUNC(rb_range_bang), 2);
 
-  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), 1);
+  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), -1);
   rb_define_method(rb_klass, "repeat", RUBY_METHOD_FUNC(rb_repeat), 1);
   rb_define_method(rb_klass, "flip", RUBY_METHOD_FUNC(rb_flip), -1);
   rb_define_method(rb_klass, "flip!", RUBY_METHOD_FUNC(rb_flip_bang), -1);
@@ -1602,25 +1602,22 @@ rb_range_bang(VALUE self, VALUE start, VALUE end)
 
 /*
  * call-seq:
- *   reshape(<i>[:rows => num][, :channel => cn]</i>) -> cvmat(refer self)
+ *   reshape(cn, rows=0) -> cvmat(refer self)
  *
  * Change shape of matrix/image without copying data.
  *
- * e.g.
- *  mat = CvMat.new(3, 3, CV_8U, 3)  #=> 3x3 3-channel matrix
- *  vec = mat.reshape(:rows => 1)    #=> 1x9 3-channel matrix
- *  ch1 = mat.reshape(:channel => 1) #=> 9x9 1-channel matrix
+ * Parameter:
+ *   * cn - New number of channels. If the parameter is 0, the number of channels remains the same.
+ *   * rows - New number of rows. If the parameter is 0, the number of rows remains the same.
  */
 VALUE
-rb_reshape(VALUE self, VALUE hash)
+rb_reshape(int argc, VALUE *argv, VALUE self)
 {
-  Check_Type(hash, T_HASH);
-  VALUE channel = LOOKUP_HASH(hash, "channel");
-  VALUE rows = LOOKUP_HASH(hash, "rows");
+  VALUE cn, rows;
   CvMat *mat = NULL;
+  rb_scan_args(argc, argv, "11", &cn, &rows);
   try {
-    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NIL_P(channel) ? 0 : NUM2INT(channel),
-		    NIL_P(rows) ? 0 : NUM2INT(rows));
+    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(cn), IF_INT(rows, 0));
   }
   catch (cv::Exception& e) {
     if (mat != NULL)

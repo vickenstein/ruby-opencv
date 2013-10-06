@@ -888,7 +888,7 @@ class TestCvMat < OpenCVTestCase
   def test_reshape
     m = create_cvmat(2, 3, CV_8U, 3)
 
-    vec = m.reshape(:rows => 1)
+    vec = m.reshape(0, 1)
     assert_equal(6, vec.width)
     assert_equal(1, vec.height)
     size = m.width * m.height
@@ -896,7 +896,7 @@ class TestCvMat < OpenCVTestCase
       assert_cvscalar_equal(m[i], vec[i])
     }
 
-    ch1 = m.reshape(:channel => 1)
+    ch1 = m.reshape(1)
     assert_equal(9, ch1.width)
     assert_equal(2, ch1.height)
 
@@ -909,10 +909,11 @@ class TestCvMat < OpenCVTestCase
       }
     }
     
-    [DUMMY_OBJ, { :rows => DUMMY_OBJ }, { :channel => DUMMY_OBJ }].each { |arg|
-      assert_raise(TypeError) {
-        m.reshape(arg)
-      }
+    assert_raise(TypeError) {
+      m.reshape(DUMMY_OBJ)
+    }
+    assert_raise(TypeError) {
+      m.reshape(0, DUMMY_OBJ)
     }
   end
 

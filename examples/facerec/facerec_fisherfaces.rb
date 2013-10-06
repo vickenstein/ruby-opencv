@@ -82,7 +82,7 @@ w = model.get_mat('eigenvectors');
 mean = model.get_mat('mean')
 
 if output_folder
-  norm_0_255(mean.reshape(channel: 1, rows: images[0].rows)).save("#{output_folder}/mean.png")
+  norm_0_255(mean.reshape(1, images[0].rows)).save("#{output_folder}/mean.png")
 else
   w1 = GUI::Window.new('Predicted')
   w2 = GUI::Window.new('Actual')
@@ -90,14 +90,14 @@ else
 
   w1.show images[predicted_label]
   w2.show images[test_label]
-  w3.show norm_0_255(mean.reshape(channel: 1, rows: images[0].rows))
+  w3.show norm_0_255(mean.reshape(1, images[0].rows))
 end
 
 # Display or save the first, at most 16 Fisherfaces
 [w.cols, 16].min.times { |i|
   puts "Eigenvalue ##{i} = #{eigenvalues[i][0]}"
   ev = w.get_cols(i).clone()
-  grayscale = norm_0_255(ev.reshape(channel: 1, rows: height))
+  grayscale = norm_0_255(ev.reshape(1, height))
 
   # Show the image & apply a Bone colormap for better sensing.
   cgrayscale = grayscale.apply_color_map(COLORMAP_BONE)
@@ -112,11 +112,11 @@ end
 [w.cols, 16].min.times { |num_component|
   # Slice the Fisherface from the model
   ev = w.get_cols(num_component)
-  projection = images[0].reshape(channel: 1, rows: 1).subspace_project(ev, mean)
+  projection = images[0].reshape(1, 1).subspace_project(ev, mean)
   reconstruction = projection.subspace_reconstruct(ev, mean)
 
   # Normalize the result:
-  reconstruction = norm_0_255(reconstruction.reshape(channel: 1, rows: images[0].rows))
+  reconstruction = norm_0_255(reconstruction.reshape(1, images[0].rows))
 
   # Display or save:
   if output_folder
