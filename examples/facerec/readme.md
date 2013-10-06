@@ -66,7 +66,6 @@ Eigenvalue #8 = 314658.94374918053
 Eigenvalue #9 = 288764.63018440653
 ```
 
-You will get the predicted class, actual class and eignvalues like Eigenfaces sample.
 The result images will be stored in **output-eigenfaces** .
 
 
@@ -76,6 +75,8 @@ The result images will be stored in **output-eigenfaces** .
 $ mkdir output-fisherfaces
 $ ruby facerec_fisherfaces.rb at.txt output-fisherfaces
 ```
+
+You will get the predicted class, actual class and eignvalues like Eigenfaces sample.
 
 The result images will be stored in **output-fisherfaces** .
 
