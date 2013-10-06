@@ -34,6 +34,8 @@ examples/paint.rb
 examples/snake.rb
 examples/stuff.jpg
 examples/tiffany.jpg
+ext/opencv/algorithm.cpp
+ext/opencv/algorithm.h
 ext/opencv/curve.cpp
 ext/opencv/curve.h
 ext/opencv/cvavgcomp.cpp
@@ -110,7 +112,11 @@ ext/opencv/cvutils.cpp
 ext/opencv/cvutils.h
 ext/opencv/cvvideowriter.cpp
 ext/opencv/cvvideowriter.h
+ext/opencv/eigenfaces.cpp
+ext/opencv/eigenfaces.h
 ext/opencv/extconf.rb
+ext/opencv/facerecognizer.cpp
+ext/opencv/facerecognizer.h
 ext/opencv/gui.cpp
 ext/opencv/gui.h
 ext/opencv/iplconvkernel.cpp
@@ -135,6 +141,7 @@ lib/opencv.rb
 lib/opencv/psyched_yaml.rb
 lib/opencv/version.rb
 ruby-opencv.gemspec
+test/eigenfaces_save.xml
 test/helper.rb
 test/runner.rb
 test/samples/airplane.jpg
@@ -217,6 +224,7 @@ test/test_cvsurfpoint.rb
 test/test_cvtermcriteria.rb
 test/test_cvtwopoints.rb
 test/test_cvvideowriter.rb
+test/test_eigenfaces.rb
 test/test_iplconvkernel.rb
 test/test_iplimage.rb
 test/test_mouseevent.rb

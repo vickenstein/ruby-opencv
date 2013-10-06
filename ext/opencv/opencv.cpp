@@ -185,7 +185,37 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_32F", INT2FIX(CV_32F));
   /* 6: 64bit floating-point */
   rb_define_const(rb_module, "CV_64F", INT2FIX(CV_64F));
-  
+
+  /* Other depth */
+  rb_define_const(rb_module, "CV_8UC1", INT2FIX(CV_8UC1));
+  rb_define_const(rb_module, "CV_8UC2", INT2FIX(CV_8UC2));
+  rb_define_const(rb_module, "CV_8UC3", INT2FIX(CV_8UC3));
+  rb_define_const(rb_module, "CV_8UC4", INT2FIX(CV_8UC4));
+  rb_define_const(rb_module, "CV_8SC1", INT2FIX(CV_8SC1));
+  rb_define_const(rb_module, "CV_8SC2", INT2FIX(CV_8SC2));
+  rb_define_const(rb_module, "CV_8SC3", INT2FIX(CV_8SC3));
+  rb_define_const(rb_module, "CV_8SC4", INT2FIX(CV_8SC4));
+  rb_define_const(rb_module, "CV_16UC1", INT2FIX(CV_16UC1));
+  rb_define_const(rb_module, "CV_16UC2", INT2FIX(CV_16UC2));
+  rb_define_const(rb_module, "CV_16UC3", INT2FIX(CV_16UC3));
+  rb_define_const(rb_module, "CV_16UC4", INT2FIX(CV_16UC4));
+  rb_define_const(rb_module, "CV_16SC1", INT2FIX(CV_16SC1));
+  rb_define_const(rb_module, "CV_16SC2", INT2FIX(CV_16SC2));
+  rb_define_const(rb_module, "CV_16SC3", INT2FIX(CV_16SC3));
+  rb_define_const(rb_module, "CV_16SC4", INT2FIX(CV_16SC4));
+  rb_define_const(rb_module, "CV_32SC1", INT2FIX(CV_32SC1));
+  rb_define_const(rb_module, "CV_32SC2", INT2FIX(CV_32SC2));
+  rb_define_const(rb_module, "CV_32SC3", INT2FIX(CV_32SC3));
+  rb_define_const(rb_module, "CV_32SC4", INT2FIX(CV_32SC4));
+  rb_define_const(rb_module, "CV_32FC1", INT2FIX(CV_32FC1));
+  rb_define_const(rb_module, "CV_32FC2", INT2FIX(CV_32FC2));
+  rb_define_const(rb_module, "CV_32FC3", INT2FIX(CV_32FC3));
+  rb_define_const(rb_module, "CV_32FC4", INT2FIX(CV_32FC4));
+  rb_define_const(rb_module, "CV_64FC1", INT2FIX(CV_64FC1));
+  rb_define_const(rb_module, "CV_64FC2", INT2FIX(CV_64FC2));
+  rb_define_const(rb_module, "CV_64FC3", INT2FIX(CV_64FC3));
+  rb_define_const(rb_module, "CV_64FC4", INT2FIX(CV_64FC4));
+
   /* Color types of loaded images */
   rb_define_const(rb_module, "CV_LOAD_IMAGE_UNCHANGED", INT2FIX(CV_LOAD_IMAGE_UNCHANGED));
   rb_define_const(rb_module, "CV_LOAD_IMAGE_GRAYSCALE", INT2FIX(CV_LOAD_IMAGE_GRAYSCALE));
@@ -342,6 +372,19 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_CALIB_CB_FILTER_QUADS", INT2FIX(CV_CALIB_CB_FILTER_QUADS));
   rb_define_const(rb_module, "CV_CALIB_CB_FAST_CHECK", INT2FIX(CV_CALIB_CB_FAST_CHECK));
 
+  /* Color map for cv::applyColorMap */
+  rb_define_const(rb_module, "COLORMAP_AUTUMN", INT2FIX(cv::COLORMAP_AUTUMN));
+  rb_define_const(rb_module, "COLORMAP_BONE", INT2FIX(cv::COLORMAP_BONE));
+  rb_define_const(rb_module, "COLORMAP_JET", INT2FIX(cv::COLORMAP_JET));
+  rb_define_const(rb_module, "COLORMAP_WINTER", INT2FIX(cv::COLORMAP_WINTER));
+  rb_define_const(rb_module, "COLORMAP_RAINBOW", INT2FIX(cv::COLORMAP_RAINBOW));
+  rb_define_const(rb_module, "COLORMAP_OCEAN", INT2FIX(cv::COLORMAP_OCEAN));
+  rb_define_const(rb_module, "COLORMAP_SUMMER", INT2FIX(cv::COLORMAP_SUMMER));
+  rb_define_const(rb_module, "COLORMAP_SPRING", INT2FIX(cv::COLORMAP_SPRING));
+  rb_define_const(rb_module, "COLORMAP_COOL", INT2FIX(cv::COLORMAP_COOL));
+  rb_define_const(rb_module, "COLORMAP_HSV", INT2FIX(cv::COLORMAP_HSV));
+  rb_define_const(rb_module, "COLORMAP_PINK", INT2FIX(cv::COLORMAP_PINK));
+  rb_define_const(rb_module, "COLORMAP_HOT", INT2FIX(cv::COLORMAP_HOT));
 
   VALUE inversion_method = rb_hash_new();
   /* {:lu, :svd, :svd_sym(:svd_symmetric)}: Inversion method */
@@ -711,6 +754,13 @@ extern "C" {
     mOpenCV::cCvConnectedComp::define_ruby_class();
     mOpenCV::cCvAvgComp::define_ruby_class();
     mOpenCV::cCvHaarClassifierCascade::define_ruby_class();
+
+    mOpenCV::cAlgorithm::define_ruby_class();
+    mOpenCV::cFaceRecognizer::define_ruby_class();
+    mOpenCV::cEigenFaces::define_ruby_class();
+    mOpenCV::cFisherFaces::define_ruby_class();
+    mOpenCV::cLBPH::define_ruby_class();
+
     mOpenCV::mGUI::define_ruby_module();
     mOpenCV::mGUI::cWindow::define_ruby_class();
     mOpenCV::mGUI::cTrackbar::define_ruby_class();

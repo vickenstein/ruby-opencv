@@ -214,6 +214,9 @@ VALUE rb_dist_transform(int argc, VALUE *argv, VALUE self);
 VALUE rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius);
 
 VALUE rb_equalize_hist(VALUE self);
+
+VALUE rb_apply_color_map(VALUE self, VALUE colormap);
+
 /* Matching*/
 VALUE rb_match_template(int argc, VALUE *argv, VALUE self);
 VALUE rb_match_shapes(int argc, VALUE *argv, VALUE self);
@@ -235,6 +238,9 @@ VALUE rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_imag
 
 /* Feature detection and description */
 VALUE rb_extract_surf(int argc, VALUE *argv, VALUE self);
+
+VALUE rb_subspace_project(VALUE self, VALUE w, VALUE mean);
+VALUE rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean);
 
 // HighGUI function
 VALUE rb_save_image(int argc, VALUE *argv, VALUE self);

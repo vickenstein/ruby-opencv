@@ -2053,10 +2053,16 @@ class TestCvMat < OpenCVTestCase
       assert_in_delta(x, mminmax[i][0], 0.001)
     }
 
+    minf = mat.normalize(1, 0, CV_NORM_INF, CV_32FC3)
+    expected = [0.0, 0.333, 0.666, 1.0]
+    expected.each_with_index { |x, i|
+      assert_in_delta(x, minf[i][0], 0.001)
+    }
+
     mask = mat.to_8u.zero
     mask[0, 0] = CvScalar.new(255, 0, 0)
     mask[1, 0] = CvScalar.new(255, 0, 0)
-    minf = mat.normalize(1, 0, CV_NORM_INF, mask)
+    minf = mat.normalize(1, 0, CV_NORM_INF, -1, mask)
     expected = [0.0, 0.0, 1.0, 0.0]
     expected.each_with_index { |x, i|
       assert_in_delta(x, minf[i][0], 0.001)
@@ -2942,6 +2948,55 @@ class TestCvMat < OpenCVTestCase
     assert_raise(TypeError) {
       CvMat.compute_correspond_epilines(mat1, 1, DUMMY_OBJ)
     }
+  end
+
+  def test_apply_color_map
+    mat = CvMat.new(64, 256, :cv8u, 1)
+    mat.cols.times { |c|
+      mat.rows.times { |r|
+        mat[r, c] = c
+      }
+    }
+
+    results = []
+    [COLORMAP_AUTUMN, COLORMAP_BONE, COLORMAP_JET, COLORMAP_WINTER,
+     COLORMAP_RAINBOW, COLORMAP_OCEAN, COLORMAP_SUMMER, COLORMAP_SPRING,
+     COLORMAP_COOL, COLORMAP_HSV, COLORMAP_PINK, COLORMAP_HOT].each { |colormap|
+      cmap = mat.apply_color_map(colormap)
+      assert_equal(CvMat, cmap.class)
+      assert_equal(mat.rows, cmap.rows)
+      assert_equal(mat.cols, cmap.cols)
+      results << cmap
+    }
+
+    assert_raise(TypeError) {
+      mat.apply_color_map(DUMMY_OBJ)
+    }
+
+    # Uncomment the following line to show the result
+    # snap *results
+  end
+
+  def test_subspace_project
+    w = CvMat.new(10, 20, :cv32f, 1)
+    mean = CvMat.new(w.rows, 1, :cv32f, 1)
+    mat = CvMat.new(w.cols, w.rows, :cv32f, 1)
+    result = mat.subspace_project(w, mean)
+
+    assert_equal(CvMat, result.class)
+    assert_equal(w.cols, result.rows)
+    assert_equal(w.cols, result.cols)
+  end
+
+  def test_subspace_reconstruct
+    w = CvMat.new(10, 20, :cv32f, 1)
+    mean = CvMat.new(w.rows, 1, :cv32f, 1)
+    mat = CvMat.new(w.cols, w.cols, :cv32f, 1)
+    result = mat.subspace_reconstruct(w, mean)
+
+    assert_equal(CvMat, result.class)
+    assert_equal(w.cols, result.rows)
+    assert_equal(w.rows, result.cols)
   end
 end
 
