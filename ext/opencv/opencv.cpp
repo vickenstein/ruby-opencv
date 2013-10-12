@@ -772,6 +772,8 @@ extern "C" {
     */
 #endif
 
+#ifdef HAVE_NONFREE_H
     cv::initModule_nonfree();
+#endif
   }
 }
