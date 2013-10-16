@@ -108,6 +108,30 @@ rb_predict(VALUE self, VALUE src)
 
 /*
  * call-seq:
+ *   predict_with_confidence(src)
+ * 
+ * Predicts a label and associated confidence (e.g. distance) for a given input image.
+ */
+VALUE
+rb_predict_with_confidence(VALUE self, VALUE src)
+{
+  cv::Mat mat = cv::Mat(CVMAT_WITH_CHECK(src));
+  cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
+  int label;
+  double confidence;
+  try {
+    self_ptr->predict(mat, label, confidence);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return rb_ary_new3(2, INT2NUM(label), DBL2NUM(confidence));
+}
+
+
+/*
+ * call-seq:
  *   save(filename)
  *
  * Saves this model to a given filename, either as XML or YAML.
@@ -164,6 +188,7 @@ define_ruby_class()
   rb_klass = rb_define_class_under(opencv, "FaceRecognizer", cAlgorithm::rb_class());
   rb_define_method(rb_klass, "train", RUBY_METHOD_FUNC(rb_train), 2);
   rb_define_method(rb_klass, "predict", RUBY_METHOD_FUNC(rb_predict), 1);
+  rb_define_method(rb_klass, "predict_with_confidence", RUBY_METHOD_FUNC(rb_predict_with_confidence), 1);
   rb_define_method(rb_klass, "save", RUBY_METHOD_FUNC(rb_save), 1);
   rb_define_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load), 1);
 }
