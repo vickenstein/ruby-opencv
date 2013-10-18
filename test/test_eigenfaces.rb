@@ -55,6 +55,19 @@ class TestEigenFaces < OpenCVTestCase
     }
   end
 
+  def test_predict_with_confidence
+    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
+    label = 1
+    @eigenfaces.train([img], [label])
+    lbl, conf = @eigenfaces.predict_with_confidence(img)
+    assert_equal(label, lbl)
+    assert_equal(0.0, conf)
+
+    assert_raise(TypeError) {
+      @eigenfaces.predict_with_confidence(DUMMY_OBJ)
+    }
+  end
+
   def test_save
     img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
     label = 1

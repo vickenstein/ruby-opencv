@@ -52,6 +52,17 @@ class TestFisherFaces < OpenCVTestCase
     }
   end
 
+  def test_predict_with_confidence
+    label = 1
+    lbl, conf = @fisherfaces_trained.predict_with_confidence(@images[0])
+    assert_equal(1, lbl)
+    assert_equal(0.0, conf)
+
+    assert_raise(TypeError) {
+      @fisherfaces_trained.predict_with_confidence(DUMMY_OBJ)
+    }
+  end
+
   def test_save
     filename = "fisherfaces_save-#{DateTime.now.strftime('%Y%m%d%H%M%S')}.xml"
     begin
