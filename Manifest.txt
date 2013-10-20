@@ -29,6 +29,7 @@ examples/inpaint.rb
 examples/lenna-rotated.jpg
 examples/lenna.jpg
 examples/match_kdtree.rb
+examples/match_template.rb
 examples/matching_to_many_images.rb
 examples/matching_to_many_images/query.png
 examples/matching_to_many_images/train/1.png
