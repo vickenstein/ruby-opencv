@@ -14,7 +14,8 @@ class TestFisherFaces < OpenCVTestCase
 
     @fisherfaces_trained = FisherFaces.new
     @images = [CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)] * 2
-    @fisherfaces_trained.train(@images, [1, 2])
+    @labels = [1, 2]
+    @fisherfaces_trained.train(@images, @labels)
   end
 
   def test_initialize
@@ -32,10 +33,10 @@ class TestFisherFaces < OpenCVTestCase
   end
 
   def test_train
-    assert_nil(@fisherfaces.train(@images, [1, 2]))
+    assert_nil(@fisherfaces.train(@images, @labels))
 
     assert_raise(TypeError) {
-      @fisherfaces.train(DUMMY_OBJ, [1])
+      @fisherfaces.train(DUMMY_OBJ, @labels)
     }
 
     assert_raise(TypeError) {
@@ -44,8 +45,9 @@ class TestFisherFaces < OpenCVTestCase
   end
 
   def test_predict
-    label = 1
-    assert_equal(1, @fisherfaces_trained.predict(@images[0]))
+    predicted_label, predicted_confidence = @fisherfaces_trained.predict(@images[0])
+    assert_equal(@labels[0], predicted_label)
+    assert_in_delta(0.0, predicted_confidence, 0.01)
 
     assert_raise(TypeError) {
       @fisherfaces_trained.predict(DUMMY_OBJ)
