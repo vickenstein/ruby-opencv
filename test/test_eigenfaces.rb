@@ -13,8 +13,9 @@ class TestEigenFaces < OpenCVTestCase
     @eigenfaces = EigenFaces.new
 
     @eigenfaces_trained = EigenFaces.new
-    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
-    @eigenfaces_trained.train([img], [1])
+    @images = [CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)] * 2
+    @labels = [1, 2]
+    @eigenfaces_trained.train(@images, @labels)
   end
 
   def test_initialize
@@ -32,53 +33,46 @@ class TestEigenFaces < OpenCVTestCase
   end
 
   def test_train
-    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
-    assert_nil(@eigenfaces.train([img], [1]))
+    assert_nil(@eigenfaces.train(@images, @labels))
 
     assert_raise(TypeError) {
-      @eigenfaces.train(DUMMY_OBJ, [1])
+      @eigenfaces.train(DUMMY_OBJ, @labels)
     }
 
     assert_raise(TypeError) {
-      @eigenfaces.train([img], DUMMY_OBJ)
+      @eigenfaces.train(@images, DUMMY_OBJ)
     }
   end
 
   def test_predict
-    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
-    label = 1
-    @eigenfaces.train([img], [label])
-    predicted_label, predicted_confidence = @eigenfaces.predict(img)
-    assert_equal(1, predicted_label)
+    predicted_label, predicted_confidence = @eigenfaces_trained.predict(@images[0])
+    assert_equal(@labels[0], predicted_label)
     assert_in_delta(0.0, predicted_confidence, 0.01)
 
     assert_raise(TypeError) {
-      @eigenfaces.predict(DUMMY_OBJ)
+      @eigenfaces_trained.predict(DUMMY_OBJ)
     }
   end
 
   def test_save
-    img = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
-    label = 1
-    @eigenfaces.train([img], [label])
     filename = "eigenfaces_save-#{DateTime.now.strftime('%Y%m%d%H%M%S')}.xml"
     begin
-      @eigenfaces.save(filename)
+      @eigenfaces_trained.save(filename)
       assert(File.exist? filename)
     ensure
       File.delete filename
     end
     assert_raise(TypeError) {
-      @eigenfaces.save(DUMMY_OBJ)
+      @eigenfaces_trained.save(DUMMY_OBJ)
     }
   end
 
   def test_load
     assert_nothing_raised {
-      @eigenfaces.load('eigenfaces_save.xml')
+      @eigenfaces_trained.load('eigenfaces_save.xml')
     }
     assert_raise(TypeError) {
-      @eigenfaces.load(DUMMY_OBJ)
+      @eigenfaces_trained.load(DUMMY_OBJ)
     }
   end
 
