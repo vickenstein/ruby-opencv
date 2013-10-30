@@ -2,7 +2,7 @@ require 'opencv'
 require 'benchmark'
 include OpenCV
 
-data = File.join(File.dirname(__FILE__), 'matching_to_many_images')
+data = File.dirname(__FILE__)
 
 query = IplImage.load File.join(data, 'query.png'), CV_LOAD_IMAGE_GRAYSCALE
 image_files = ['1.png', '2.png', '3.png'].map{|f| File.join(data, 'train', f)}
