@@ -44,22 +44,12 @@ class TestFisherFaces < OpenCVTestCase
   end
 
   def test_predict
-    label = 1
-    assert_equal(1, @fisherfaces_trained.predict(@images[0]))
+    predicted_label, predicted_confidence = @fisherfaces_trained.predict(@images[0])
+    assert_equal(1, predicted_label)
+    assert_in_delta(0.0, predicted_confidence, 0.01)
 
     assert_raise(TypeError) {
       @fisherfaces_trained.predict(DUMMY_OBJ)
-    }
-  end
-
-  def test_predict_with_confidence
-    label = 1
-    lbl, conf = @fisherfaces_trained.predict_with_confidence(@images[0])
-    assert_equal(1, lbl)
-    assert_equal(0.0, conf)
-
-    assert_raise(TypeError) {
-      @fisherfaces_trained.predict_with_confidence(DUMMY_OBJ)
     }
   end
 

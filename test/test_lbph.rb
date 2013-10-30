@@ -52,7 +52,9 @@ class TestLBPH < OpenCVTestCase
   end
 
   def test_predict
-    assert_equal(1, @lbph_trained.predict(@images[0]))
+    predicted_label, predicted_confidence = @lbph_trained.predict(@images[0])
+    assert_equal(1, predicted_label)
+    assert_in_delta(0.0, predicted_confidence, 0.01)
 
     assert_raise(TypeError) {
       @lbph_trained.predict(DUMMY_OBJ)
