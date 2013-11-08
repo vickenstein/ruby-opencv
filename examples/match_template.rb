@@ -15,7 +15,7 @@ match_image_filename = (ARGV.size == 2) ? ARGV[1] : File.expand_path(File.dirnam
 
 template = CvMat.load(template_filename)
 match_image = CvMat.load(match_image_filename)
-result = match_image.match_template(template)
+result = match_image.match_template(template, :sqdiff_normed)
 
 pt1 = result.min_max_loc[2] # minimum location
 pt2 = CvPoint.new(pt1.x + template.width, pt1.y + template.height)
