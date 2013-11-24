@@ -254,7 +254,7 @@ void define_ruby_class()
   rb_define_method(rb_klass, "range", RUBY_METHOD_FUNC(rb_range), 2);
   rb_define_method(rb_klass, "range!", RUBY_METHOD_FUNC(rb_range_bang), 2);
 
-  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), 1);
+  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), -1);
   rb_define_method(rb_klass, "repeat", RUBY_METHOD_FUNC(rb_repeat), 1);
   rb_define_method(rb_klass, "flip", RUBY_METHOD_FUNC(rb_flip), -1);
   rb_define_method(rb_klass, "flip!", RUBY_METHOD_FUNC(rb_flip_bang), -1);
@@ -392,6 +392,7 @@ void define_ruby_class()
   rb_define_method(rb_klass, "inpaint", RUBY_METHOD_FUNC(rb_inpaint), 3);
 
   rb_define_method(rb_klass, "equalize_hist", RUBY_METHOD_FUNC(rb_equalize_hist), 0);
+  rb_define_method(rb_klass, "apply_color_map", RUBY_METHOD_FUNC(rb_apply_color_map), 1);
   rb_define_method(rb_klass, "match_template", RUBY_METHOD_FUNC(rb_match_template), -1);
   rb_define_method(rb_klass, "match_shapes", RUBY_METHOD_FUNC(rb_match_shapes), -1);
   rb_define_method(rb_klass, "match_descriptors", RUBY_METHOD_FUNC(rb_match_descriptors), -1);
@@ -410,6 +411,9 @@ void define_ruby_class()
 			     RUBY_METHOD_FUNC(rb_compute_correspond_epilines), 3);
 
   rb_define_method(rb_klass, "extract_surf", RUBY_METHOD_FUNC(rb_extract_surf), -1);
+
+  rb_define_method(rb_klass, "subspace_project", RUBY_METHOD_FUNC(rb_subspace_project), 2);
+  rb_define_method(rb_klass, "subspace_reconstruct", RUBY_METHOD_FUNC(rb_subspace_reconstruct), 2);
 
   rb_define_method(rb_klass, "save_image", RUBY_METHOD_FUNC(rb_save_image), -1);
   rb_define_alias(rb_klass, "save", "save_image");
@@ -1598,25 +1602,22 @@ rb_range_bang(VALUE self, VALUE start, VALUE end)
 
 /*
  * call-seq:
- *   reshape(<i>[:rows => num][, :channel => cn]</i>) -> cvmat(refer self)
+ *   reshape(cn, rows=0) -> cvmat(refer self)
  *
  * Change shape of matrix/image without copying data.
  *
- * e.g.
- *  mat = CvMat.new(3, 3, CV_8U, 3)  #=> 3x3 3-channel matrix
- *  vec = mat.reshape(:rows => 1)    #=> 1x9 3-channel matrix
- *  ch1 = mat.reshape(:channel => 1) #=> 9x9 1-channel matrix
+ * Parameter:
+ *   * cn - New number of channels. If the parameter is 0, the number of channels remains the same.
+ *   * rows - New number of rows. If the parameter is 0, the number of rows remains the same.
  */
 VALUE
-rb_reshape(VALUE self, VALUE hash)
+rb_reshape(int argc, VALUE *argv, VALUE self)
 {
-  Check_Type(hash, T_HASH);
-  VALUE channel = LOOKUP_HASH(hash, "channel");
-  VALUE rows = LOOKUP_HASH(hash, "rows");
+  VALUE cn, rows;
   CvMat *mat = NULL;
+  rb_scan_args(argc, argv, "11", &cn, &rows);
   try {
-    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NIL_P(channel) ? 0 : NUM2INT(channel),
-		    NIL_P(rows) ? 0 : NUM2INT(rows));
+    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(cn), IF_INT(rows, 0));
   }
   catch (cv::Exception& e) {
     if (mat != NULL)
@@ -2378,38 +2379,50 @@ rb_abs_diff(VALUE self, VALUE val)
 
 /*
  * call-seq:
- *   normalize(...) -> cvmat
+ *   normalize(alpha=1, beta=0, norm_type=NORM_L2, dtype=-1, mask=nil) -> cvmat
  *
- * Normalizes the norm or value range of an array
+ * Normalizes the norm or value range of an array.
+ *
+ * Parameters:
+ *   * alpha - norm value to normalize to or the lower range boundary in case of the range normalization.
+ *   * beta - upper range boundary in case of the range normalization; it is not used for the norm normalization.
+ *   * norm_type - normalization type.
+ *   * dtype - when negative, the output array has the same type as src; otherwise, it has the same number of channels as src and the depth
+ *   * mask - optional operation mask.
  */
 VALUE
 rb_normalize(int argc, VALUE *argv, VALUE self)
 {
-  VALUE alphaVal, betaVal, normTypeVal, maskVal;
-  rb_scan_args(argc, argv, "04", &alphaVal, &betaVal, &normTypeVal, &maskVal);
-  
-  const double alpha = alphaVal != Qnil ? NUM2DBL(alphaVal) : 1.0;
-  const double beta = betaVal != Qnil ? NUM2DBL(betaVal) : 0.0;
-  const int normType = normTypeVal != Qnil ? NUM2INT(normTypeVal) : cv::NORM_L2;
-  
-  VALUE dest = new_mat_kind_object(cvGetSize(CVARR(self)), self);
+  VALUE alpha_val, beta_val, norm_type_val, dtype_val, mask_val;
+  rb_scan_args(argc, argv, "05", &alpha_val, &beta_val, &norm_type_val, &dtype_val, &mask_val);
+
+  double alpha = NIL_P(alpha_val) ? 1.0 : NUM2DBL(alpha_val);
+  double beta = NIL_P(beta_val) ? 0.0 : NUM2DBL(beta_val);
+  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
+  int dtype = NIL_P(dtype_val) ? -1 : NUM2INT(dtype_val);
+  VALUE dst;
+
   try {
-    const cv::Mat selfMat(CVMAT(self));
-    cv::Mat destMat(CVMAT(dest));
-    
-    if (NIL_P(maskVal)) {
-      cv::normalize(selfMat, destMat, alpha, beta, normType);
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat dst_mat;
+
+    if (NIL_P(mask_val)) {
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype);
     }
     else {
-      cv::Mat maskMat(MASK(maskVal));
-      cv::normalize(selfMat, destMat, alpha, beta, normType, -1, maskMat);
+      cv::Mat mask(MASK(mask_val));
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype, mask);
     }
-    
-  } catch (cv::Exception& e) {
+    dst = new_mat_kind_object(cvGetSize(CVARR(self)), self, dst_mat.depth(), dst_mat.channels());
+
+    CvMat tmp = dst_mat;
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
     raise_cverror(e);
   }
 
-  return dest;
+  return dst;
 }
 
 /*
@@ -5200,6 +5213,35 @@ rb_equalize_hist(VALUE self)
 
 /*
  * call-seq:
+ *   apply_color_map(colormap) -> cvmat
+ *
+ * Applies a GNU Octave/MATLAB equivalent colormap on a given image.
+ *
+ * Parameters:
+ *   colormap - The colormap to apply.
+ */
+VALUE
+rb_apply_color_map(VALUE self, VALUE colormap)
+{
+  VALUE dst;
+  try {
+    cv::Mat dst_mat;
+    cv::Mat self_mat(CVMAT(self));
+
+    cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
+    CvMat tmp = dst_mat;
+    dst = new_object(tmp.rows, tmp.cols, tmp.type);
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dst;
+}
+
+/*
+ * call-seq:
  *   match_template(<i>template[,method = :sqdiff]</i>) -> cvmat(result)
  *
  * Compares template against overlapped image regions.
@@ -5798,6 +5840,55 @@ rb_extract_surf(int argc, VALUE *argv, VALUE self)
   }
   
   return rb_assoc_new(_keypoints, _descriptors);
+}
+
+
+/*
+ * call-seq:
+ *   subspace_project(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_project(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE projection;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat pmat = cv::subspaceProject(w_mat, mean_mat, self_mat);
+    projection = new_object(pmat.rows, pmat.cols, pmat.type());
+    CvMat tmp = pmat;
+    cvCopy(&tmp, CVMAT(projection));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return projection;
+}
+
+/*
+ * call-seq:
+ *   subspace_reconstruct(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE result;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat rmat = cv::subspaceReconstruct(w_mat, mean_mat, self_mat);
+    result = new_object(rmat.rows, rmat.cols, rmat.type());
+    CvMat tmp = rmat;
+    cvCopy(&tmp, CVMAT(result));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return result;
 }
 
 VALUE

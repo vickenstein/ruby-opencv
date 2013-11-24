@@ -80,28 +80,24 @@ class TestIplImage < OpenCVTestCase
     img4 = IplImage.decode(data, CV_LOAD_IMAGE_COLOR)
     img5 = IplImage.decode(data_ary, CV_LOAD_IMAGE_COLOR)
     img6 = IplImage.decode(data_mat, CV_LOAD_IMAGE_COLOR)
-    expected_hash = hash_img(expected)
 
     [img1, img2, img3, img4, img5, img6].each { |img|
       assert_equal(IplImage, img.class)
       assert_equal(expected.rows, img.rows)
       assert_equal(expected.cols, img.cols)
       assert_equal(expected.channel, img.channel)
-      assert_equal(expected_hash, hash_img(img))
     }
 
     expected_c1 = IplImage.load(FILENAME_CAT, CV_LOAD_IMAGE_GRAYSCALE)
     img1c1 = IplImage.decode(data, CV_LOAD_IMAGE_GRAYSCALE)
     img2c1 = IplImage.decode(data_ary, CV_LOAD_IMAGE_GRAYSCALE)
     img3c1 = IplImage.decode(data_mat, CV_LOAD_IMAGE_GRAYSCALE)
-    expected_hash_c1 = hash_img(expected_c1)
 
     [img1c1, img2c1, img3c1].each { |img|
       assert_equal(IplImage, img.class)
       assert_equal(expected_c1.rows, img.rows)
       assert_equal(expected_c1.cols, img.cols)
       assert_equal(expected_c1.channel, img.channel)
-      assert_equal(expected_hash_c1, hash_img(img))
     }
 
     assert_raise(TypeError) {

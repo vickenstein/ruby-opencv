@@ -130,6 +130,12 @@ extern "C" {
 
 #include "cvfeaturetree.h"
 
+#include "algorithm.h"
+#include "facerecognizer.h"
+#include "eigenfaces.h"
+#include "fisherfaces.h"
+#include "lbph.h"
+
 // GUI
 #include "gui.h"
 #include "window.h"

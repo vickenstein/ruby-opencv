@@ -10,8 +10,8 @@ puts 'Usage:'
 puts "ruby #{__FILE__} <template_filename> <match_filename>"
 puts
 
-template_filename = (ARGV.size == 2) ? ARGV[0] : File.expand_path(File.dirname(__FILE__) + '/../test/samples/lena-eyes.jpg')
-match_image_filename = (ARGV.size == 2) ? ARGV[1] : File.expand_path(File.dirname(__FILE__) + '/../test/samples/lena-inpaint.jpg')
+template_filename = (ARGV.size == 2) ? ARGV[0] : File.expand_path(File.dirname(__FILE__) + '/images/lena-eyes.jpg')
+match_image_filename = (ARGV.size == 2) ? ARGV[1] : File.expand_path(File.dirname(__FILE__) + '/images/lena-256x256.jpg')
 
 template = CvMat.load(template_filename)
 match_image = CvMat.load(match_image_filename)

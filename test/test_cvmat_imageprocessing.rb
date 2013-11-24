@@ -1009,10 +1009,18 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     test_proc = lambda { |type, type_sym, expected_mat, expected_threshold|
       mat1 = mat0.threshold(expected_threshold, 7, type)
       mat2 = mat0.threshold(expected_threshold, 7, type_sym)
+      [mat1, mat2].each { |m|
+        expected_mat.each_with_index { |x, i|
+          assert_equal(x, m[i][0])
+        }
+      }
+    }
+
+    test_proc_with_otsu = lambda { |type, type_sym, expected_mat, expected_threshold|
       mat3, th3 = mat0.threshold(5, 7, type | CV_THRESH_OTSU)
       mat4, th4 = mat0.threshold(3, 7, type_sym, true)
       mat5, th5 = mat0.threshold(5, 7, type | CV_THRESH_OTSU, true)
-      [mat1, mat2, mat3, mat4, mat5].each { |m|
+      [mat3, mat4, mat5].each { |m|
         expected_mat.each_with_index { |x, i|
           assert_equal(x, m[i][0])
         }
@@ -1021,11 +1029,17 @@ class TestCvMat_imageprocessing < OpenCVTestCase
         assert_in_delta(expected_threshold, th, 0.001)
       }
     }
+
     # Binary
     expected = [0, 0, 0,
                 0, 0, 7,
                 7, 7, 7]
     test_proc.call(CV_THRESH_BINARY, :binary, expected, 4)
+
+    expected = [0, 0, 0,
+                0, 7, 7,
+                7, 7, 7]
+    test_proc_with_otsu.call(CV_THRESH_BINARY, :binary, expected, 3)
 
     # Binary inverse
     expected = [7, 7, 7,
@@ -1033,11 +1047,21 @@ class TestCvMat_imageprocessing < OpenCVTestCase
                 0, 0, 0]
     test_proc.call(CV_THRESH_BINARY_INV, :binary_inv, expected, 4)
 
+    expected = [7, 7, 7,
+                7, 0, 0,
+                0, 0, 0]
+    test_proc_with_otsu.call(CV_THRESH_BINARY_INV, :binary_inv, expected, 3)
+
     # Trunc
     expected = [0, 1, 2,
                 3, 4, 4,
                 4, 4, 4]
     test_proc.call(CV_THRESH_TRUNC, :trunc, expected, 4)
+
+    expected = [0, 1, 2,
+                3, 3, 3,
+                3, 3, 3]
+    test_proc_with_otsu.call(CV_THRESH_TRUNC, :trunc, expected, 3)
 
     # To zero
     expected = [0, 0, 0,
@@ -1045,11 +1069,21 @@ class TestCvMat_imageprocessing < OpenCVTestCase
                 6, 7, 8]
     test_proc.call(CV_THRESH_TOZERO, :tozero, expected, 4)
 
+    expected = [0, 0, 0,
+                0, 4, 5,
+                6, 7, 8]
+    test_proc_with_otsu.call(CV_THRESH_TOZERO, :tozero, expected, 3)
+
     # To zero inverse
     expected = [0, 1, 2,
                 3, 4, 0,
                 0, 0, 0]
     test_proc.call(CV_THRESH_TOZERO_INV, :tozero_inv, expected, 4)
+
+    expected = [0, 1, 2,
+                3, 0, 0,
+                0, 0, 0]
+    test_proc_with_otsu.call(CV_THRESH_TOZERO_INV, :tozero_inv, expected, 3)
 
     assert_raise(TypeError) {
       mat0.threshold(DUMMY_OBJ, 2, :binary)
@@ -1603,7 +1637,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
   def test_equalize_hist
     mat = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
     result = mat.equalize_hist
-    assert_equal('de235065c746193d7f3de9359f63a7af', hash_img(result))
+    assert_equal(CvMat, result.class)
+    assert_equal(mat.rows, result.rows)
+    assert_equal(mat.cols, result.cols)
 
     assert_raise(CvStsAssert) {
       CvMat.new(10, 10, :cv32f, 3).equalize_hist

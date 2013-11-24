@@ -7,7 +7,7 @@ include OpenCV
 original_window = GUI::Window.new "original"
 hough_window = GUI::Window.new "hough circles"
 
-image = IplImage::load "stuff.jpg"
+image = IplImage::load "images/stuff.jpg"
 gray = image.BGR2GRAY
 
 result = image.clone

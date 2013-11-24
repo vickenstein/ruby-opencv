@@ -6,8 +6,8 @@
 require 'opencv'
 include OpenCV
 
-img1 = IplImage.load('lenna.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-img2 = IplImage.load('tiffany.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
+img1 = IplImage.load('images/lenna.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
+img2 = IplImage.load('images/tiffany.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
 
 window = GUI::Window.new('Alpha blend')
 max = 100.0

@@ -100,8 +100,8 @@ puts 'Usage:'
 puts "ruby #{__FILE__} <object_filename> <scene_filename>, default is box.png and box_in_scene.png"
 puts
 
-object_filename = (ARGV.size == 2) ? ARGV[0] : 'box.png'
-scene_filename = (ARGV.size == 2) ? ARGV[1] : 'box_in_scene.png'
+object_filename = (ARGV.size == 2) ? ARGV[0] : 'images/box.png'
+scene_filename = (ARGV.size == 2) ? ARGV[1] : 'images/box_in_scene.png'
 
 object, image = nil, nil
 begin
