@@ -18,7 +18,7 @@ class TestCvMat_matching < OpenCVTestCase
   end
 
   def read_test_image(*path)
-    IplImage.load File.join(data_dir, *path), CV_LOAD_IMAGE_GRAYSCALE
+    CvMat.load File.join(data_dir, *path), CV_LOAD_IMAGE_GRAYSCALE
   end
 
   def test_match_descriptors
