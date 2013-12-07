@@ -352,6 +352,7 @@ void define_ruby_class()
   rb_define_method(rb_klass, "resize", RUBY_METHOD_FUNC(rb_resize), -1);
   rb_define_method(rb_klass, "warp_affine", RUBY_METHOD_FUNC(rb_warp_affine), -1);
   rb_define_singleton_method(rb_klass, "rotation_matrix2D", RUBY_METHOD_FUNC(rb_rotation_matrix2D), 3);
+  rb_define_singleton_method(rb_klass, "get_perspective_transform", RUBY_METHOD_FUNC(rb_get_perspective_transform), 2);
   rb_define_method(rb_klass, "warp_perspective", RUBY_METHOD_FUNC(rb_warp_perspective), -1);
   rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homograpy), -1);
   rb_define_method(rb_klass, "remap", RUBY_METHOD_FUNC(rb_remap), -1);
@@ -4046,6 +4047,40 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
   VALUE map_matrix = new_object(cvSize(3, 2), CV_MAKETYPE(CV_32F, 1));
   try {
     cv2DRotationMatrix(VALUE_TO_CVPOINT2D32F(center), NUM2DBL(angle), NUM2DBL(scale), CVMAT(map_matrix));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return map_matrix;
+}
+
+/*
+ * call-seq:
+ *   CvMat.get_perspective_transform(<i>from_points,to_points</i>) -> cvmat
+ *
+ * Calculates a perspective transform from four pairs of the corresponding points.
+ * Returns a matrix suitable for use with warp_perspective
+ */
+VALUE
+rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
+{
+  Check_Type(source, T_ARRAY);
+  Check_Type(dest, T_ARRAY);
+
+  int count = RARRAY_LEN(source);
+
+  CvPoint2D32f* source_buff = ALLOCA_N(CvPoint2D32f, count);
+  CvPoint2D32f* dest_buff = ALLOCA_N(CvPoint2D32f, count);
+
+  for (int i = 0; i < count; i++) {
+    source_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(source)[i]));
+    dest_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(dest)[i]));
+  }
+
+  VALUE map_matrix = new_object(cvSize(3, 3), CV_MAKETYPE(CV_32F, 1));
+
+  try {
+    cvGetPerspectiveTransform(source_buff, dest_buff, CVMAT(map_matrix));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
