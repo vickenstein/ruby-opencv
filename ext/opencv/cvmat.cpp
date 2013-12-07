@@ -5386,7 +5386,6 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
 {
   VALUE images, detector_type, descriptor_type, matcher_type;
   rb_scan_args(argc, argv, "13", &images, &detector_type, &descriptor_type, &matcher_type);
-
   if (RARRAY_LEN(images) == 0) {
     return rb_hash_new();
   }
@@ -5400,54 +5399,58 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
     matcher_type = rb_str_new2("FlannBased");
   }
 
-  cv::Mat queryImage = CVMAT(self);
-  std::vector<cv::Mat> trainImages;
-  for(int i=0; i < RARRAY_LEN(images); i++) {
-    trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
-  }
-
-  cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(RSTRING_PTR(detector_type));
-  if (featureDetector.empty()) {
-    rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", RSTRING_PTR(detector_type));
-  }
-  cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(RSTRING_PTR(descriptor_type));
-  if (descriptorExtractor.empty()) {
-    rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", RSTRING_PTR(descriptor_type));
-  }
-  cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-  try {
-    descriptorMatcher = cv::DescriptorMatcher::create(RSTRING_PTR(matcher_type));
-  }
-  catch(cv::Exception& e) {
-    rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", RSTRING_PTR(matcher_type));
-  }
-
-  std::vector<cv::KeyPoint> queryKeypoints;
-  std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
-  featureDetector->detect(queryImage, queryKeypoints);
-  featureDetector->detect(trainImages, trainKeypoints);
-
-  cv::Mat queryDescriptors;
-  std::vector<cv::Mat> trainDescriptors;
-  descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
-  descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
-
-  std::vector<cv::DMatch> matches;
-  descriptorMatcher->add(trainDescriptors);
-  descriptorMatcher->train();
-  descriptorMatcher->match(queryDescriptors, matches);
-
   VALUE _matches = rb_hash_new();
-  for (size_t i=0; i<matches.size(); i++) {
-    VALUE match = INT2FIX(matches[i].imgIdx);
-    VALUE count = rb_hash_lookup(_matches, match);
-    if (NIL_P(count)) {
-      count = INT2FIX(1);
-    } else {
-      count = INT2FIX(FIX2INT(count) + 1);
+  try {
+    cv::Mat queryImage(CVMAT(self));
+    std::vector<cv::Mat> trainImages;
+    for(int i = 0, n = RARRAY_LEN(images); i < n; i++) {
+      trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
     }
-    rb_hash_aset(_matches, match, count);
+
+    cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(StringValueCStr(detector_type));
+    if (featureDetector.empty()) {
+      rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", StringValueCStr(detector_type));
+    }
+    cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(StringValueCStr(descriptor_type));
+    if (descriptorExtractor.empty()) {
+      rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", StringValueCStr(descriptor_type));
+    }
+    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
+    try {
+      descriptorMatcher = cv::DescriptorMatcher::create(StringValueCStr(matcher_type));
+    }
+    catch(cv::Exception& e) {
+      rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", StringValueCStr(matcher_type));
+    }
+
+    std::vector<cv::KeyPoint> queryKeypoints;
+    std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
+    featureDetector->detect(queryImage, queryKeypoints);
+    featureDetector->detect(trainImages, trainKeypoints);
+    cv::Mat queryDescriptors;
+    std::vector<cv::Mat> trainDescriptors;
+    descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
+    descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
+    std::vector<cv::DMatch> matches;
+    descriptorMatcher->add(trainDescriptors);
+    descriptorMatcher->train();
+    descriptorMatcher->match(queryDescriptors, matches);
+
+    for (size_t i = 0, n = matches.size(); i < n; i++) {
+      VALUE match = INT2FIX(matches[i].imgIdx);
+      VALUE count = rb_hash_lookup(_matches, match);
+      if (NIL_P(count)) {
+	count = INT2FIX(1);
+      } else {
+	count = INT2FIX(FIX2INT(count) + 1);
+      }
+      rb_hash_aset(_matches, match, count);
+    }
   }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
   return _matches;
 }
 
