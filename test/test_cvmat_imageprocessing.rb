@@ -450,6 +450,40 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     # snap mat0, mat1, mat2, mat3, mat4
   end
 
+  def test_get_perspective_transform
+    from = [
+        OpenCV::CvPoint2D32f.new(540, 382),
+        OpenCV::CvPoint2D32f.new(802, 400),
+        OpenCV::CvPoint2D32f.new(850, 731),
+        OpenCV::CvPoint2D32f.new(540, 731),
+    ]
+    to = [
+      OpenCV::CvPoint2D32f.new(0, 0),
+      OpenCV::CvPoint2D32f.new(233, 0),
+      OpenCV::CvPoint2D32f.new(233, 310),
+      OpenCV::CvPoint2D32f.new(0, 310),
+    ]
+    transform = OpenCV::CvMat.get_perspective_transform(from, to)
+    assert_equal 3, transform.rows
+    assert_equal 3, transform.columns
+    expected = [
+      0.923332154750824,
+      0.0,
+      0.0,
+      1.4432899320127035e-15,
+      0.0,
+      0.0,
+      -498.599365234375,
+      0.0,
+      0.0,
+    ]
+    3.times do |i|
+      3.times do |j|
+        assert_in_delta(expected.shift, transform[i][j], 0.001)
+      end
+    end
+  end
+
   def test_rotation_matrix2D
     mat1 = CvMat.rotation_matrix2D(CvPoint2D32f.new(10, 20), 60, 2.0)
     expected = [1.0, 1.73205, -34.64102,
