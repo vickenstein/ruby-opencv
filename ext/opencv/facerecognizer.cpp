@@ -96,15 +96,17 @@ rb_predict(VALUE self, VALUE src)
   cv::Mat mat = cv::Mat(CVMAT_WITH_CHECK(src));
   cv::FaceRecognizer *self_ptr = FACERECOGNIZER(self);
   int label;
+  double confidence;
   try {
-    label = self_ptr->predict(mat);
+    self_ptr->predict(mat, label, confidence);
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
 
-  return INT2NUM(label);
+  return rb_ary_new3(2, INT2NUM(label), DBL2NUM(confidence));
 }
+
 
 /*
  * call-seq:

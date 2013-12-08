@@ -73,7 +73,7 @@ model = FisherFaces.new
 model.train(images, labels)
 
 # The following line predicts the label of a given test image:
-predicted_label = model.predict(test_sample)
+predicted_label, predicted_confidence = model.predict(test_sample)
 
 puts "Predicted class: #{predicted_label} / Actual class: #{test_label}"
 
