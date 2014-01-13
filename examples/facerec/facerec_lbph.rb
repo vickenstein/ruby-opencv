@@ -97,7 +97,7 @@ model.set_double('threshold', 0.0);
 
 # Now the threshold of this model is set to 0.0. A prediction
 # now returns -1, as it's impossible to have a distance below it
-predicted_label = model.predict(test_sample)
+predicted_label, predicted_confidence = model.predict(test_sample)
 puts "Predicted class = #{predicted_label}"
 
 # Show some informations about the model, as there's no cool
