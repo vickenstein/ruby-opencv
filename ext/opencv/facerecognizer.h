@@ -27,7 +27,7 @@ VALUE rb_save(VALUE self, VALUE filename);
 VALUE rb_load(VALUE self, VALUE filename);
 
 void guard_facerecognizer(void* data_ptr, cv::Ptr<cv::FaceRecognizer> ptr);
-void release_facerecognizer(void *ptr);
+void release_facerecognizer(void *data_ptr);
 VALUE allocate_facerecognizer(VALUE klass);
 
 __NAMESPACE_END_FACERECOGNIZER
