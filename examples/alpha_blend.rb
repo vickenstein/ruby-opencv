@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*-
+# -*- mode: ruby; coding: utf-8 -*-
 
 # Alpha blending sample with GUI
 
 require 'opencv'
 include OpenCV
 
-img1 = IplImage.load('lenna.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
-img2 = IplImage.load('tiffany.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
+img1 = IplImage.load('images/lenna.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
+img2 = IplImage.load('images/tiffany.jpg', CV_LOAD_IMAGE_ANYCOLOR | CV_LOAD_IMAGE_ANYDEPTH)
 
 window = GUI::Window.new('Alpha blend')
 max = 100.0

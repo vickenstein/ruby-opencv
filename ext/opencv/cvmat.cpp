@@ -184,6 +184,7 @@ rb_load_imageM(int argc, VALUE *argv, VALUE self)
 
 /*
  * Encodes an image into a memory buffer.
+ *
  * @overload encode_image(ext, params = nil)
  *   @param ext [String] File extension that defines the output format ('.jpg', '.png', ...)
  *   @param params [Hash] - Format-specific parameters.
@@ -1297,13 +1298,9 @@ rb_range_bang(VALUE self, VALUE start, VALUE end)
 
 /*
  * Changes shape of matrix/image without copying data.
- * @overload reshape(params = nil)
- *   @param params [Hash] Parameters
- *   @option params [Integer] :channel (0) New number of channels.
- *     <tt>:channel => 0</tt> means that the number of channels remains unchanged.
- *   @option params [Integer] :rows (0) New number of rows.
- *     <tt>:rows => 0</tt> means that the number of rows remains unchanged unless
- *     it needs to be changed according to new_cn value.
+ * @overload reshape(cn, rows=0)
+ *   @param cn [Integer] New number of channels. If the parameter is 0, the number of channels remains the same.
+ *   @param rows [Integer] New number of rows. If the parameter is 0, the number of rows remains the same.
  * @return [CvMat] Changed matrix
  * @opencv_func cvReshape
  * @example
@@ -1312,15 +1309,13 @@ rb_range_bang(VALUE self, VALUE start, VALUE end)
  *   ch1 = mat.reshape(:channel => 1) #=> 9x3 1-channel matrix
  */
 VALUE
-rb_reshape(VALUE self, VALUE hash)
+rb_reshape(int argc, VALUE *argv, VALUE self)
 {
-  Check_Type(hash, T_HASH);
-  VALUE channel = LOOKUP_HASH(hash, "channel");
-  VALUE rows = LOOKUP_HASH(hash, "rows");
+  VALUE cn, rows;
   CvMat *mat = NULL;
+  rb_scan_args(argc, argv, "11", &cn, &rows);
   try {
-    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NIL_P(channel) ? 0 : NUM2INT(channel),
-		    NIL_P(rows) ? 0 : NUM2INT(rows));
+    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(cn), IF_INT(rows, 0));
   }
   catch (cv::Exception& e) {
     if (mat != NULL)
@@ -2100,44 +2095,51 @@ rb_abs_diff(VALUE self, VALUE val)
 /*
  * Normalizes the norm or value range of an array.
  *
- * @overload normalize(alpha = 1.0, beta = 0.0, norm_type = 4, mask = nil)
- * @param alpha [Number] Norm value to normalize to or the lower range boundary
+ * @overload normalize(alpha = 1.0, beta = 0.0, norm_type = NORM_L2, dtype = -1, mask = nil)
+ *   @param alpha [Number] Norm value to normalize to or the lower range boundary
  *     in case of the range normalization.
- * @param beta [Number] Upper range boundary in case of the range normalization.
+ *   @param beta [Number] Upper range boundary in case of the range normalization.
  *     It is not used for the norm normalization.
- * @param norm_type [Integer] Normalization type.
- * @param mask [CvMat] Optional operation mask.
+ *   @param norm_type [Integer] Normalization type.
+ *   @param dtype [Integer] when negative, the output array has the same type as src;
+ *     otherwise, it has the same number of channels as src and the depth
+ *   @param mask [CvMat] Optional operation mask.
  * @return [CvMat] Normalized array.
  * @opencv_func cv::normalize
  */
 VALUE
 rb_normalize(int argc, VALUE *argv, VALUE self)
 {
-  VALUE alphaVal, betaVal, normTypeVal, maskVal;
-  rb_scan_args(argc, argv, "04", &alphaVal, &betaVal, &normTypeVal, &maskVal);
-  
-  const double alpha = alphaVal != Qnil ? NUM2DBL(alphaVal) : 1.0;
-  const double beta = betaVal != Qnil ? NUM2DBL(betaVal) : 0.0;
-  const int normType = normTypeVal != Qnil ? NUM2INT(normTypeVal) : cv::NORM_L2;
-  
-  VALUE dest = new_mat_kind_object(cvGetSize(CVARR(self)), self);
+  VALUE alpha_val, beta_val, norm_type_val, dtype_val, mask_val;
+  rb_scan_args(argc, argv, "05", &alpha_val, &beta_val, &norm_type_val, &dtype_val, &mask_val);
+
+  double alpha = NIL_P(alpha_val) ? 1.0 : NUM2DBL(alpha_val);
+  double beta = NIL_P(beta_val) ? 0.0 : NUM2DBL(beta_val);
+  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
+  int dtype = NIL_P(dtype_val) ? -1 : NUM2INT(dtype_val);
+  VALUE dst;
+
   try {
-    const cv::Mat selfMat(CVMAT(self));
-    cv::Mat destMat(CVMAT(dest));
-    
-    if (NIL_P(maskVal)) {
-      cv::normalize(selfMat, destMat, alpha, beta, normType);
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat dst_mat;
+
+    if (NIL_P(mask_val)) {
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype);
     }
     else {
-      cv::Mat maskMat(MASK(maskVal));
-      cv::normalize(selfMat, destMat, alpha, beta, normType, -1, maskMat);
+      cv::Mat mask(MASK(mask_val));
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype, mask);
     }
-    
-  } catch (cv::Exception& e) {
+    dst = new_mat_kind_object(cvGetSize(CVARR(self)), self, dst_mat.depth(), dst_mat.channels());
+
+    CvMat tmp = dst_mat;
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
     raise_cverror(e);
   }
 
-  return dest;
+  return dst;
 }
 
 /*
@@ -3749,9 +3751,9 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 VALUE
 rb_warp_affine(int argc, VALUE *argv, VALUE self)
 {
-  VALUE map_matrix, flags_val, option, fill_value;
+  VALUE map_matrix, flags_val, fill_value;
   VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fill_value) < 4)
+  if (rb_scan_args(argc, argv, "12", &map_matrix, &flags_val, &fill_value) < 3)
     fill_value = INT2FIX(0);
   CvArr* self_ptr = CVARR(self);
   int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
@@ -3769,17 +3771,17 @@ rb_warp_affine(int argc, VALUE *argv, VALUE self)
 /*
  * Finds a perspective transformation between two planes.
  *
- * @overload find_homograpy(src_points, dst_points ,method = :all, ransac_reproj_threshold = 0, get_mask = nil)
- * @param src_points [CvMat] Coordinates of the points in the original plane.
- * @param dst_points [CvMat] Coordinates of the points in the target plane.
- * @param method [Symbol] Method used to computed a homography matrix. The following methods are possible:
- *   * <tt>:all</tt> - a regular method using all the points
- *   * <tt>:ransac</tt> - RANSAC-based robust method
- *   * <tt>:lmeds</tt> - Least-Median robust method
- * @param ransac_reproj_threshold [Number] Maximum allowed reprojection error to treat a point pair as
- *   an inlier (used in the RANSAC method only).
- * @param get_mask [Boolean] If <tt>true</tt>, the optional output mask set by
- *   a robust method (<tt>:ransac</tt> or <tt>:lmeds</tt>) is returned additionally.
+ * @overload find_homography(src_points, dst_points, method = :all, ransac_reproj_threshold = 3, get_mask = false)
+ *   @param src_points [CvMat] Coordinates of the points in the original plane.
+ *   @param dst_points [CvMat] Coordinates of the points in the target plane.
+ *   @param method [Symbol] Method used to computed a homography matrix. The following methods are possible:
+ *     * <tt>:all</tt> - a regular method using all the points
+ *     * <tt>:ransac</tt> - RANSAC-based robust method
+ *     * <tt>:lmeds</tt> - Least-Median robust method
+ *   @param ransac_reproj_threshold [Number] Maximum allowed reprojection error to treat a point pair as
+ *     an inlier (used in the RANSAC method only).
+ *   @param get_mask [Boolean] If <tt>true</tt>, the optional output mask set by
+ *     a robust method (<tt>:ransac</tt> or <tt>:lmeds</tt>) is returned additionally.
  * @return [CvMat, Array<CvMat>] The perspective transformation <tt>H</tt> between the source and the destination
  *   planes in <tt>CvMat</tt>.
  *   If <tt>method</tt> is <tt>:ransac</tt> or <tt>:lmeds</tt> and <tt>get_mask</tt> is <tt>true</tt>, the output mask
@@ -3788,7 +3790,7 @@ rb_warp_affine(int argc, VALUE *argv, VALUE self)
  * @opencv_func cvFindHomography
  */
 VALUE
-rb_find_homograpy(int argc, VALUE *argv, VALUE self)
+rb_find_homography(int argc, VALUE *argv, VALUE self)
 {
   VALUE src_points, dst_points, method, ransac_reproj_threshold, get_status;
   rb_scan_args(argc, argv, "23", &src_points, &dst_points, &method, &ransac_reproj_threshold, &get_status);
@@ -3848,8 +3850,40 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
 }
 
 /*
- * Applies a perspective transformation to an image.
+ * call-seq:
+ *   CvMat.get_perspective_transform(<i>from_points,to_points</i>) -> cvmat
  *
+ * Calculates a perspective transform from four pairs of the corresponding points.
+ * Returns a matrix suitable for use with warp_perspective
+ */
+VALUE
+rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
+{
+  Check_Type(source, T_ARRAY);
+  Check_Type(dest, T_ARRAY);
+
+  int count = RARRAY_LEN(source);
+
+  CvPoint2D32f* source_buff = ALLOCA_N(CvPoint2D32f, count);
+  CvPoint2D32f* dest_buff = ALLOCA_N(CvPoint2D32f, count);
+
+  for (int i = 0; i < count; i++) {
+    source_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(source)[i]));
+    dest_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(dest)[i]));
+  }
+
+  VALUE map_matrix = new_object(cvSize(3, 3), CV_MAKETYPE(CV_32F, 1));
+
+  try {
+    cvGetPerspectiveTransform(source_buff, dest_buff, CVMAT(map_matrix));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return map_matrix;
+}
+
+/*
  * @overload warp_perspective(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
  * @param map_matrix [CvMat] 3x3 transformation matrix.
  * @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
@@ -4580,7 +4614,7 @@ rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
   try {
     CvSize size = cvGetSize(self_ptr);
     // TODO: Change argument format to set mask
-    mask = new_object(size.width + 2, size.height + 2, CV_MAKETYPE(CV_8U, 1));
+    mask = new_object(size.height + 2, size.width + 2, CV_MAKETYPE(CV_8U, 1));
     CvMat* mask_ptr = CVMAT(mask);
     cvSetZero(mask_ptr);
     cvFloodFill(self_ptr,
@@ -5025,6 +5059,35 @@ rb_equalize_hist(VALUE self)
 
 /*
  * call-seq:
+ *   apply_color_map(colormap) -> cvmat
+ *
+ * Applies a GNU Octave/MATLAB equivalent colormap on a given image.
+ *
+ * Parameters:
+ *   colormap - The colormap to apply.
+ */
+VALUE
+rb_apply_color_map(VALUE self, VALUE colormap)
+{
+  VALUE dst;
+  try {
+    cv::Mat dst_mat;
+    cv::Mat self_mat(CVMAT(self));
+
+    cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
+    CvMat tmp = dst_mat;
+    dst = new_object(tmp.rows, tmp.cols, tmp.type);
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dst;
+}
+
+/*
+ * call-seq:
  *   match_template(<i>template[,method = :sqdiff]</i>) -> cvmat(result)
  *
  * Compares template against overlapped image regions.
@@ -5086,11 +5149,11 @@ rb_match_template(int argc, VALUE *argv, VALUE self)
  * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
  *
  * A - object1, B - object2:
- * * method=CV_CONTOUR_MATCH_I1
+ * * method=CV_CONTOURS_MATCH_I1
  *     I1(A,B)=sumi=1..7abs(1/mAi - 1/mBi)
- * * method=CV_CONTOUR_MATCH_I2
+ * * method=CV_CONTOURS_MATCH_I2
  *     I2(A,B)=sumi=1..7abs(mAi - mBi)
- * * method=CV_CONTOUR_MATCH_I3
+ * * method=CV_CONTOURS_MATCH_I3
  *     I3(A,B)=sumi=1..7abs(mAi - mBi)/abs(mAi)
  */
 VALUE
@@ -5134,7 +5197,6 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
 {
   VALUE images, detector_type, descriptor_type, matcher_type;
   rb_scan_args(argc, argv, "13", &images, &detector_type, &descriptor_type, &matcher_type);
-
   if (RARRAY_LEN(images) == 0) {
     return rb_hash_new();
   }
@@ -5148,54 +5210,58 @@ rb_match_descriptors(int argc, VALUE *argv, VALUE self)
     matcher_type = rb_str_new2("FlannBased");
   }
 
-  cv::Mat queryImage = CVMAT(self);
-  std::vector<cv::Mat> trainImages;
-  for(int i=0; i < RARRAY_LEN(images); i++) {
-    trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
-  }
-
-  cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(RSTRING_PTR(detector_type));
-  if (featureDetector.empty()) {
-    rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", RSTRING_PTR(detector_type));
-  }
-  cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(RSTRING_PTR(descriptor_type));
-  if (descriptorExtractor.empty()) {
-    rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", RSTRING_PTR(descriptor_type));
-  }
-  cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-  try {
-    descriptorMatcher = cv::DescriptorMatcher::create(RSTRING_PTR(matcher_type));
-  }
-  catch(cv::Exception& e) {
-    rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", RSTRING_PTR(matcher_type));
-  }
-
-  std::vector<cv::KeyPoint> queryKeypoints;
-  std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
-  featureDetector->detect(queryImage, queryKeypoints);
-  featureDetector->detect(trainImages, trainKeypoints);
-
-  cv::Mat queryDescriptors;
-  std::vector<cv::Mat> trainDescriptors;
-  descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
-  descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
-
-  std::vector<cv::DMatch> matches;
-  descriptorMatcher->add(trainDescriptors);
-  descriptorMatcher->train();
-  descriptorMatcher->match(queryDescriptors, matches);
-
   VALUE _matches = rb_hash_new();
-  for (size_t i=0; i<matches.size(); i++) {
-    VALUE match = INT2FIX(matches[i].imgIdx);
-    VALUE count = rb_hash_lookup(_matches, match);
-    if (NIL_P(count)) {
-      count = INT2FIX(1);
-    } else {
-      count = INT2FIX(FIX2INT(count) + 1);
+  try {
+    cv::Mat queryImage(CVMAT(self));
+    std::vector<cv::Mat> trainImages;
+    for(int i = 0, n = RARRAY_LEN(images); i < n; i++) {
+      trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
     }
-    rb_hash_aset(_matches, match, count);
+
+    cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(StringValueCStr(detector_type));
+    if (featureDetector.empty()) {
+      rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", StringValueCStr(detector_type));
+    }
+    cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(StringValueCStr(descriptor_type));
+    if (descriptorExtractor.empty()) {
+      rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", StringValueCStr(descriptor_type));
+    }
+    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
+    try {
+      descriptorMatcher = cv::DescriptorMatcher::create(StringValueCStr(matcher_type));
+    }
+    catch(cv::Exception& e) {
+      rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", StringValueCStr(matcher_type));
+    }
+
+    std::vector<cv::KeyPoint> queryKeypoints;
+    std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
+    featureDetector->detect(queryImage, queryKeypoints);
+    featureDetector->detect(trainImages, trainKeypoints);
+    cv::Mat queryDescriptors;
+    std::vector<cv::Mat> trainDescriptors;
+    descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
+    descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
+    std::vector<cv::DMatch> matches;
+    descriptorMatcher->add(trainDescriptors);
+    descriptorMatcher->train();
+    descriptorMatcher->match(queryDescriptors, matches);
+
+    for (size_t i = 0, n = matches.size(); i < n; i++) {
+      VALUE match = INT2FIX(matches[i].imgIdx);
+      VALUE count = rb_hash_lookup(_matches, match);
+      if (NIL_P(count)) {
+	count = INT2FIX(1);
+      } else {
+	count = INT2FIX(FIX2INT(count) + 1);
+      }
+      rb_hash_aset(_matches, match, count);
+    }
   }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
   return _matches;
 }
 
@@ -5625,6 +5691,55 @@ rb_extract_surf(int argc, VALUE *argv, VALUE self)
   return rb_assoc_new(_keypoints, _descriptors);
 }
 
+
+/*
+ * call-seq:
+ *   subspace_project(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_project(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE projection;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat pmat = cv::subspaceProject(w_mat, mean_mat, self_mat);
+    projection = new_object(pmat.rows, pmat.cols, pmat.type());
+    CvMat tmp = pmat;
+    cvCopy(&tmp, CVMAT(projection));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return projection;
+}
+
+/*
+ * call-seq:
+ *   subspace_reconstruct(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE result;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat rmat = cv::subspaceReconstruct(w_mat, mean_mat, self_mat);
+    result = new_object(rmat.rows, rmat.cols, rmat.type());
+    CvMat tmp = rmat;
+    cvCopy(&tmp, CVMAT(result));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return result;
+}
+
 VALUE
 new_object(int rows, int cols, int type)
 {
@@ -5728,7 +5843,7 @@ init_ruby_class()
   rb_hash_aset(find_fundamental_matrix_option, ID2SYM(rb_intern("maximum_distance")), rb_float_new(1.0));
   rb_hash_aset(find_fundamental_matrix_option, ID2SYM(rb_intern("desirable_level")), rb_float_new(0.99));
 
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
   rb_define_singleton_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load_imageM), -1);
   // Ruby/OpenCV original functions
   rb_define_method(rb_klass, "method_missing", RUBY_METHOD_FUNC(rb_method_missing), -1);
@@ -5790,7 +5905,7 @@ init_ruby_class()
   rb_define_method(rb_klass, "range", RUBY_METHOD_FUNC(rb_range), 2);
   rb_define_method(rb_klass, "range!", RUBY_METHOD_FUNC(rb_range_bang), 2);
 
-  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), 1);
+  rb_define_method(rb_klass, "reshape", RUBY_METHOD_FUNC(rb_reshape), -1);
   rb_define_method(rb_klass, "repeat", RUBY_METHOD_FUNC(rb_repeat), 1);
   rb_define_method(rb_klass, "flip", RUBY_METHOD_FUNC(rb_flip), -1);
   rb_define_method(rb_klass, "flip!", RUBY_METHOD_FUNC(rb_flip_bang), -1);
@@ -5888,8 +6003,9 @@ init_ruby_class()
   rb_define_method(rb_klass, "resize", RUBY_METHOD_FUNC(rb_resize), -1);
   rb_define_method(rb_klass, "warp_affine", RUBY_METHOD_FUNC(rb_warp_affine), -1);
   rb_define_singleton_method(rb_klass, "rotation_matrix2D", RUBY_METHOD_FUNC(rb_rotation_matrix2D), 3);
+  rb_define_singleton_method(rb_klass, "get_perspective_transform", RUBY_METHOD_FUNC(rb_get_perspective_transform), 2);
   rb_define_method(rb_klass, "warp_perspective", RUBY_METHOD_FUNC(rb_warp_perspective), -1);
-  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homograpy), -1);
+  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homography), -1);
   rb_define_method(rb_klass, "remap", RUBY_METHOD_FUNC(rb_remap), -1);
   rb_define_method(rb_klass, "log_polar", RUBY_METHOD_FUNC(rb_log_polar), -1);
 
@@ -5928,6 +6044,7 @@ init_ruby_class()
   rb_define_method(rb_klass, "inpaint", RUBY_METHOD_FUNC(rb_inpaint), 3);
 
   rb_define_method(rb_klass, "equalize_hist", RUBY_METHOD_FUNC(rb_equalize_hist), 0);
+  rb_define_method(rb_klass, "apply_color_map", RUBY_METHOD_FUNC(rb_apply_color_map), 1);
   rb_define_method(rb_klass, "match_template", RUBY_METHOD_FUNC(rb_match_template), -1);
   rb_define_method(rb_klass, "match_shapes", RUBY_METHOD_FUNC(rb_match_shapes), -1);
   rb_define_method(rb_klass, "match_descriptors", RUBY_METHOD_FUNC(rb_match_descriptors), -1);
@@ -5947,6 +6064,9 @@ init_ruby_class()
 
   rb_define_method(rb_klass, "extract_surf", RUBY_METHOD_FUNC(rb_extract_surf), -1);
 
+  rb_define_method(rb_klass, "subspace_project", RUBY_METHOD_FUNC(rb_subspace_project), 2);
+  rb_define_method(rb_klass, "subspace_reconstruct", RUBY_METHOD_FUNC(rb_subspace_reconstruct), 2);
+
   rb_define_method(rb_klass, "save_image", RUBY_METHOD_FUNC(rb_save_image), -1);
   rb_define_alias(rb_klass, "save", "save_image");
 
@@ -5958,3 +6078,4 @@ init_ruby_class()
 
 __NAMESPACE_END_OPENCV
 __NAMESPACE_END_CVMAT
+

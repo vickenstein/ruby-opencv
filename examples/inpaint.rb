@@ -20,7 +20,7 @@ owindow = GUI::Window.new('original')
 mwindow = GUI::Window.new('mask')
 iwindow = GUI::Window.new('inpaint')
 
-image = IplImage::load('inpaint.png')
+image = IplImage::load('images/inpaint.png')
 noimage = image.zero
 b, g, r = image.split
 original_mask = r.threshold(0x00, 0xFF, CV_THRESH_BINARY_INV) & b.threshold(0x00, 0xFF, CV_THRESH_BINARY_INV)

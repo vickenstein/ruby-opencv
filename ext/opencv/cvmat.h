@@ -78,7 +78,7 @@ VALUE rb_set_identity_bang(int argc, VALUE *argv, VALUE self);
 VALUE rb_range(VALUE self, VALUE start, VALUE end);
 VALUE rb_range_bang(VALUE self, VALUE start, VALUE end);
 /* Transforms and Permutations */
-VALUE rb_reshape(VALUE self, VALUE hash);
+VALUE rb_reshape(int argc, VALUE *argv, VALUE self);
 VALUE rb_repeat(VALUE self, VALUE object);
 VALUE rb_flip(int argc, VALUE *argv, VALUE self);
 VALUE rb_flip_bang(int argc, VALUE *argv, VALUE self);
@@ -175,8 +175,9 @@ VALUE rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self);
 VALUE rb_resize(int argc, VALUE *argv, VALUE self);
 VALUE rb_warp_affine(int argc, VALUE *argv, VALUE self);
 VALUE rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale);
+VALUE rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest);
 VALUE rb_warp_perspective(int argc, VALUE *argv, VALUE self);
-VALUE rb_find_homograpy(int argc, VALUE *argv, VALUE self);
+VALUE rb_find_homography(int argc, VALUE *argv, VALUE self);
 VALUE rb_remap(int argc, VALUE *argv, VALUE self);
 VALUE rb_log_polar(int argc, VALUE *argv, VALUE self);
 
@@ -214,6 +215,9 @@ VALUE rb_dist_transform(int argc, VALUE *argv, VALUE self);
 VALUE rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius);
 
 VALUE rb_equalize_hist(VALUE self);
+
+VALUE rb_apply_color_map(VALUE self, VALUE colormap);
+
 /* Matching*/
 VALUE rb_match_template(int argc, VALUE *argv, VALUE self);
 VALUE rb_match_shapes(int argc, VALUE *argv, VALUE self);
@@ -235,6 +239,9 @@ VALUE rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_imag
 
 /* Feature detection and description */
 VALUE rb_extract_surf(int argc, VALUE *argv, VALUE self);
+
+VALUE rb_subspace_project(VALUE self, VALUE w, VALUE mean);
+VALUE rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean);
 
 // HighGUI function
 VALUE rb_save_image(int argc, VALUE *argv, VALUE self);

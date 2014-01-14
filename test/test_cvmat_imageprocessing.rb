@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*-
+# -*- mode: ruby; coding: utf-8 -*-
 require 'test/unit'
 require 'opencv'
 require File.expand_path(File.dirname(__FILE__)) + '/helper'
@@ -448,6 +448,40 @@ class TestCvMat_imageprocessing < OpenCVTestCase
 
     # Uncomment the following lines to show the results
     # snap mat0, mat1, mat2, mat3, mat4
+  end
+
+  def test_get_perspective_transform
+    from = [
+        OpenCV::CvPoint2D32f.new(540, 382),
+        OpenCV::CvPoint2D32f.new(802, 400),
+        OpenCV::CvPoint2D32f.new(850, 731),
+        OpenCV::CvPoint2D32f.new(540, 731),
+    ]
+    to = [
+      OpenCV::CvPoint2D32f.new(0, 0),
+      OpenCV::CvPoint2D32f.new(233, 0),
+      OpenCV::CvPoint2D32f.new(233, 310),
+      OpenCV::CvPoint2D32f.new(0, 310),
+    ]
+    transform = OpenCV::CvMat.get_perspective_transform(from, to)
+    assert_equal 3, transform.rows
+    assert_equal 3, transform.columns
+    expected = [
+      0.923332154750824,
+      0.0,
+      0.0,
+      1.4432899320127035e-15,
+      0.0,
+      0.0,
+      -498.599365234375,
+      0.0,
+      0.0,
+    ]
+    3.times do |i|
+      3.times do |j|
+        assert_in_delta(expected.shift, transform[i][j], 0.001)
+      end
+    end
   end
 
   def test_rotation_matrix2D
@@ -1009,10 +1043,18 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     test_proc = lambda { |type, type_sym, expected_mat, expected_threshold|
       mat1 = mat0.threshold(expected_threshold, 7, type)
       mat2 = mat0.threshold(expected_threshold, 7, type_sym)
+      [mat1, mat2].each { |m|
+        expected_mat.each_with_index { |x, i|
+          assert_equal(x, m[i][0])
+        }
+      }
+    }
+
+    test_proc_with_otsu = lambda { |type, type_sym, expected_mat, expected_threshold|
       mat3, th3 = mat0.threshold(5, 7, type | CV_THRESH_OTSU)
       mat4, th4 = mat0.threshold(3, 7, type_sym, true)
       mat5, th5 = mat0.threshold(5, 7, type | CV_THRESH_OTSU, true)
-      [mat1, mat2, mat3, mat4, mat5].each { |m|
+      [mat3, mat4, mat5].each { |m|
         expected_mat.each_with_index { |x, i|
           assert_equal(x, m[i][0])
         }
@@ -1021,11 +1063,17 @@ class TestCvMat_imageprocessing < OpenCVTestCase
         assert_in_delta(expected_threshold, th, 0.001)
       }
     }
+
     # Binary
     expected = [0, 0, 0,
                 0, 0, 7,
                 7, 7, 7]
     test_proc.call(CV_THRESH_BINARY, :binary, expected, 4)
+
+    expected = [0, 0, 0,
+                0, 7, 7,
+                7, 7, 7]
+    test_proc_with_otsu.call(CV_THRESH_BINARY, :binary, expected, 3)
 
     # Binary inverse
     expected = [7, 7, 7,
@@ -1033,11 +1081,21 @@ class TestCvMat_imageprocessing < OpenCVTestCase
                 0, 0, 0]
     test_proc.call(CV_THRESH_BINARY_INV, :binary_inv, expected, 4)
 
+    expected = [7, 7, 7,
+                7, 0, 0,
+                0, 0, 0]
+    test_proc_with_otsu.call(CV_THRESH_BINARY_INV, :binary_inv, expected, 3)
+
     # Trunc
     expected = [0, 1, 2,
                 3, 4, 4,
                 4, 4, 4]
     test_proc.call(CV_THRESH_TRUNC, :trunc, expected, 4)
+
+    expected = [0, 1, 2,
+                3, 3, 3,
+                3, 3, 3]
+    test_proc_with_otsu.call(CV_THRESH_TRUNC, :trunc, expected, 3)
 
     # To zero
     expected = [0, 0, 0,
@@ -1045,11 +1103,21 @@ class TestCvMat_imageprocessing < OpenCVTestCase
                 6, 7, 8]
     test_proc.call(CV_THRESH_TOZERO, :tozero, expected, 4)
 
+    expected = [0, 0, 0,
+                0, 4, 5,
+                6, 7, 8]
+    test_proc_with_otsu.call(CV_THRESH_TOZERO, :tozero, expected, 3)
+
     # To zero inverse
     expected = [0, 1, 2,
                 3, 4, 0,
                 0, 0, 0]
     test_proc.call(CV_THRESH_TOZERO_INV, :tozero_inv, expected, 4)
+
+    expected = [0, 1, 2,
+                3, 0, 0,
+                0, 0, 0]
+    test_proc_with_otsu.call(CV_THRESH_TOZERO_INV, :tozero_inv, expected, 3)
 
     assert_raise(TypeError) {
       mat0.threshold(DUMMY_OBJ, 2, :binary)
@@ -1169,10 +1237,10 @@ class TestCvMat_imageprocessing < OpenCVTestCase
   end
 
   def test_flood_fill
-    mat0 = create_cvmat(128, 128, :cv8u, 1) { |j, i, c|
-      if (i >= 32 and i < 96) and (j >= 32 and j < 96)
+    mat0 = create_cvmat(128, 256, :cv8u, 1) { |j, i, c|
+      if (i >= 32 and i < 224) and (j >= 32 and j < 96)
         CvScalar.new(255)
-      elsif (i >= 16 and i < 112) and (j >= 16 and j < 112)
+      elsif (i >= 16 and i < 240) and (j >= 16 and j < 112)
         CvScalar.new(192)
       else
         CvScalar.new(128)
@@ -1189,50 +1257,40 @@ class TestCvMat_imageprocessing < OpenCVTestCase
     mat5, comp5, mask5 = mat05.flood_fill!(point, 0, CvScalar.new(0), CvScalar.new(64),
                                            {:connectivity => 8, :fixed_range => true, :mask_only => true})
 
-    assert_equal('8c6a235fdf4c9c4f6822a45daac5b1af', hash_img(mat1))
-    assert_equal(5120.0, comp1.area)
+    assert_equal(9216.0, comp1.area)
     assert_equal(16, comp1.rect.x)
     assert_equal(16, comp1.rect.y)
-    assert_equal(96, comp1.rect.width)
+    assert_equal(224, comp1.rect.width)
     assert_equal(96, comp1.rect.height)
     assert_cvscalar_equal(CvScalar.new(0, 0, 0, 0), comp1.value)
-    assert_equal('1fd2537966283987b39c8b2c9d778383', hash_img(mask1))
 
-    assert_equal('7456e5de74bb8b4e783d04bbf1904644', hash_img(mat2))
-    assert_equal(12288.0, comp2.area)
+    assert_equal(20480.0, comp2.area)
     assert_equal(0, comp2.rect.x)
     assert_equal(0, comp2.rect.y)
-    assert_equal(128, comp2.rect.width)
+    assert_equal(256, comp2.rect.width)
     assert_equal(128, comp2.rect.height)
     assert_cvscalar_equal(CvScalar.new(0, 0, 0, 0), comp2.value)
-    assert_equal('847934f5170e2072cdfd63e16a1e06ad', hash_img(mask2))
 
-    assert_equal('df720005423762ca1b68e06571f58b21', hash_img(mat3))
-    assert_equal(9216.0, comp3.area)
+    assert_equal(21504.0, comp3.area)
     assert_equal(16, comp3.rect.x)
     assert_equal(16, comp3.rect.y)
-    assert_equal(96, comp3.rect.width)
+    assert_equal(224, comp3.rect.width)
     assert_equal(96, comp3.rect.height)
     assert_cvscalar_equal(CvScalar.new(0, 0, 0, 0), comp3.value)
 
-    assert_equal('7833f4c85c77056db71e33ae8072a1b5', hash_img(mat4))
-    assert_equal(9216.0, comp4.area)
+    assert_equal(21504.0, comp4.area)
     assert_equal(16, comp4.rect.x)
     assert_equal(16, comp4.rect.y)
-    assert_equal(96, comp4.rect.width)
+    assert_equal(224, comp4.rect.width)
     assert_equal(96, comp4.rect.height)
-    assert_cvscalar_equal(CvScalar.new(220, 0, 0, 0), comp4.value)
-    assert_equal('b34b0269872fe3acde0e0c73e5cdd23b', hash_img(mask4))
+    assert_cvscalar_equal(CvScalar.new(228, 0, 0, 0), comp4.value)
 
-    assert_equal('7833f4c85c77056db71e33ae8072a1b5', hash_img(mat5))
-    assert_equal('7833f4c85c77056db71e33ae8072a1b5', hash_img(mat05))
-    assert_equal(9216.0, comp5.area)
+    assert_equal(21504.0, comp5.area)
     assert_equal(16, comp5.rect.x)
     assert_equal(16, comp5.rect.y)
-    assert_equal(96, comp5.rect.width)
+    assert_equal(224, comp5.rect.width)
     assert_equal(96, comp5.rect.height)
-    assert_cvscalar_equal(CvScalar.new(220, 0, 0, 0), comp5.value)
-    assert_equal('b34b0269872fe3acde0e0c73e5cdd23b', hash_img(mask5))
+    assert_cvscalar_equal(CvScalar.new(228, 0, 0, 0), comp5.value)
 
     assert_raise(TypeError) {
       mat0.flood_fill(DUMMY_OBJ, 0)
@@ -1613,7 +1671,9 @@ class TestCvMat_imageprocessing < OpenCVTestCase
   def test_equalize_hist
     mat = CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)
     result = mat.equalize_hist
-    assert_equal('de235065c746193d7f3de9359f63a7af', hash_img(result))
+    assert_equal(CvMat, result.class)
+    assert_equal(mat.rows, result.rows)
+    assert_equal(mat.cols, result.cols)
 
     assert_raise(CvStsAssert) {
       CvMat.new(10, 10, :cv32f, 3).equalize_hist

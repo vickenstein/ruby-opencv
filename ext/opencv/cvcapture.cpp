@@ -107,21 +107,25 @@ VALUE
 rb_retrieve(VALUE self)
 {
   VALUE image = Qnil;
+  IplImage *frame = NULL;
   try {
-    IplImage *frame = cvRetrieveFrame(CVCAPTURE(self));
-    if (!frame)
+    if (!(frame = cvRetrieveFrame(CVCAPTURE(self)))) {
       return Qnil;
-    image = cIplImage::new_object(cvSize(frame->width, frame->height),
-				  CV_MAKETYPE(CV_8U, frame->nChannels));
-    if (frame->origin == IPL_ORIGIN_TL)
+    }
+    image = cIplImage::new_object(frame->width, frame->height,
+				  CV_MAKETYPE(IPL2CV_DEPTH(frame->depth), frame->nChannels));
+    if (frame->origin == IPL_ORIGIN_TL) {
       cvCopy(frame, CVARR(image));
-    else
+    }
+    else {
       cvFlip(frame, CVARR(image));
+    }
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
   return image;
+
 }
 
 /*
@@ -135,16 +139,19 @@ VALUE
 rb_query(VALUE self)
 {
   VALUE image = Qnil;
+  IplImage *frame = NULL;
   try {
-    IplImage *frame = cvQueryFrame(CVCAPTURE(self));
-    if (!frame)
+    if (!(frame = cvQueryFrame(CVCAPTURE(self)))) {
       return Qnil;
-    image = cIplImage::new_object(cvSize(frame->width, frame->height),
-				  CV_MAKETYPE(CV_8U, frame->nChannels));
-    if (frame->origin == IPL_ORIGIN_TL)
+    }
+    image = cIplImage::new_object(frame->width, frame->height,
+				  CV_MAKETYPE(IPL2CV_DEPTH(frame->depth), frame->nChannels));
+    if (frame->origin == IPL_ORIGIN_TL) {
       cvCopy(frame, CVARR(image));
-    else
+    }
+    else {
       cvFlip(frame, CVARR(image));
+    }
   }
   catch (cv::Exception& e) {
     raise_cverror(e);

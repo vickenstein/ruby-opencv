@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 require 'test/unit'
 require 'opencv'
 require File.expand_path(File.dirname(__FILE__)) + '/helper'
@@ -9,10 +9,15 @@ include OpenCV
 class TestOpenCV < OpenCVTestCase
   def test_constants
     # OpenCV version
-    assert_equal('2.4.3', CV_VERSION)
+    assert_equal('2.4.8', CV_VERSION)
     assert_equal(2, CV_MAJOR_VERSION)
     assert_equal(4, CV_MINOR_VERSION)
-    assert_equal(3, CV_SUBMINOR_VERSION)
+    assert_equal(8, CV_SUBMINOR_VERSION)
+
+    assert_equal(2, CV_VERSION_EPOCH)
+    assert_equal(4, CV_VERSION_MAJOR)
+    assert_equal(8, CV_VERSION_MINOR)
+    assert_equal(0, CV_VERSION_REVISION)
 
     # Depths
     assert_equal(0, CV_8U)
@@ -22,6 +27,35 @@ class TestOpenCV < OpenCVTestCase
     assert_equal(4, CV_32S)
     assert_equal(5, CV_32F)
     assert_equal(6, CV_64F)
+
+    assert_equal(0, CV_8UC1)
+    assert_equal(8, CV_8UC2)
+    assert_equal(16, CV_8UC3)
+    assert_equal(24, CV_8UC4)
+    assert_equal(1, CV_8SC1)
+    assert_equal(9, CV_8SC2)
+    assert_equal(17, CV_8SC3)
+    assert_equal(25, CV_8SC4)
+    assert_equal(2, CV_16UC1)
+    assert_equal(10, CV_16UC2)
+    assert_equal(18, CV_16UC3)
+    assert_equal(26, CV_16UC4)
+    assert_equal(3, CV_16SC1)
+    assert_equal(11, CV_16SC2)
+    assert_equal(19, CV_16SC3)
+    assert_equal(27, CV_16SC4)
+    assert_equal(4, CV_32SC1)
+    assert_equal(12, CV_32SC2)
+    assert_equal(20, CV_32SC3)
+    assert_equal(28, CV_32SC4)
+    assert_equal(5, CV_32FC1)
+    assert_equal(13, CV_32FC2)
+    assert_equal(21, CV_32FC3)
+    assert_equal(29, CV_32FC4)
+    assert_equal(6, CV_64FC1)
+    assert_equal(14, CV_64FC2)
+    assert_equal(22, CV_64FC3)
+    assert_equal(30, CV_64FC4)
 
     # Load image flags
     assert_equal(-1, CV_LOAD_IMAGE_UNCHANGED)

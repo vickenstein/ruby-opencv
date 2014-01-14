@@ -5,14 +5,17 @@ def cv_version_suffix(incdir)
   major, minor, subminor = nil, nil, nil
   open("#{incdir}/opencv2/core/version.hpp", 'r') { |f|
     f.read.lines.each { |line|
-      major = $1.to_s if line =~ /\A#define\s+CV_MAJOR_VERSION\s+(\d+)\s*\Z/
-      minor = $1.to_s if line =~ /\A#define\s+CV_MINOR_VERSION\s+(\d+)\s*\Z/
-      subminor = $1.to_s if line =~ /\A#define\s+CV_SUBMINOR_VERSION\s+(\d+)\s*\Z/
+      major = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_EPOCH|CV_MAJOR_VERSION)\s+(\d+)\s*\Z/
+      minor = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_MAJOR|CV_MINOR_VERSION)\s+(\d+)\s*\Z/
+      subminor = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_MINOR|CV_SUBMINOR_VERSION)\s+(\d+)\s*\Z/
     }
   }
   major + minor + subminor
 end
 
+# Quick fix for 2.0.0
+# @libdir_basename is set to nil and dir_config() sets invalid libdir '${opencv-dir}/' when --with-opencv-dir option passed.
+@libdir_basename ||= 'lib'
 incdir, libdir = dir_config("opencv", "/usr/local/include", "/usr/local/lib")
 dir_config("libxml2", "/usr/include", "/usr/lib")
 
@@ -67,9 +70,14 @@ opencv_headers.each {|header|
 }
 have_header("stdarg.h")
 
+if $warnflags
+  $warnflags.slice!('-Wdeclaration-after-statement')
+  $warnflags.slice!('-Wimplicit-function-declaration')
+end
+
 # Quick fix for 1.8.7
 $CFLAGS << " -I#{File.dirname(__FILE__)}/ext/opencv"
 
 # Create Makefile
-create_makefile("opencv", "./ext/opencv")
+create_makefile('opencv')
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# -*- mode: ruby; coding: utf-8-unix -*- 
+# -*- mode: ruby; coding: utf-8 -*-
 
 # A sample of matching SURF feature points using kd-tree
 # See http://tech.groups.yahoo.com/group/OpenCV/message/62318
@@ -11,8 +11,8 @@ USE_EXTENDED_DESCRIPTOR = true
 THRESHOLD = 1500
 DESCRIPTOR_SIZE = USE_EXTENDED_DESCRIPTOR ? 128 : 64
 
-img1 = CvMat.load('lenna.jpg', CV_LOAD_IMAGE_GRAYSCALE)
-img2 = CvMat.load('lenna-rotated.jpg', CV_LOAD_IMAGE_GRAYSCALE)
+img1 = CvMat.load('images/lenna.jpg', CV_LOAD_IMAGE_GRAYSCALE)
+img2 = CvMat.load('images/lenna-rotated.jpg', CV_LOAD_IMAGE_GRAYSCALE)
 
 puts 'Extracting features from img1 using SURF...'
 param = CvSURFParams.new(THRESHOLD, USE_EXTENDED_DESCRIPTOR)
