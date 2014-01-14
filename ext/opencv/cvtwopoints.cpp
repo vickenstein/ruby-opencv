@@ -9,7 +9,7 @@
 ************************************************************/
 #include "cvtwopoints.h"
 /*
- * Document-class: OpenCV::CvTwopoints
+ * Document-class: OpenCV::CvTwoPoints
  *
  * This class means one twopoints on X axis Y axis. 
  * X and Y takes the value of the Fixnum. see also CvTwopoints2D32F
@@ -29,27 +29,6 @@ VALUE
 rb_class()
 {
   return rb_klass;
-}
-
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvTwoPoints", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "point1", RUBY_METHOD_FUNC(rb_point1), 0);
-  rb_define_method(rb_klass, "point2", RUBY_METHOD_FUNC(rb_point2), 0);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
-  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
-  rb_define_alias(rb_klass, "to_a", "to_ary");
 }
 
 VALUE
@@ -112,5 +91,32 @@ rb_to_ary(VALUE self)
   return rb_ary_new3(2, rb_point1(self), rb_point2(self));
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  
+  rb_klass = rb_define_class_under(opencv, "CvTwoPoints", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "point1", RUBY_METHOD_FUNC(rb_point1), 0);
+  rb_define_method(rb_klass, "point2", RUBY_METHOD_FUNC(rb_point2), 0);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
+  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
+  rb_define_alias(rb_klass, "to_a", "to_ary");
+}
+
 __NAMESPACE_END_CVTWOPOINTS
 __NAMESPACE_END_OPENCV
+

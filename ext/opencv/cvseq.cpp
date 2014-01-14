@@ -73,49 +73,6 @@ unregister_elem_class(void *ptr)
   }
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvSeq", rb_cObject);
-  rb_include_module(rb_klass, rb_mEnumerable);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "total", RUBY_METHOD_FUNC(rb_total), 0);
-  rb_define_alias(rb_klass, "length", "total");
-  rb_define_alias(rb_klass, "size", "total");
-  rb_define_method(rb_klass, "empty?", RUBY_METHOD_FUNC(rb_empty_q), 0);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
-  rb_define_method(rb_klass, "first", RUBY_METHOD_FUNC(rb_first), 0);
-  rb_define_method(rb_klass, "last", RUBY_METHOD_FUNC(rb_last), 0);
-  
-  rb_define_method(rb_klass, "h_prev", RUBY_METHOD_FUNC(rb_h_prev), 0);
-  rb_define_method(rb_klass, "h_next", RUBY_METHOD_FUNC(rb_h_next), 0);
-  rb_define_method(rb_klass, "v_prev", RUBY_METHOD_FUNC(rb_v_prev), 0);
-  rb_define_method(rb_klass, "v_next", RUBY_METHOD_FUNC(rb_v_next), 0);
-
-  rb_define_method(rb_klass, "push", RUBY_METHOD_FUNC(rb_push), -2);
-  rb_define_alias(rb_klass, "<<", "push");
-  rb_define_method(rb_klass, "pop", RUBY_METHOD_FUNC(rb_pop), 0);
-  rb_define_method(rb_klass, "unshift", RUBY_METHOD_FUNC(rb_unshift), -2);
-  rb_define_alias(rb_klass, "push_front", "unshift");
-  rb_define_method(rb_klass, "shift", RUBY_METHOD_FUNC(rb_shift), 0);
-  rb_define_alias(rb_klass, "pop_front", "shift");
-  rb_define_method(rb_klass, "each", RUBY_METHOD_FUNC(rb_each), 0);
-  rb_define_method(rb_klass, "each_index", RUBY_METHOD_FUNC(rb_each_index), 0);
-  rb_define_method(rb_klass, "insert", RUBY_METHOD_FUNC(rb_insert), 2);
-  rb_define_method(rb_klass, "remove", RUBY_METHOD_FUNC(rb_remove), 1);
-  rb_define_alias(rb_klass, "delete_at", "remove");
-  rb_define_method(rb_klass, "clear", RUBY_METHOD_FUNC(rb_clear), 0);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -595,5 +552,54 @@ new_sequence(VALUE klass, CvSeq *seq, VALUE element_klass, VALUE storage)
   return Data_Wrap_Struct(klass, mark_root_object, unregister_elem_class, seq);
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvSeq", rb_cObject);
+  rb_include_module(rb_klass, rb_mEnumerable);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "total", RUBY_METHOD_FUNC(rb_total), 0);
+  rb_define_alias(rb_klass, "length", "total");
+  rb_define_alias(rb_klass, "size", "total");
+  rb_define_method(rb_klass, "empty?", RUBY_METHOD_FUNC(rb_empty_q), 0);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
+  rb_define_method(rb_klass, "first", RUBY_METHOD_FUNC(rb_first), 0);
+  rb_define_method(rb_klass, "last", RUBY_METHOD_FUNC(rb_last), 0);
+  
+  rb_define_method(rb_klass, "h_prev", RUBY_METHOD_FUNC(rb_h_prev), 0);
+  rb_define_method(rb_klass, "h_next", RUBY_METHOD_FUNC(rb_h_next), 0);
+  rb_define_method(rb_klass, "v_prev", RUBY_METHOD_FUNC(rb_v_prev), 0);
+  rb_define_method(rb_klass, "v_next", RUBY_METHOD_FUNC(rb_v_next), 0);
+
+  rb_define_method(rb_klass, "push", RUBY_METHOD_FUNC(rb_push), -2);
+  rb_define_alias(rb_klass, "<<", "push");
+  rb_define_method(rb_klass, "pop", RUBY_METHOD_FUNC(rb_pop), 0);
+  rb_define_method(rb_klass, "unshift", RUBY_METHOD_FUNC(rb_unshift), -2);
+  rb_define_alias(rb_klass, "push_front", "unshift");
+  rb_define_method(rb_klass, "shift", RUBY_METHOD_FUNC(rb_shift), 0);
+  rb_define_alias(rb_klass, "pop_front", "shift");
+  rb_define_method(rb_klass, "each", RUBY_METHOD_FUNC(rb_each), 0);
+  rb_define_method(rb_klass, "each_index", RUBY_METHOD_FUNC(rb_each_index), 0);
+  rb_define_method(rb_klass, "insert", RUBY_METHOD_FUNC(rb_insert), 2);
+  rb_define_method(rb_klass, "remove", RUBY_METHOD_FUNC(rb_remove), 1);
+  rb_define_alias(rb_klass, "delete_at", "remove");
+  rb_define_method(rb_klass, "clear", RUBY_METHOD_FUNC(rb_clear), 0);
+}
+
 __NAMESPACE_END_CVSEQ
 __NAMESPACE_END_OPENCV
+

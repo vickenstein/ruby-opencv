@@ -30,50 +30,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvMoments", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "spatial", RUBY_METHOD_FUNC(rb_spatial), 2);
-  rb_define_method(rb_klass, "central", RUBY_METHOD_FUNC(rb_central), 2);
-  rb_define_method(rb_klass, "normalized_central", RUBY_METHOD_FUNC(rb_normalized_central), 2);
-  rb_define_method(rb_klass, "hu", RUBY_METHOD_FUNC(rb_hu), 0);     
-  rb_define_method(rb_klass, "gravity_center", RUBY_METHOD_FUNC(rb_gravity_center), 0);
-  rb_define_method(rb_klass, "angle", RUBY_METHOD_FUNC(rb_angle), 0);
-
-  DEFINE_CVMOMENTS_ACCESSOR(m00);
-  DEFINE_CVMOMENTS_ACCESSOR(m10);
-  DEFINE_CVMOMENTS_ACCESSOR(m01);
-  DEFINE_CVMOMENTS_ACCESSOR(m20);
-  DEFINE_CVMOMENTS_ACCESSOR(m11);
-  DEFINE_CVMOMENTS_ACCESSOR(m02);
-  DEFINE_CVMOMENTS_ACCESSOR(m30);
-  DEFINE_CVMOMENTS_ACCESSOR(m21);
-  DEFINE_CVMOMENTS_ACCESSOR(m12);
-  DEFINE_CVMOMENTS_ACCESSOR(m03);
-
-  DEFINE_CVMOMENTS_ACCESSOR(mu20);
-  DEFINE_CVMOMENTS_ACCESSOR(mu11);
-  DEFINE_CVMOMENTS_ACCESSOR(mu02);
-  DEFINE_CVMOMENTS_ACCESSOR(mu30);
-  DEFINE_CVMOMENTS_ACCESSOR(mu21);
-  DEFINE_CVMOMENTS_ACCESSOR(mu12);
-  DEFINE_CVMOMENTS_ACCESSOR(mu03);
-
-  DEFINE_CVMOMENTS_ACCESSOR(inv_sqrt_m00);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -283,5 +239,55 @@ new_object(CvArr *arr, int is_binary = 0)
   return object;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  
+  rb_klass = rb_define_class_under(opencv, "CvMoments", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "spatial", RUBY_METHOD_FUNC(rb_spatial), 2);
+  rb_define_method(rb_klass, "central", RUBY_METHOD_FUNC(rb_central), 2);
+  rb_define_method(rb_klass, "normalized_central", RUBY_METHOD_FUNC(rb_normalized_central), 2);
+  rb_define_method(rb_klass, "hu", RUBY_METHOD_FUNC(rb_hu), 0);     
+  rb_define_method(rb_klass, "gravity_center", RUBY_METHOD_FUNC(rb_gravity_center), 0);
+  rb_define_method(rb_klass, "angle", RUBY_METHOD_FUNC(rb_angle), 0);
+
+  DEFINE_CVMOMENTS_ACCESSOR(m00);
+  DEFINE_CVMOMENTS_ACCESSOR(m10);
+  DEFINE_CVMOMENTS_ACCESSOR(m01);
+  DEFINE_CVMOMENTS_ACCESSOR(m20);
+  DEFINE_CVMOMENTS_ACCESSOR(m11);
+  DEFINE_CVMOMENTS_ACCESSOR(m02);
+  DEFINE_CVMOMENTS_ACCESSOR(m30);
+  DEFINE_CVMOMENTS_ACCESSOR(m21);
+  DEFINE_CVMOMENTS_ACCESSOR(m12);
+  DEFINE_CVMOMENTS_ACCESSOR(m03);
+
+  DEFINE_CVMOMENTS_ACCESSOR(mu20);
+  DEFINE_CVMOMENTS_ACCESSOR(mu11);
+  DEFINE_CVMOMENTS_ACCESSOR(mu02);
+  DEFINE_CVMOMENTS_ACCESSOR(mu30);
+  DEFINE_CVMOMENTS_ACCESSOR(mu21);
+  DEFINE_CVMOMENTS_ACCESSOR(mu12);
+  DEFINE_CVMOMENTS_ACCESSOR(mu03);
+
+  DEFINE_CVMOMENTS_ACCESSOR(inv_sqrt_m00);
+}
+
 __NAMESPACE_END_CVMOMENTS
 __NAMESPACE_END_OPENCV
+

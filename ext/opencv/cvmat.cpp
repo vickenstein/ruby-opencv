@@ -3506,7 +3506,7 @@ rb_corner_harris(int argc, VALUE *argv, VALUE self)
  *   corners, found = gray.find_chessboard_corners(pattern_size, CV_CALIB_CB_ADAPTIVE_THRESH)
  *
  *   if found
- *     corners = gray.find_corner_sub_pix(corners, CvSize.new(3, 3), CvSize.new(-1, -1), CvTermCriteria.new(20, 0.03));
+ *     corners = gray.find_corner_sub_pix(corners, CvSize.new(3, 3), CvSize.new(-1, -1), CvTermCriteria.new(20, 0.03))
  *   end
  *
  *   result = mat.draw_chessboard_corners(pattern_size, corners, found)
@@ -3850,11 +3850,14 @@ rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
 }
 
 /*
- * call-seq:
- *   CvMat.get_perspective_transform(<i>from_points,to_points</i>) -> cvmat
- *
  * Calculates a perspective transform from four pairs of the corresponding points.
- * Returns a matrix suitable for use with warp_perspective
+ *
+ * @overload get_perspective_transform(src, dst)
+ *   @param src [Array<CvPoint>] Coordinates of quadrangle vertices in the source image.
+ *   @param dst [Array<CvPoint>] Coordinates of the corresponding quadrangle vertices in the destination image.
+ * @return [CvMat] Map matrix
+ * @scope class
+ * @opencv_func cvGetPerspectiveTransform
  */
 VALUE
 rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
@@ -3884,11 +3887,13 @@ rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
 }
 
 /*
+ * Applies a perspective transformation to an image.
+ *
  * @overload warp_perspective(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
- * @param map_matrix [CvMat] 3x3 transformation matrix.
- * @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
- *   and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
- * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ *   @param map_matrix [CvMat] 3x3 transformation matrix.
+ *   @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *     and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ *   @param fillval [Number, CvScalar] Value used in case of a constant border.
  * @return [CvMat] Output image.
  * @opencv_func cvWarpPerspective
  */
@@ -3916,15 +3921,14 @@ rb_warp_perspective(int argc, VALUE *argv, VALUE self)
  * Applies a generic geometrical transformation to an image.
  *
  * @overload remap(mapx, mapy, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
- * @param mapx [CvMat] The first map of either <tt>(x,y)</tt> points or just x values having the type
- *   <tt>CV_16SC2</tt>, <tt>CV_32FC1</tt>, or <tt>CV_32FC2</tt>.
- * @param mapy [CvMat] The second map of y values having the type <tt>CV_16UC1</tt>, <tt>CV_32FC1</tt>, or none
- *   (empty map if <tt>mapx</tt> is <tt>(x,y)</tt> points), respectively.
- * @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
- *   and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
- * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ *   @param mapx [CvMat] The first map of either <tt>(x,y)</tt> points or just x values having the type
+ *     <tt>CV_16SC2</tt>, <tt>CV_32FC1</tt>, or <tt>CV_32FC2</tt>.
+ *   @param mapy [CvMat] The second map of y values having the type <tt>CV_16UC1</tt>, <tt>CV_32FC1</tt>, or none
+ *     (empty map if <tt>mapx</tt> is <tt>(x,y)</tt> points), respectively.
+ *   @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *     and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ *   @param fillval [Number, CvScalar] Value used in case of a constant border.
  * @return [CvMat] Output image.
- * @return [CvMat] Destination image.
  * @opencv_func cvRemap
  */
 VALUE
@@ -3951,13 +3955,13 @@ rb_remap(int argc, VALUE *argv, VALUE self)
  * Remaps an image to log-polar space.
  *
  * @overload log_polar(size, center, magnitude, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS)
- * @param size [CvSize] Size of the destination image.
- * @param center [CvPoint2D32f] The transformation center; where the output precision is maximal.
- * @param magnitude [Number] Magnitude scale parameter.
- * @param flags [Integer] A combination of interpolation methods and the following optional flags:
- *   * <tt>CV_WARP_FILL_OUTLIERS</tt> - fills all of the destination image pixels. If some of them
- *     correspond to outliers in the source image, they are set to zero.
- *   * <tt>CV_WARP_INVERSE_MAP</tt> - performs inverse transformation.
+ *   @param size [CvSize] Size of the destination image.
+ *   @param center [CvPoint2D32f] The transformation center; where the output precision is maximal.
+ *   @param magnitude [Number] Magnitude scale parameter.
+ *   @param flags [Integer] A combination of interpolation methods and the following optional flags:
+ *     * <tt>CV_WARP_FILL_OUTLIERS</tt> - fills all of the destination image pixels. If some of them
+ *       correspond to outliers in the source image, they are set to zero.
+ *     * <tt>CV_WARP_INVERSE_MAP</tt> - performs inverse transformation.
  * @return [CvMat] Destination image.
  * @opencv_func cvLogPolar
  */
@@ -4390,11 +4394,42 @@ rb_threshold_internal(int threshold_type, VALUE threshold, VALUE max_value, VALU
 }
 
 /*
- * call-seq:
- *   threshold(<i>threshold, max_value, threshold_type[,use_otsu = false]</i>)
+ * Applies a fixed-level threshold to each array element.
  *
- * Applies fixed-level threshold to array elements.
- *
+ * @overload threshold(threshold, max_value, threshold_type)
+ *   @param threshold [Number] Threshold value.
+ *   @param max_value [Number] Maximum value to use with the <tt>CV_THRESH_BINARY</tt>
+ *     and <tt>CV_THRESH_BINARY_INV</tt> thresholding types.
+ *   @param threshold_type [Integer] Thresholding type
+ *     * CV_THRESH_BINARY
+ *     * CV_THRESH_BINARY_INV
+ *     * CV_THRESH_TRUNC
+ *     * CV_THRESH_TOZERO
+ *     * CV_THRESH_TOZERO_INV
+ *   @return [CvMat] Output array of the same size and type as <tt>self</tt>.
+ * @overload threshold(threshold, max_value, threshold_type, use_otsu)
+ *   @param threshold [Number] Threshold value.
+ *   @param max_value [Number] Maximum value to use with the <tt>CV_THRESH_BINARY</tt>
+ *     and <tt>CV_THRESH_BINARY_INV</tt> thresholding types.
+ *   @param threshold_type [Integer] Thresholding type
+ *     * CV_THRESH_BINARY
+ *     * CV_THRESH_BINARY_INV
+ *     * CV_THRESH_TRUNC
+ *     * CV_THRESH_TOZERO
+ *     * CV_THRESH_TOZERO_INV
+ *   @param use_otsu [Boolean] Determines the optimal threshold value using the Otsu's algorithm
+ *   @return [Array<CvMat, Number>] Output array and Otsu's threshold.
+ * @opencv_func cvThreshold
+ * @example
+ *   mat = CvMat.new(3, 3, CV_8U, 1)
+ *   mat.set_data([1, 2, 3, 4, 5, 6, 7, 8, 9])
+ *   mat #=> [1, 2, 3,
+ *            4, 5, 6,
+ *            7, 8, 9]
+ *   result = mat.threshold(4, 7, CV_THRESH_BINARY)
+ *   result #=> [0, 0, 0,
+ *               0, 7, 7,
+ *               7, 7, 7]
  */
 VALUE
 rb_threshold(int argc, VALUE *argv, VALUE self)
@@ -4409,21 +4444,34 @@ rb_threshold(int argc, VALUE *argv, VALUE self)
   return rb_threshold_internal(type, threshold, max_value, use_otsu, self);
 }
 
-
 /*
- * call-seq:
- *   adaptive_threshold(max_value[, options]) -> cvmat
- *
  * Applies an adaptive threshold to an array.
  *
- * ==== params:
- *
- * * <b>max_value (Number)</b> - Maximum value that is used with +CV_THRESH_BINARY+ and +CV_THRESH_BINARY_INV+
- * * <b>options (Hash)</b> - threshold option
- *   * <b>:threshold_type (Integer or Symbol)</b> - Thresholding type; must be one of +CV_THRESH_BINARY+ or +:binary+, +CV_THRESH_BINARY_INV+ or +:binary_inv+ (default: +CV_THRESH_BINARY+)
- *   * <b>:adaptive_method (Integer or Symbol)</b> - Adaptive thresholding algorithm to use: +CV_ADAPTIVE_THRESH_MEAN_C+ or +:mean_c+, +CV_ADAPTIVE_THRESH_GAUSSIAN_C+ or +:gaussian_c+ (default: +CV_ADAPTIVE_THRESH_MEAN_C+)
- *   * <b>:block_size (Integer)</b> - The size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on (default: 3)
- *   * <b>:param1 (Number)</b> - The method-dependent parameter. For the methods +CV_ADAPTIVE_THRESH_MEAN_C+ and +CV_ADAPTIVE_THRESH_GAUSSIAN_C+ it is a constant subtracted from the mean or weighted mean, though it may be negative (default: 5)
+ * @overload adaptive_threshold(max_value, options)
+ *   @param max_value [Number] Non-zero value assigned to the pixels for which the condition is satisfied.
+ *   @param options [Hash] Threshold option
+ *   @option options [Integer, Symbol] :threshold_type (CV_THRESH_BINARY) Thresholding type;
+ *     must be one of <tt>CV_THRESH_BINARY</tt> or <tt>:binary</tt>, <tt>CV_THRESH_BINARY_INV</tt> or <tt>:binary_inv</tt>.
+ *   @option options [Integer, Symbol] :adaptive_method (CV_ADAPTIVE_THRESH_MEAN_C) Adaptive thresholding algorithm to use:
+ *     <tt>CV_ADAPTIVE_THRESH_MEAN_C</tt> or <tt>:mean_c</tt>, <tt>CV_ADAPTIVE_THRESH_GAUSSIAN_C</tt> or <tt>:gaussian_c</tt>.
+ *   @option options [Integer] :block_size (3) The size of a pixel neighborhood that is used to calculate a threshold value
+ *     for the pixel: 3, 5, 7, and so on.
+ *   @option options :param1 [Number] (5) The method-dependent parameter. For the methods <tt>CV_ADAPTIVE_THRESH_MEAN_C</tt>
+ *     and <tt>CV_ADAPTIVE_THRESH_GAUSSIAN_C</tt> it is a constant subtracted from the mean or weighted mean, though it may be negative
+ *   @return [CvMat] Destination image of the same size and the same type as <tt>self</tt>.
+ * @opencv_func cvAdaptiveThreshold
+ * @example
+ *   mat = CvMat.new(3, 3, CV_8U, 1)
+ *   mat.set_data([1, 2, 3, 4, 5, 6, 7, 8, 9])
+ *   mat #=> [1, 2, 3,
+ *            4, 5, 6,
+ *            7, 8, 9]
+ *   result = mat.adaptive_threshold(7, threshold_type: CV_THRESH_BINARY,
+ *                                   adaptive_method: CV_ADAPTIVE_THRESH_MEAN_C,
+ *                                   block_size: 3, param1: 1)
+ *   result #=> [0, 0, 0,
+ *               7, 7, 7,
+ *               7, 7, 7]
  */
 VALUE
 rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
@@ -4470,7 +4518,8 @@ rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
  * Return downsamples image.
  *
  * This operation performs downsampling step of Gaussian pyramid decomposition.
- * First it convolves source image with the specified filter and then downsamples the image by rejecting even rows and columns.
+ * First it convolves source image with the specified filter and then downsamples the image
+ * by rejecting even rows and columns.
  *
  * note: filter - only :gaussian_5x5 is currently supported.
  */
@@ -4509,7 +4558,8 @@ rb_pyr_down(int argc, VALUE *argv, VALUE self)
  * Return upsamples image.
  *
  * This operation performs up-sampling step of Gaussian pyramid decomposition.
- * First it upsamples the source image by injecting even zero rows and columns and then convolves result with the specified filter multiplied by 4 for interpolation.
+ * First it upsamples the source image by injecting even zero rows and columns and
+ * then convolves result with the specified filter multiplied by 4 for interpolation.
  * So the destination image is four times larger than the source image.
  *
  * note: filter - only :gaussian_5x5 is currently supported.
@@ -4544,43 +4594,27 @@ rb_pyr_up(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   flood_fill(<i>seed_point, new_val, lo_diff, up_diff[,flood_fill_option]</i>) -> [cvmat, cvconnectedcomp, iplimage(mask)]
+ * Fills a connected component with the given color.
  *
- * Return image filled a connnected compoment with given color.
- * This operation fills a connected component starting from the seed point with the specified color.
- * The connectivity is determined by the closeness of pixel values.
- * The pixel at (x, y) is considered to belong to the repainted domain if:
- *
- *   src(x',y')-lo_diff<=src(x,y)<=src(x',y')+up_diff,     grayscale image, floating range
- *   src(seed.x,seed.y)-lo<=src(x,y)<=src(seed.x,seed.y)+up_diff, grayscale image, fixed range
- *   src(x',y')r-lo_diffr<=src(x,y)r<=src(x',y')r+up_diffr and
- *   src(x',y')g-lo_diffg<=src(x,y)g<=src(x',y')g+up_diffg and
- *   src(x',y')b-lo_diffb<=src(x,y)b<=src(x',y')b+up_diffb, color image, floating range
- *   src(seed.x,seed.y)r-lo_diffr<=src(x,y)r<=src(seed.x,seed.y)r+up_diffr and
- *   src(seed.x,seed.y)g-lo_diffg<=src(x,y)g<=src(seed.x,seed.y)g+up_diffg and
- *   src(seed.x,seed.y)b-lo_diffb<=src(x,y)b<=src(seed.x,seed.y)b+up_diffb, color image, fixed range
- *
- * where src(x',y') is value of one of pixel neighbors.
- * That is, to be added to the connected component, a pixel's color/brightness should be close enough to:
- * * color/brightness of one of its neighbors that are already referred to the connected component in case of floating range
- * * color/brightness of the seed point in case of fixed range.
- *
- * arguments
- * * seed_point -The starting point.
- * * new_val - New value of repainted domain pixels.
- * * lo_diff - Maximal lower brightness/color difference between the currently observed pixel and one of its neighbor belong to the component or seed pixel to add the pixel to component. In case of 8-bit color images it is packed value.
- * * up_diff - Maximal upper brightness/color difference between the currently observed pixel and one of its neighbor belong to the component or seed pixel to add the pixel to component. In case of 8-bit color images it is packed value.
- *
- * and flood_fill_option
- *   :connectivity => 4 or 8, 4 default
- *     Connectivity determines which neighbors of a pixel are considered.
- *   :fixed_range => true or false, false default
- *     If set the difference between the current pixel and seed pixel is considered, otherwise difference between neighbor pixels is considered (the range is floating).
- *   :mask_only => true or false, false default
+ * @overload flood_fill(seed_point, new_val, lo_diff = CvScalar.new(0), up_diff = CvScalar.new(0), flood_fill_option = nil)
+ *   @param seed_point [CvPoint] Starting point.
+ *   @param new_val [CvScalar] New value of the repainted domain pixels.
+ *   @param lo_diff [CvScalar] Maximal lower brightness/color difference between the currently observed pixel
+ *     and one of its neighbor belong to the component or seed pixel to add the pixel to component.
+ *     In case of 8-bit color images it is packed value.
+ *   @param up_diff [CvScalar] Maximal upper brightness/color difference between the currently observed pixel and
+ *     one of its neighbor belong to the component or seed pixel to add the pixel to component.
+ *     In case of 8-bit color images it is packed value.
+ *   @param flood_fill_option [Hash] 
+ *   @option flood_fill_option [Integer] :connectivity (4)
+ *     Connectivity determines which neighbors of a pixel are considered (4 or 8).
+ *   @option flood_fill_option [Boolean] :fixed_range (false)
+ *     If set the difference between the current pixel and seed pixel is considered, otherwise difference between
+ *     neighbor pixels is considered (the range is floating).
+ *   @option flood_fill_option [Boolean] :mask_only (false)
  *     If set, the function does not fill the image(new_val is ignored), but the fills mask.
- *
- * note: <i>flood_fill_option</i>'s default value is CvMat::FLOOD_FILL_OPTION.
+ * @return [Array<CvMat, CvConnectedComp>] Array of output image, connected component and mask.
+ * @opencv_func cvFloodFill
  */
 VALUE
 rb_flood_fill(int argc, VALUE *argv, VALUE self)
@@ -4589,11 +4623,12 @@ rb_flood_fill(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   flood_fill!(<i>seed_point, new_val, lo_diff, up_diff[,flood_fill_option]</i>) -> [self, cvconnectedcomp, iplimage(mask)]
+ * Fills a connected component with the given color.
  *
- * Fills a connected component with given color.
- * see CvMat#flood_fill
+ * @overload flood_fill!(seed_point, new_val, lo_diff = CvScalar.new(0), up_diff = CvScalar.new(0), flood_fill_option = nil)
+ *   @param (see #flood_fill)
+ *   @return (see #flood_fill)
+ * @opencv_func (see #flood_fill)
  */
 VALUE
 rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
@@ -4633,39 +4668,26 @@ rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   find_contours([find_contours_options]) -> cvchain or cvcontour or nil
+ * Finds contours in binary image.
  *
- * Finds contours in binary image, and return contours as CvContour or CvChain.
- * If contours not found, return nil.
- *
- * <i>flood_fill_option</i> should be Hash include these keys.
- *   :mode - Retrieval mode.
- *      :external - retrive only the extreme outer contours
- *      :list - retrieve all the contours and puts them in the list.(default)
- *      :ccomp - retrieve all the contours and organizes them into two-level hierarchy:
- *               top level are external boundaries of the components, second level are bounda boundaries of the holes
- *      :tree - retrieve all the contours and reconstructs the full hierarchy of nested contours
- *              Connectivity determines which neighbors of a pixel are considered.
- *   :method - Approximation method.
- *      :code - output contours in the Freeman chain code. All other methods output polygons (sequences of vertices).
- *      :approx_none - translate all the points from the chain code into points;
- *      :approx_simple - compress horizontal, vertical, and diagonal segments, that is, the function leaves only their ending points;(default)
- *      :approx_tc89_l1
- *      :approx_tc89_kcos - apply one of the flavors of Teh-Chin chain approximation algorithm.
- *      If set the difference between the current pixel and seed pixel is considered,
- *      otherwise difference between neighbor pixels is considered (the range is floating).
- *   :offset - Offset, by which every contour point is shifted.
- *             This is useful if the contours are extracted from the image ROI
- *             and then they should be analyzed in the whole image context. Should be CvPoint.
- *
- * note: <i>find_contours_option</i>'s default value is CvMat::FIND_CONTOURS_OPTION.
- *
- * <b>support single-channel 8bit unsigned image only.</b>
- *
- * note: Non-zero pixels are treated as 1's, zero pixels remain 0's
- * that is image treated as binary. To get such a binary image from grayscale,
- * one may use threshold, adaptive_threshold or canny.
+ * @overload find_contours(find_contours_options)
+ *   @param find_contours_options [Hash] Options
+ *   @option find_contours_options [Symbol] :mode (:list) Retrieval mode.
+ *      * :external - retrive only the extreme outer contours
+ *      * :list - retrieve all the contours and puts them in the list.
+ *      * :ccomp - retrieve all the contours and organizes them into two-level hierarchy:
+ *        top level are external boundaries of the components, second level are bounda boundaries of the holes
+ *      * :tree - retrieve all the contours and reconstructs the full hierarchy of nested contours
+ *        Connectivity determines which neighbors of a pixel are considered.
+ *   @option find_contours_options [Symbol] :method (:approx_simple) Approximation method.
+ *      * :code - output contours in the Freeman chain code. All other methods output polygons (sequences of vertices).
+ *      * :approx_none - translate all the points from the chain code into points;
+ *      * :approx_simple - compress horizontal, vertical, and diagonal segments, that is, the function leaves only their ending points;
+ *      * :approx_tc89_l1, :approx_tc89_kcos - apply one of the flavors of Teh-Chin chain approximation algorithm.
+ *   @option find_contours_options [CvPoint] :offset (CvPoint.new(0, 0)) Offset, by which every contour point is shifted.
+ * @return [CvContour, CvChain] Detected contours. If <tt>:method</tt> is <tt>:code</tt>,
+ *   returns as <tt>CvChain</tt>, otherwise <tt>CvContour</tt>.
+ * @opencv_func cvFindContours
  */
 VALUE
 rb_find_contours(int argc, VALUE *argv, VALUE self)
@@ -4674,16 +4696,12 @@ rb_find_contours(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   find_contours!([find_contours_options]) -> cvchain or chcontour or nil
- *
  * Finds contours in binary image.
- * The function modifies the source image content.
- * (Because the copy is not made, it is slightly faster than find_contours.)
  *
- * see find_contours
- *
- * <b>support single-channel 8bit unsigned image only.</b>
+ * @overload find_contours!(find_contours_options)
+ *   @param (see #find_contours)
+ * @return (see #find_contours)
+ * @opencv_func (see #find_contours)
  */
 VALUE
 rb_find_contours_bang(int argc, VALUE *argv, VALUE self)
@@ -4870,10 +4888,12 @@ rb_pyr_mean_shift_filtering(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   watershed -> cvmat(mean markers:cv32s)
+ * Performs a marker-based image segmentation using the watershed algorithm.
  *
- * Does watershed segmentation.
+ * @overload watershed(markers)
+ *   @param markers [CvMat] Input 32-bit single-channel image of markers. It should have the same size as <tt>self</tt>
+ * @return [CvMat] Output image
+ * @opencv_func cvWatershed
  */
 VALUE
 rb_watershed(VALUE self, VALUE markers)
@@ -4910,31 +4930,31 @@ rb_moments(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   hough_lines(<i>method, rho, theta, threshold, param1, param2</i>) -> cvseq(include CvLine or CvTwoPoints)
- *
  * Finds lines in binary image using a Hough transform.
- * * method –
-
- * *   The Hough transform variant, one of the following:
- * *   - CV_HOUGH_STANDARD - classical or standard Hough transform.
- * *   - CV_HOUGH_PROBABILISTIC - probabilistic Hough transform (more efficient in case if picture contains a few long linear segments).
- * *   - CV_HOUGH_MULTI_SCALE - multi-scale variant of the classical Hough transform. The lines are encoded the same way as CV_HOUGH_STANDARD.
- * * rho - Distance resolution in pixel-related units.
- * * theta - Angle resolution measured in radians.
- * * threshold - Threshold parameter. A line is returned by the function if the corresponding accumulator value is greater than threshold.
- * * param1 –
-
- * *   The first method-dependent parameter:
- * *     For the classical Hough transform it is not used (0).
- * *     For the probabilistic Hough transform it is the minimum line length.
- * *     For the multi-scale Hough transform it is the divisor for the distance resolution . (The coarse distance resolution will be rho and the accurate resolution will be (rho / param1)).
- * * param2 –
-
- * *   The second method-dependent parameter:
- * *     For the classical Hough transform it is not used (0).
- * *     For the probabilistic Hough transform it is the maximum gap between line segments lying on the same line to treat them as a single line segment (i.e. to join them).
- * *     For the multi-scale Hough transform it is the divisor for the angle resolution. (The coarse angle resolution will be theta and the accurate resolution will be (theta / param2).)
+ *
+ * @overload hough_lines(method, rho, theta, threshold, param1, param2)
+ *   @param method [Integer] The Hough transform variant, one of the following:
+ *     * CV_HOUGH_STANDARD - classical or standard Hough transform.
+ *     * CV_HOUGH_PROBABILISTIC - probabilistic Hough transform (more efficient in case if picture contains a few long linear segments).
+ *     * CV_HOUGH_MULTI_SCALE - multi-scale variant of the classical Hough transform. The lines are encoded the same way as CV_HOUGH_STANDARD.
+ *   @param rho [Number] Distance resolution in pixel-related units.
+ *   @param theta [Number] Angle resolution measured in radians.
+ *   @param threshold [Number] Threshold parameter. A line is returned by the function if the corresponding
+ *     accumulator value is greater than threshold.
+ *   @param param1 [Number] The first method-dependent parameter:
+ *     * For the classical Hough transform it is not used (0).
+ *     * For the probabilistic Hough transform it is the minimum line length.
+ *     * For the multi-scale Hough transform it is the divisor for the distance resolution.
+ *       (The coarse distance resolution will be rho and the accurate resolution will be (rho / param1)).
+ *   @param param2 [Number] The second method-dependent parameter:
+ *     * For the classical Hough transform it is not used (0).
+ *     * For the probabilistic Hough transform it is the maximum gap between line segments lying
+ *       on the same line to treat them as a single line segment (i.e. to join them).
+ *     * For the multi-scale Hough transform it is the divisor for the angle resolution.
+ *       (The coarse angle resolution will be theta and the accurate resolution will be (theta / param2).)
+ * @return [CvSeq<CvLine, CvTwoPoints>] Output lines. If <tt>method</tt> is <tt>CV_HOUGH_STANDARD</tt> or <tt>CV_HOUGH_MULTI_SCALE</tt>,
+ *   the class of elements is <tt>CvLine</tt>, otherwise <tt>CvTwoPoints</tt>.
+ * @opencv_func cvHoughLines2
  */
 VALUE
 rb_hough_lines(int argc, VALUE *argv, VALUE self)
@@ -4971,10 +4991,24 @@ rb_hough_lines(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   hough_circles(<i>method, dp, min_dist, param1, param2, min_radius = 0, max_radius = max(width,height)</i>) -> cvseq(include CvCircle32f)
+ * Finds circles in a grayscale image using the Hough transform.
  *
- * Finds circles in grayscale image using Hough transform.
+ * @overload hough_circles(method, dp, min_dist, param1, param2, min_radius = 0, max_radius = 0)
+ *   @param method [Integer] Detection method to use. Currently, the only implemented method is <tt>CV_HOUGH_GRADIENT</tt>.
+ *   @param dp [Number] Inverse ratio of the accumulator resolution to the image resolution.
+ *     For example, if dp=1, the accumulator has the same resolution as the input image.
+ *     If dp=2, the accumulator has half as big width and height.
+ *   @param min_dist [Number] Minimum distance between the centers of the detected circles.
+ *     If the parameter is too small, multiple neighbor circles may be falsely detected
+ *     in addition to a true one. If it is too large, some circles may be missed.
+ *   @param param1 [Number] First method-specific parameter. In case of <tt>CV_HOUGH_GRADIENT</tt>,
+ *     it is the higher threshold of the two passed to the #canny detector (the lower one is twice smaller). 
+ *   @param param2 [Number] Second method-specific parameter. In case of <tt>CV_HOUGH_GRADIENT</tt>,
+ *     it is the accumulator threshold for the circle centers at the detection stage. The smaller it is,
+ *     the more false circles may be detected. Circles, corresponding to the larger accumulator values,
+ *     will be returned first.
+ * @return [CvSeq<CvCircle32f>] Output circles.
+ * @opencv_func cvHoughCircles
  */
 VALUE
 rb_hough_circles(int argc, VALUE *argv, VALUE self)
@@ -5087,31 +5121,21 @@ rb_apply_color_map(VALUE self, VALUE colormap)
 }
 
 /*
- * call-seq:
- *   match_template(<i>template[,method = :sqdiff]</i>) -> cvmat(result)
- *
  * Compares template against overlapped image regions.
-
- * <i>method</i> is specifies the way the template must be compared with image regions.
- * <i>method</i> should be following symbol. (see OpenCV::MATCH_TEMPLATE_METHOD 's key and value.)
  *
- * * :sqdiff
- *   R(x,y)=sumx',y'[T(x',y')-I(x+x',y+y')]2
- * * :sqdiff_normed
- *   R(x,y)=sumx',y'[T(x',y')-I(x+x',y+y')]2/sqrt[sumx',y'T(x',y')2*sumx',y'I(x+x',y+y')2]
- * * :ccorr
- *   R(x,y)=sumx',y'[T(x',y')*I(x+x',y+y')]
- * * :ccorr_normed
- *   R(x,y)=sumx',y'[T(x',y')*I(x+x',y+y')]/sqrt[sumx',y'T(x',y')2*sumx',y'I(x+x',y+y')2]
- * * :ccoeff
- *   R(x,y)=sumx',y'[T'(x',y')*I'(x+x',y+y')],
- *     where T'(x',y')=T(x',y') - 1/(w*h)*sumx",y"T(x",y")
- *   I'(x+x',y+y')=I(x+x',y+y') - 1/(w*h)*sumx",y"I(x+x",y+y")
- * * :ccoeff_normed
- *   R(x,y)=sumx',y'[T'(x',y')*I'(x+x',y+y')]/sqrt[sumx',y'T'(x',y')2*sumx',y'I'(x+x',y+y')2]
+ * @overload match_template(template, method = CV_TM_SQDIFF)
+ *   @param template [CvMat] Searched template. It must be not greater than the source image and have the same data type.
+ *   @param method [Integer] Parameter specifying the comparison method.
+ *     * CV_TM_SQDIFF
+ *     * CV_TM_SQDIFF_NORMED
+ *     * CV_TM_CCORR
+ *     * CV_TM_CCORR_NORMED
+ *     * CV_TM_CCOEFF
+ *     * CV_TM_CCOEFF_NORMED
+ * @opencv_func cvMatchTemplate
  *
  * After the match_template finishes comparison, the best matches can be found as global
- * minimums (:sqdiff*) or maximums(:ccorr* or :ccoeff*) using minmax function.
+ * minimums (<tt>CV_TM_SQDIFF</tt>) or maximums(<tt>CV_TM_CCORR</tt> or <tt>CV_TM_CCOEFF</tt>) using CvMat#min_max_loc.
  * In case of color image and template summation in both numerator and each sum in denominator
  * is done over all the channels (and separate mean values are used for each channel).
  */
@@ -5645,12 +5669,14 @@ rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_image, VAL
 }
 
 /*
- * call-seq:
- *   extract_surf(params[,mask]) -> [cvseq(cvsurfpoint), array(float)]
  * Extracts Speeded Up Robust Features from an image
  *
- * <i>params</i> (CvSURFParams) - Various algorithm parameters put to the structure CvSURFParams.
- * <i>mask</i> (CvMat) - The optional input 8-bit mask. The features are only found in the areas that contain more than 50% of non-zero mask pixels.
+ * @overload extract_surf(params, mask = nil) -> [cvseq(cvsurfpoint), array(float)]
+ *   @param params [CvSURFParams] Various algorithm parameters put to the structure CvSURFParams.
+ *   @param mask [CvMat] The optional input 8-bit mask. The features are only found
+ *     in the areas that contain more than 50% of non-zero mask pixels.
+ * @return [Array<CvSeq<CvSURFPoint>, Array<float>>] Output vector of keypoints and descriptors.
+ * @opencv_func cvExtractSURF
  */
 VALUE
 rb_extract_surf(int argc, VALUE *argv, VALUE self)

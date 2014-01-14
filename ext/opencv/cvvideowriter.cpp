@@ -26,23 +26,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvVideoWriter", rb_cObject);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "write", RUBY_METHOD_FUNC(rb_write), 1);
-  rb_define_method(rb_klass, "close", RUBY_METHOD_FUNC(rb_close), 0);
-}
-
 /*
  * call-seq:
  *   CvVideoWriter.new(<i>filname, fourcc, fps, size[, is_color]</i>) -> cvvideowriter
@@ -132,6 +115,28 @@ rb_close(VALUE self)
   return Qnil;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvVideoWriter", rb_cObject);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "write", RUBY_METHOD_FUNC(rb_write), 1);
+  rb_define_method(rb_klass, "close", RUBY_METHOD_FUNC(rb_close), 0);
+}
 
 __NAMESPACE_END_CVVIDEOWRITER
 __NAMESPACE_END_OPENCV
+

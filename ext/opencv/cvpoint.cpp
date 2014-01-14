@@ -201,6 +201,11 @@ new_object(CvPoint point)
 void
 init_ruby_class()
 {
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
   if (rb_klass)
     return;
   /* 

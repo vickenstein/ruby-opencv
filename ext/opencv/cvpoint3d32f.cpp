@@ -32,35 +32,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * cvpoint2d32f = rb_define_class_under(opencv, "CvPoint2D32f", rb_cObject);
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  VALUE cvpoint2d32f = cCvPoint2D32f::rb_class();
-  rb_klass = rb_define_class_under(opencv, "CvPoint3D32f", cvpoint2d32f);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_singleton_method(rb_klass, "compatible?", RUBY_METHOD_FUNC(rb_compatible_q), 1);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "x", RUBY_METHOD_FUNC(rb_x), 0);
-  rb_define_method(rb_klass, "x=", RUBY_METHOD_FUNC(rb_set_x), 1);
-  rb_define_method(rb_klass, "y", RUBY_METHOD_FUNC(rb_y), 0);
-  rb_define_method(rb_klass, "y=", RUBY_METHOD_FUNC(rb_set_y), 1);
-  rb_define_method(rb_klass, "z", RUBY_METHOD_FUNC(rb_z), 0);
-  rb_define_method(rb_klass, "z=", RUBY_METHOD_FUNC(rb_set_z), 1);
-
-  rb_define_method(rb_klass, "to_s", RUBY_METHOD_FUNC(rb_to_s), 0);
-  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
-  rb_define_alias(rb_klass, "to_a", "to_ary");
-}
-
 /*
  * call-seq:
  *   combatible?(obj)
@@ -241,5 +212,41 @@ new_object(CvPoint3D32f point)
   return object;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE cvpoint2d32f = rb_define_class_under(opencv, "CvPoint2D32f", rb_cObject);
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * cvpoint2d32f = rb_define_class_under(opencv, "CvPoint2D32f", rb_cObject);
+   *
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  VALUE cvpoint2d32f = cCvPoint2D32f::rb_class();
+  rb_klass = rb_define_class_under(opencv, "CvPoint3D32f", cvpoint2d32f);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_singleton_method(rb_klass, "compatible?", RUBY_METHOD_FUNC(rb_compatible_q), 1);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "x", RUBY_METHOD_FUNC(rb_x), 0);
+  rb_define_method(rb_klass, "x=", RUBY_METHOD_FUNC(rb_set_x), 1);
+  rb_define_method(rb_klass, "y", RUBY_METHOD_FUNC(rb_y), 0);
+  rb_define_method(rb_klass, "y=", RUBY_METHOD_FUNC(rb_set_y), 1);
+  rb_define_method(rb_klass, "z", RUBY_METHOD_FUNC(rb_z), 0);
+  rb_define_method(rb_klass, "z=", RUBY_METHOD_FUNC(rb_set_z), 1);
+
+  rb_define_method(rb_klass, "to_s", RUBY_METHOD_FUNC(rb_to_s), 0);
+  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
+  rb_define_alias(rb_klass, "to_a", "to_ary");
+}
+
 __NAMESPACE_END_CVPOINT3D32F
 __NAMESPACE_END_OPENCV
+

@@ -29,32 +29,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvTermCriteria", rb_cObject);
-  /* CvTermCriteria: class */
-  rb_define_const(opencv, "CvTerm", rb_klass);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "type", RUBY_METHOD_FUNC(rb_type), 0);
-  rb_define_method(rb_klass, "max", RUBY_METHOD_FUNC(rb_max), 0);
-  rb_define_method(rb_klass, "max=", RUBY_METHOD_FUNC(rb_set_max), 1);
-  rb_define_method(rb_klass, "eps", RUBY_METHOD_FUNC(rb_eps), 0);
-  rb_define_method(rb_klass, "eps=", RUBY_METHOD_FUNC(rb_set_eps), 1);
-  rb_define_alias(rb_klass, "epsilon", "eps");
-  rb_define_alias(rb_klass, "epsilon=", "eps=");
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -188,5 +162,37 @@ new_object(CvTermCriteria criteria)
   return object;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  
+  rb_klass = rb_define_class_under(opencv, "CvTermCriteria", rb_cObject);
+  /* CvTermCriteria: class */
+  rb_define_const(opencv, "CvTerm", rb_klass);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "type", RUBY_METHOD_FUNC(rb_type), 0);
+  rb_define_method(rb_klass, "max", RUBY_METHOD_FUNC(rb_max), 0);
+  rb_define_method(rb_klass, "max=", RUBY_METHOD_FUNC(rb_set_max), 1);
+  rb_define_method(rb_klass, "eps", RUBY_METHOD_FUNC(rb_eps), 0);
+  rb_define_method(rb_klass, "eps=", RUBY_METHOD_FUNC(rb_set_eps), 1);
+  rb_define_alias(rb_klass, "epsilon", "eps");
+  rb_define_alias(rb_klass, "epsilon=", "eps=");
+}
+
 __NAMESPACE_END_CVTERMCRITERIA
 __NAMESPACE_END_OPENCV
+

@@ -9,7 +9,7 @@
 ************************************************************/
 #include "cvslice.h"
 /*
- * Document-class: OpenCV::CvClice
+ * Document-class: OpenCV::CvSlice
  *
  * C structure is here, very simple.
  *   typdef struct CvSlice {
@@ -26,26 +26,6 @@ VALUE
 rb_class()
 {
   return rb_klass;
-}
-
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvSlice", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 2);
-  rb_define_method(rb_klass, "start_index", RUBY_METHOD_FUNC(rb_start_index_aref), 0);
-  rb_define_method(rb_klass, "end_index", RUBY_METHOD_FUNC(rb_end_index_aref), 0);
-  rb_define_method(rb_klass, "start_index=", RUBY_METHOD_FUNC(rb_start_index_aset), 1);
-  rb_define_method(rb_klass, "end_index=", RUBY_METHOD_FUNC(rb_end_index_aset), 1);
 }
 
 VALUE
@@ -116,5 +96,31 @@ rb_end_index_aset(VALUE self, VALUE index)
   return self;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvSlice", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 2);
+  rb_define_method(rb_klass, "start_index", RUBY_METHOD_FUNC(rb_start_index_aref), 0);
+  rb_define_method(rb_klass, "end_index", RUBY_METHOD_FUNC(rb_end_index_aref), 0);
+  rb_define_method(rb_klass, "start_index=", RUBY_METHOD_FUNC(rb_start_index_aset), 1);
+  rb_define_method(rb_klass, "end_index=", RUBY_METHOD_FUNC(rb_end_index_aset), 1);
+}
+
 __NAMESPACE_END_CVSLICE
 __NAMESPACE_END_OPENCV
+

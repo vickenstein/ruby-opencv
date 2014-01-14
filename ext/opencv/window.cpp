@@ -32,33 +32,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-init_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * GUI = rb_define_module_under(opencv, "GUI");         
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE GUI = rb_module_GUI();
-  rb_klass = rb_define_class_under(GUI, "Window", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "alive?", RUBY_METHOD_FUNC(rb_alive_q), 0);
-  rb_define_method(rb_klass, "destroy", RUBY_METHOD_FUNC(rb_destroy), 0);
-  rb_define_singleton_method(rb_klass, "destroy_all", RUBY_METHOD_FUNC(rb_destroy_all), 0);
-  rb_define_method(rb_klass, "resize", RUBY_METHOD_FUNC(rb_resize), -1);
-  rb_define_method(rb_klass, "move", RUBY_METHOD_FUNC(rb_move), -1);
-  rb_define_method(rb_klass, "show_image", RUBY_METHOD_FUNC(rb_show_image), 1);
-  rb_define_alias(rb_klass, "show", "show_image");
-  rb_define_method(rb_klass, "set_trackbar", RUBY_METHOD_FUNC(rb_set_trackbar), -1);
-  rb_define_method(rb_klass, "set_mouse_callback", RUBY_METHOD_FUNC(rb_set_mouse_callback), -1);
-  rb_define_alias(rb_klass, "on_mouse", "set_mouse_callback");
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -349,6 +322,39 @@ rb_set_mouse_callback(int argc, VALUE* argv, VALUE self)
 
   rb_ary_push(WINDOW(self)->blocks, block);
   return block;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE GUI = rb_define_module_under(opencv, "GUI");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * GUI = rb_define_module_under(opencv, "GUI");
+   *
+   * note: this comment is used by rdoc.
+   */
+  VALUE GUI = rb_module_GUI();
+  rb_klass = rb_define_class_under(GUI, "Window", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "alive?", RUBY_METHOD_FUNC(rb_alive_q), 0);
+  rb_define_method(rb_klass, "destroy", RUBY_METHOD_FUNC(rb_destroy), 0);
+  rb_define_singleton_method(rb_klass, "destroy_all", RUBY_METHOD_FUNC(rb_destroy_all), 0);
+  rb_define_method(rb_klass, "resize", RUBY_METHOD_FUNC(rb_resize), -1);
+  rb_define_method(rb_klass, "move", RUBY_METHOD_FUNC(rb_move), -1);
+  rb_define_method(rb_klass, "show_image", RUBY_METHOD_FUNC(rb_show_image), 1);
+  rb_define_alias(rb_klass, "show", "show_image");
+  rb_define_method(rb_klass, "set_trackbar", RUBY_METHOD_FUNC(rb_set_trackbar), -1);
+  rb_define_method(rb_klass, "set_mouse_callback", RUBY_METHOD_FUNC(rb_set_mouse_callback), -1);
+  rb_define_alias(rb_klass, "on_mouse", "set_mouse_callback");
 }
 
 __NAMESPACE_END_WINDOW
