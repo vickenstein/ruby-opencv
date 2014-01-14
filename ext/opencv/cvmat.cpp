@@ -354,7 +354,7 @@ void define_ruby_class()
   rb_define_singleton_method(rb_klass, "rotation_matrix2D", RUBY_METHOD_FUNC(rb_rotation_matrix2D), 3);
   rb_define_singleton_method(rb_klass, "get_perspective_transform", RUBY_METHOD_FUNC(rb_get_perspective_transform), 2);
   rb_define_method(rb_klass, "warp_perspective", RUBY_METHOD_FUNC(rb_warp_perspective), -1);
-  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homograpy), -1);
+  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homography), -1);
   rb_define_method(rb_klass, "remap", RUBY_METHOD_FUNC(rb_remap), -1);
   rb_define_method(rb_klass, "log_polar", RUBY_METHOD_FUNC(rb_log_polar), -1);
 
@@ -3979,7 +3979,7 @@ rb_warp_affine(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   CvMat.find_homograpy(<i>src_points, dst_points[,method = :all][,ransac_reproj_threshold = 0][,get_status = nil]</i>) -> cvmat
+ *   CvMat.find_homography(<i>src_points, dst_points[,method = :all][,ransac_reproj_threshold = 0][,get_status = nil]</i>) -> cvmat
  * 
  * Finds the perspective transformation between two planes.
  * <i>src_points:</i> Coordinates of the points in the original plane, 2xN, Nx2, 3xN or Nx3 1-channel array (the latter two are for representation in homogeneous coordinates), where N is the number of points. 1xN or Nx1 2- or 3-channel array can also be passed.
@@ -3992,7 +3992,7 @@ rb_warp_affine(int argc, VALUE *argv, VALUE self)
  * <i>get_status</i> If true, the optional output mask set by a robust method (:ransac or :lmeds) is returned additionally.
  */
 VALUE
-rb_find_homograpy(int argc, VALUE *argv, VALUE self)
+rb_find_homography(int argc, VALUE *argv, VALUE self)
 {
   VALUE src_points, dst_points, method, ransac_reproj_threshold, get_status;
   rb_scan_args(argc, argv, "23", &src_points, &dst_points, &method, &ransac_reproj_threshold, &get_status);
