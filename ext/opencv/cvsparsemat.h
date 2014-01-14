@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVSPARSEMAT
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 __NAMESPACE_END_CVSPARSEMAT
 __NAMESPACE_END_OPENCV

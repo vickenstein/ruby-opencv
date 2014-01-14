@@ -24,7 +24,7 @@ rb_module()
 }
 
 void
-define_ruby_module()
+init_ruby_module()
 {
   if (module)
     return;

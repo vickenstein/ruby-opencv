@@ -25,7 +25,7 @@ rb_class()
 }
 
 void
-define_ruby_class()
+init_ruby_class()
 {
   if (rb_klass)
     return;

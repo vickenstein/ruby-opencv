@@ -50,7 +50,7 @@ rb_initialize(int argc, VALUE argv[], VALUE self)
 }
 
 void
-define_ruby_class()
+init_ruby_class()
 {
   if (rb_klass)
     return;

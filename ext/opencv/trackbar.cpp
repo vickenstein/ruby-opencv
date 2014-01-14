@@ -25,7 +25,7 @@ VALUE rb_class() {
   return rb_klass;
 }
 
-void define_ruby_class() {
+void init_ruby_class() {
   if (rb_klass)
     return;
   /* 

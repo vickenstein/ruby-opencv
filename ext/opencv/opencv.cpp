@@ -154,7 +154,7 @@ rb_module_opencv()
 }
 
 void
-define_ruby_module()
+init_ruby_module()
 {
   if (rb_module)
     return;
@@ -705,70 +705,70 @@ extern "C" {
   {
     cvRedirectError((CvErrorCallback)mOpenCV::error_callback);
 
-    mOpenCV::define_ruby_module();
+    mOpenCV::init_ruby_module();
     
     mOpenCV::cCvError::init_ruby_class();
-    mOpenCV::cCvPoint::define_ruby_class();
-    mOpenCV::cCvPoint2D32f::define_ruby_class();
-    mOpenCV::cCvPoint3D32f::define_ruby_class();
-    mOpenCV::cCvSize::define_ruby_class();
-    mOpenCV::cCvSize2D32f::define_ruby_class();
-    mOpenCV::cCvRect::define_ruby_class();
-    mOpenCV::cCvScalar::define_ruby_class();
-    mOpenCV::cCvSlice::define_ruby_class();
-    mOpenCV::cCvTermCriteria::define_ruby_class();
+    mOpenCV::cCvPoint::init_ruby_class();
+    mOpenCV::cCvPoint2D32f::init_ruby_class();
+    mOpenCV::cCvPoint3D32f::init_ruby_class();
+    mOpenCV::cCvSize::init_ruby_class();
+    mOpenCV::cCvSize2D32f::init_ruby_class();
+    mOpenCV::cCvRect::init_ruby_class();
+    mOpenCV::cCvScalar::init_ruby_class();
+    mOpenCV::cCvSlice::init_ruby_class();
+    mOpenCV::cCvTermCriteria::init_ruby_class();
     mOpenCV::cCvBox2D::init_ruby_class();
     mOpenCV::cCvFont::init_ruby_class();
-    mOpenCV::cIplConvKernel::define_ruby_class();
-    mOpenCV::cCvMoments::define_ruby_class();
+    mOpenCV::cIplConvKernel::init_ruby_class();
+    mOpenCV::cCvMoments::init_ruby_class();
     mOpenCV::cCvHuMoments::init_ruby_class();
     mOpenCV::cCvConvexityDefect::init_ruby_class();
 
-    mOpenCV::cCvSURFPoint::define_ruby_class();
-    mOpenCV::cCvSURFParams::define_ruby_class();
+    mOpenCV::cCvSURFPoint::init_ruby_class();
+    mOpenCV::cCvSURFParams::init_ruby_class();
     
-    mOpenCV::cCvMemStorage::define_ruby_class();
+    mOpenCV::cCvMemStorage::init_ruby_class();
 
-    mOpenCV::cCvSeq::define_ruby_class();
+    mOpenCV::cCvSeq::init_ruby_class();
     mOpenCV::mCurve::init_ruby_module();
-    mOpenCV::mPointSet::define_ruby_module();
+    mOpenCV::mPointSet::init_ruby_module();
     mOpenCV::cCvChain::init_ruby_class();
     mOpenCV::cCvContour::init_ruby_class();
     mOpenCV::cCvContourTree::init_ruby_class();
 
     mOpenCV::cCvMat::init_ruby_class();
-    mOpenCV::cIplImage::define_ruby_class();
-    mOpenCV::cCvMatND::define_ruby_class();
-    mOpenCV::cCvSparseMat::define_ruby_class();
+    mOpenCV::cIplImage::init_ruby_class();
+    mOpenCV::cCvMatND::init_ruby_class();
+    mOpenCV::cCvSparseMat::init_ruby_class();
     mOpenCV::cCvHistogram::init_ruby_class();
     mOpenCV::cCvCapture::init_ruby_class();
-    mOpenCV::cCvVideoWriter::define_ruby_class();
+    mOpenCV::cCvVideoWriter::init_ruby_class();
 
     mOpenCV::cCvLine::init_ruby_class();
-    mOpenCV::cCvTwoPoints::define_ruby_class();
+    mOpenCV::cCvTwoPoints::init_ruby_class();
     mOpenCV::cCvCircle32f::init_ruby_class();
 
-    mOpenCV::cCvConDensation::define_ruby_class();
+    mOpenCV::cCvConDensation::init_ruby_class();
     mOpenCV::cCvFeatureTree::init_ruby_class();
 
     mOpenCV::cCvConnectedComp::init_ruby_class();
     mOpenCV::cCvAvgComp::init_ruby_class();
     mOpenCV::cCvHaarClassifierCascade::init_ruby_class();
 
-    mOpenCV::cAlgorithm::define_ruby_class();
-    mOpenCV::cFaceRecognizer::define_ruby_class();
-    mOpenCV::cEigenFaces::define_ruby_class();
-    mOpenCV::cFisherFaces::define_ruby_class();
-    mOpenCV::cLBPH::define_ruby_class();
+    mOpenCV::cAlgorithm::init_ruby_class();
+    mOpenCV::cFaceRecognizer::init_ruby_class();
+    mOpenCV::cEigenFaces::init_ruby_class();
+    mOpenCV::cFisherFaces::init_ruby_class();
+    mOpenCV::cLBPH::init_ruby_class();
 
-    mOpenCV::mGUI::define_ruby_module();
-    mOpenCV::mGUI::cWindow::define_ruby_class();
-    mOpenCV::mGUI::cTrackbar::define_ruby_class();
-    mOpenCV::mGUI::cMouseEvent::define_ruby_class();
+    mOpenCV::mGUI::init_ruby_module();
+    mOpenCV::mGUI::cWindow::init_ruby_class();
+    mOpenCV::mGUI::cTrackbar::init_ruby_class();
+    mOpenCV::mGUI::cMouseEvent::init_ruby_class();
 
 #ifdef HAVE_ML_H
     /* feature support.
-       mOpenCV::mMachineLearning::define_ruby_module();
+       mOpenCV::mMachineLearning::init_ruby_module();
     */
 #endif
 
