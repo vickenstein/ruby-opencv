@@ -154,7 +154,7 @@ rb_module_opencv()
 }
 
 void
-define_ruby_module()
+init_ruby_module()
 {
   if (rb_module)
     return;
@@ -165,6 +165,11 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_MAJOR_VERSION", INT2FIX(CV_MAJOR_VERSION));
   rb_define_const(rb_module, "CV_MINOR_VERSION", INT2FIX(CV_MINOR_VERSION));
   rb_define_const(rb_module, "CV_SUBMINOR_VERSION", INT2FIX(CV_SUBMINOR_VERSION));
+
+  rb_define_const(rb_module, "CV_VERSION_EPOCH", INT2FIX(CV_VERSION_EPOCH));
+  rb_define_const(rb_module, "CV_VERSION_MAJOR", INT2FIX(CV_VERSION_MAJOR));
+  rb_define_const(rb_module, "CV_VERSION_MINOR", INT2FIX(CV_VERSION_MINOR));
+  rb_define_const(rb_module, "CV_VERSION_REVISION", INT2FIX(CV_VERSION_REVISION));
 
   /* 0: 8bit unsigned */
   rb_define_const(rb_module, "CV_8U", INT2FIX(CV_8U));
@@ -180,7 +185,37 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_32F", INT2FIX(CV_32F));
   /* 6: 64bit floating-point */
   rb_define_const(rb_module, "CV_64F", INT2FIX(CV_64F));
-  
+
+  /* Other depth */
+  rb_define_const(rb_module, "CV_8UC1", INT2FIX(CV_8UC1));
+  rb_define_const(rb_module, "CV_8UC2", INT2FIX(CV_8UC2));
+  rb_define_const(rb_module, "CV_8UC3", INT2FIX(CV_8UC3));
+  rb_define_const(rb_module, "CV_8UC4", INT2FIX(CV_8UC4));
+  rb_define_const(rb_module, "CV_8SC1", INT2FIX(CV_8SC1));
+  rb_define_const(rb_module, "CV_8SC2", INT2FIX(CV_8SC2));
+  rb_define_const(rb_module, "CV_8SC3", INT2FIX(CV_8SC3));
+  rb_define_const(rb_module, "CV_8SC4", INT2FIX(CV_8SC4));
+  rb_define_const(rb_module, "CV_16UC1", INT2FIX(CV_16UC1));
+  rb_define_const(rb_module, "CV_16UC2", INT2FIX(CV_16UC2));
+  rb_define_const(rb_module, "CV_16UC3", INT2FIX(CV_16UC3));
+  rb_define_const(rb_module, "CV_16UC4", INT2FIX(CV_16UC4));
+  rb_define_const(rb_module, "CV_16SC1", INT2FIX(CV_16SC1));
+  rb_define_const(rb_module, "CV_16SC2", INT2FIX(CV_16SC2));
+  rb_define_const(rb_module, "CV_16SC3", INT2FIX(CV_16SC3));
+  rb_define_const(rb_module, "CV_16SC4", INT2FIX(CV_16SC4));
+  rb_define_const(rb_module, "CV_32SC1", INT2FIX(CV_32SC1));
+  rb_define_const(rb_module, "CV_32SC2", INT2FIX(CV_32SC2));
+  rb_define_const(rb_module, "CV_32SC3", INT2FIX(CV_32SC3));
+  rb_define_const(rb_module, "CV_32SC4", INT2FIX(CV_32SC4));
+  rb_define_const(rb_module, "CV_32FC1", INT2FIX(CV_32FC1));
+  rb_define_const(rb_module, "CV_32FC2", INT2FIX(CV_32FC2));
+  rb_define_const(rb_module, "CV_32FC3", INT2FIX(CV_32FC3));
+  rb_define_const(rb_module, "CV_32FC4", INT2FIX(CV_32FC4));
+  rb_define_const(rb_module, "CV_64FC1", INT2FIX(CV_64FC1));
+  rb_define_const(rb_module, "CV_64FC2", INT2FIX(CV_64FC2));
+  rb_define_const(rb_module, "CV_64FC3", INT2FIX(CV_64FC3));
+  rb_define_const(rb_module, "CV_64FC4", INT2FIX(CV_64FC4));
+
   /* Color types of loaded images */
   rb_define_const(rb_module, "CV_LOAD_IMAGE_UNCHANGED", INT2FIX(CV_LOAD_IMAGE_UNCHANGED));
   rb_define_const(rb_module, "CV_LOAD_IMAGE_GRAYSCALE", INT2FIX(CV_LOAD_IMAGE_GRAYSCALE));
@@ -337,6 +372,19 @@ define_ruby_module()
   rb_define_const(rb_module, "CV_CALIB_CB_FILTER_QUADS", INT2FIX(CV_CALIB_CB_FILTER_QUADS));
   rb_define_const(rb_module, "CV_CALIB_CB_FAST_CHECK", INT2FIX(CV_CALIB_CB_FAST_CHECK));
 
+  /* Color map for cv::applyColorMap */
+  rb_define_const(rb_module, "COLORMAP_AUTUMN", INT2FIX(cv::COLORMAP_AUTUMN));
+  rb_define_const(rb_module, "COLORMAP_BONE", INT2FIX(cv::COLORMAP_BONE));
+  rb_define_const(rb_module, "COLORMAP_JET", INT2FIX(cv::COLORMAP_JET));
+  rb_define_const(rb_module, "COLORMAP_WINTER", INT2FIX(cv::COLORMAP_WINTER));
+  rb_define_const(rb_module, "COLORMAP_RAINBOW", INT2FIX(cv::COLORMAP_RAINBOW));
+  rb_define_const(rb_module, "COLORMAP_OCEAN", INT2FIX(cv::COLORMAP_OCEAN));
+  rb_define_const(rb_module, "COLORMAP_SUMMER", INT2FIX(cv::COLORMAP_SUMMER));
+  rb_define_const(rb_module, "COLORMAP_SPRING", INT2FIX(cv::COLORMAP_SPRING));
+  rb_define_const(rb_module, "COLORMAP_COOL", INT2FIX(cv::COLORMAP_COOL));
+  rb_define_const(rb_module, "COLORMAP_HSV", INT2FIX(cv::COLORMAP_HSV));
+  rb_define_const(rb_module, "COLORMAP_PINK", INT2FIX(cv::COLORMAP_PINK));
+  rb_define_const(rb_module, "COLORMAP_HOT", INT2FIX(cv::COLORMAP_HOT));
 
   VALUE inversion_method = rb_hash_new();
   /* {:lu, :svd, :svd_sym(:svd_symmetric)}: Inversion method */
@@ -657,63 +705,70 @@ extern "C" {
   {
     cvRedirectError((CvErrorCallback)mOpenCV::error_callback);
 
-    mOpenCV::define_ruby_module();
+    mOpenCV::init_ruby_module();
     
     mOpenCV::cCvError::init_ruby_class();
-    mOpenCV::cCvPoint::define_ruby_class();
-    mOpenCV::cCvPoint2D32f::define_ruby_class();
-    mOpenCV::cCvPoint3D32f::define_ruby_class();
-    mOpenCV::cCvSize::define_ruby_class();
-    mOpenCV::cCvSize2D32f::define_ruby_class();
-    mOpenCV::cCvRect::define_ruby_class();
-    mOpenCV::cCvScalar::define_ruby_class();
-    mOpenCV::cCvSlice::define_ruby_class();
-    mOpenCV::cCvTermCriteria::define_ruby_class();
+    mOpenCV::cCvPoint::init_ruby_class();
+    mOpenCV::cCvPoint2D32f::init_ruby_class();
+    mOpenCV::cCvPoint3D32f::init_ruby_class();
+    mOpenCV::cCvSize::init_ruby_class();
+    mOpenCV::cCvSize2D32f::init_ruby_class();
+    mOpenCV::cCvRect::init_ruby_class();
+    mOpenCV::cCvScalar::init_ruby_class();
+    mOpenCV::cCvSlice::init_ruby_class();
+    mOpenCV::cCvTermCriteria::init_ruby_class();
     mOpenCV::cCvBox2D::init_ruby_class();
     mOpenCV::cCvFont::init_ruby_class();
-    mOpenCV::cIplConvKernel::define_ruby_class();
-    mOpenCV::cCvMoments::define_ruby_class();
+    mOpenCV::cIplConvKernel::init_ruby_class();
+    mOpenCV::cCvMoments::init_ruby_class();
     mOpenCV::cCvHuMoments::init_ruby_class();
     mOpenCV::cCvConvexityDefect::init_ruby_class();
 
-    mOpenCV::cCvSURFPoint::define_ruby_class();
-    mOpenCV::cCvSURFParams::define_ruby_class();
+    mOpenCV::cCvSURFPoint::init_ruby_class();
+    mOpenCV::cCvSURFParams::init_ruby_class();
     
-    mOpenCV::cCvMemStorage::define_ruby_class();
+    mOpenCV::cCvMemStorage::init_ruby_class();
 
-    mOpenCV::cCvSeq::define_ruby_class();
+    mOpenCV::cCvSeq::init_ruby_class();
     mOpenCV::mCurve::init_ruby_module();
-    mOpenCV::mPointSet::define_ruby_module();
+    mOpenCV::mPointSet::init_ruby_module();
     mOpenCV::cCvChain::init_ruby_class();
     mOpenCV::cCvContour::init_ruby_class();
     mOpenCV::cCvContourTree::init_ruby_class();
 
     mOpenCV::cCvMat::init_ruby_class();
-    mOpenCV::cIplImage::define_ruby_class();
-    mOpenCV::cCvMatND::define_ruby_class();
-    mOpenCV::cCvSparseMat::define_ruby_class();
+    mOpenCV::cIplImage::init_ruby_class();
+    mOpenCV::cCvMatND::init_ruby_class();
+    mOpenCV::cCvSparseMat::init_ruby_class();
     mOpenCV::cCvHistogram::init_ruby_class();
     mOpenCV::cCvCapture::init_ruby_class();
-    mOpenCV::cCvVideoWriter::define_ruby_class();
+    mOpenCV::cCvVideoWriter::init_ruby_class();
 
     mOpenCV::cCvLine::init_ruby_class();
-    mOpenCV::cCvTwoPoints::define_ruby_class();
+    mOpenCV::cCvTwoPoints::init_ruby_class();
     mOpenCV::cCvCircle32f::init_ruby_class();
 
-    mOpenCV::cCvConDensation::define_ruby_class();
+    mOpenCV::cCvConDensation::init_ruby_class();
     mOpenCV::cCvFeatureTree::init_ruby_class();
 
     mOpenCV::cCvConnectedComp::init_ruby_class();
     mOpenCV::cCvAvgComp::init_ruby_class();
     mOpenCV::cCvHaarClassifierCascade::init_ruby_class();
-    mOpenCV::mGUI::define_ruby_module();
-    mOpenCV::mGUI::cWindow::define_ruby_class();
-    mOpenCV::mGUI::cTrackbar::define_ruby_class();
-    mOpenCV::mGUI::cMouseEvent::define_ruby_class();
+
+    mOpenCV::cAlgorithm::init_ruby_class();
+    mOpenCV::cFaceRecognizer::init_ruby_class();
+    mOpenCV::cEigenFaces::init_ruby_class();
+    mOpenCV::cFisherFaces::init_ruby_class();
+    mOpenCV::cLBPH::init_ruby_class();
+
+    mOpenCV::mGUI::init_ruby_module();
+    mOpenCV::mGUI::cWindow::init_ruby_class();
+    mOpenCV::mGUI::cTrackbar::init_ruby_class();
+    mOpenCV::mGUI::cMouseEvent::init_ruby_class();
 
 #ifdef HAVE_ML_H
     /* feature support.
-       mOpenCV::mMachineLearning::define_ruby_module();
+       mOpenCV::mMachineLearning::init_ruby_module();
     */
 #endif
 

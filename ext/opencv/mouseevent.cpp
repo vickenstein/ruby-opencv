@@ -27,29 +27,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * GUI = rb_define_module_under(opencv, "GUI");
-   * cvpoint = rb_define_class_under(opencv, "CvPoint", rb_cObject);
-   */
-  VALUE GUI = rb_module_GUI();
-  VALUE cvpoint = cCvPoint::rb_class();
-  rb_klass = rb_define_class_under(GUI, "MouseEvent", cvpoint);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "event", RUBY_METHOD_FUNC(rb_event), 0);
-  rb_define_method(rb_klass, "left_button?", RUBY_METHOD_FUNC(rb_left_button_q), 0);
-  rb_define_method(rb_klass, "right_button?", RUBY_METHOD_FUNC(rb_right_button_q), 0);
-  rb_define_method(rb_klass, "middle_button?", RUBY_METHOD_FUNC(rb_middle_button_q), 0);
-  rb_define_method(rb_klass, "ctrl_key?", RUBY_METHOD_FUNC(rb_ctrl_key_q), 0);
-  rb_define_method(rb_klass, "shift_key?", RUBY_METHOD_FUNC(rb_shift_key_q), 0);
-  rb_define_method(rb_klass, "alt_key?", RUBY_METHOD_FUNC(rb_alt_key_q), 0);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -173,6 +150,36 @@ new_object(int event, int x, int y, int flags)
   mouseevent->event = event;
   mouseevent->flags = flags;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE GUI = rb_define_module_under(opencv, "GUI");
+  VALUE cvpoint = rb_define_class_under(opencv, "CvPoint", rb_cObject);
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * GUI = rb_define_module_under(opencv, "GUI");
+   * cvpoint = rb_define_class_under(opencv, "CvPoint", rb_cObject);
+   */
+  VALUE GUI = rb_module_GUI();
+  VALUE cvpoint = cCvPoint::rb_class();
+  rb_klass = rb_define_class_under(GUI, "MouseEvent", cvpoint);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "event", RUBY_METHOD_FUNC(rb_event), 0);
+  rb_define_method(rb_klass, "left_button?", RUBY_METHOD_FUNC(rb_left_button_q), 0);
+  rb_define_method(rb_klass, "right_button?", RUBY_METHOD_FUNC(rb_right_button_q), 0);
+  rb_define_method(rb_klass, "middle_button?", RUBY_METHOD_FUNC(rb_middle_button_q), 0);
+  rb_define_method(rb_klass, "ctrl_key?", RUBY_METHOD_FUNC(rb_ctrl_key_q), 0);
+  rb_define_method(rb_klass, "shift_key?", RUBY_METHOD_FUNC(rb_shift_key_q), 0);
+  rb_define_method(rb_klass, "alt_key?", RUBY_METHOD_FUNC(rb_alt_key_q), 0);
 }
 
 __NAMESPACE_END_MOUSEEVENT

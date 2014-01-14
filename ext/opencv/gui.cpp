@@ -26,7 +26,7 @@ rb_module_GUI()
 }
 
 void
-define_ruby_module()
+init_ruby_module()
 {
   if (rb_module)
     return;

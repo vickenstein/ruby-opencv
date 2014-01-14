@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVCONDENSATION
 
 VALUE rb_class();
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_dp(VALUE self);
 VALUE rb_mp(VALUE self);

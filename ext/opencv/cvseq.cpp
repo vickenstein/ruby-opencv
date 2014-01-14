@@ -74,7 +74,7 @@ unregister_elem_class(void *ptr)
 }
 
 void
-define_ruby_class()
+init_ruby_class()
 {
   if (rb_klass)
     return;

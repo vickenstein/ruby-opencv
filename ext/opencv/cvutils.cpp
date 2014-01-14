@@ -37,31 +37,28 @@ raise_compatible_typeerror(VALUE object, const char* expected_class_name)
 
 /*
  * Allocates a memory buffer
+ * see cv::fastMalloc()
+ */
+void*
+rbFastMalloc(size_t size)
+{
+  uchar* udata = (uchar*)xmalloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
+  if(!udata) {
+    rb_raise(rb_eNoMemError, "Failed to allocate memory");
+  }
+  uchar** adata = cv::alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
+  adata[-1] = udata;
+  return adata;
+}
+
+/*
+ * Allocates a memory buffer
  * When memory allocation is failed, run GC and retry it
  */
 void*
 rb_cvAlloc(size_t size)
 {
-  void* ptr = NULL;
-  try {
-    ptr = cvAlloc(size);
-  }
-  catch(cv::Exception& e) {
-    if (e.code != CV_StsNoMem)
-      rb_raise(rb_eRuntimeError, "%s", e.what());
-
-    rb_gc_start();
-    try {
-      ptr = cvAlloc(size);
-    }
-    catch (cv::Exception& e) {
-      if (e.code == CV_StsNoMem)
-	rb_raise(rb_eNoMemError, "%s", e.what());
-      else
-	rb_raise(rb_eRuntimeError, "%s", e.what());
-    }
-  }
-  return ptr;
+  return rbFastMalloc(size);
 }
 
 /*
@@ -69,28 +66,31 @@ rb_cvAlloc(size_t size)
  * When memory allocation is failed, run GC and retry it
  */
 CvMat*
-rb_cvCreateMat(int height, int width, int type)
+rb_cvCreateMat(int rows, int cols, int type)
 {
-  CvMat* ptr = NULL;
+  CvMat* mat = NULL;
   try {
-    ptr = cvCreateMat(height, width, type);
+    mat = cvCreateMatHeader(rows, cols, type);
+    if (mat) {
+      // see OpenCV's cvCreateData()
+      size_t step = mat->step;
+      size_t total_size = step * mat->rows + sizeof(int) + CV_MALLOC_ALIGN;
+
+      mat->refcount = (int*)rbFastMalloc(total_size);
+      mat->data.ptr = (uchar*)cvAlignPtr(mat->refcount + 1, CV_MALLOC_ALIGN);
+      *mat->refcount = 1;
+    }
+    else {
+      rb_raise(rb_eRuntimeError, "Failed to create mat header");
+    }
   }
   catch(cv::Exception& e) {
-    if (e.code != CV_StsNoMem)
-      rb_raise(rb_eRuntimeError, "%s", e.what());
-
-    rb_gc_start();
-    try {
-      ptr = cvCreateMat(height, width, type);
+    if (mat) {
+      cvReleaseMat(&mat);
     }
-    catch (cv::Exception& e) {
-      if (e.code == CV_StsNoMem)
-	rb_raise(rb_eNoMemError, "%s", e.what());
-      else
-	rb_raise(rb_eRuntimeError, "%s", e.what());
-    }
+    rb_raise(rb_eRuntimeError, "%s", e.what());
   }
-  return ptr;
+  return mat;
 }
 
 /*
@@ -102,22 +102,20 @@ rb_cvCreateImage(CvSize size, int depth, int channels)
 {
   IplImage* ptr = NULL;
   try {
-    ptr = cvCreateImage(size, depth, channels);
+    ptr = cvCreateImageHeader(size, depth, channels);
+    if (ptr) {
+      // see OpenCV's cvCreateData()
+      ptr->imageData = ptr->imageDataOrigin = (char*)rbFastMalloc((size_t)ptr->imageSize);
+    }
+    else {
+      rb_raise(rb_eRuntimeError, "Failed to create image header");
+    }
   }
   catch(cv::Exception& e) {
-    if (e.code != CV_StsNoMem)
-      rb_raise(rb_eRuntimeError, "%s", e.what());
-
-    rb_gc_start();
-    try {
-      ptr = cvCreateImage(size, depth, channels);
+    if (ptr) {
+      cvReleaseImage(&ptr);
     }
-    catch (cv::Exception& e) {
-      if (e.code == CV_StsNoMem)
-	rb_raise(rb_eNoMemError, "%s", e.what());
-      else
-	rb_raise(rb_eRuntimeError, "%s", e.what());
-    }
+    rb_raise(rb_eRuntimeError, "%s", e.what());
   }
   return ptr;
 }

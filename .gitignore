@@ -23,3 +23,6 @@ examples/contours/rotated-boxes-with-detected-bounding-rectangles.jpg
 Gemfile.lock
 .yardoc
 .RUBYLIBDIR.*
+.RUBYARCHDIR.*
+.bundle
+
