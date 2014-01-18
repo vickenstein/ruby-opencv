@@ -320,6 +320,8 @@ init_ruby_module()
 
   /* Flags of window */
   rb_define_const(rb_module, "CV_WINDOW_AUTOSIZE", INT2FIX(CV_WINDOW_AUTOSIZE));
+  rb_define_const(rb_module, "CV_WINDOW_NORMAL", INT2FIX(CV_WINDOW_NORMAL));
+  rb_define_const(rb_module, "CV_WINDOW_OPENGL", INT2FIX(CV_WINDOW_OPENGL));
 
   /* Object detection mode */
   rb_define_const(rb_module, "CV_HAAR_DO_CANNY_PRUNING", INT2FIX(CV_HAAR_DO_CANNY_PRUNING));

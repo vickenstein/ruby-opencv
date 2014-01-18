@@ -61,8 +61,11 @@ window_free(void *ptr)
  * @overload new(name, flags = CV_WINDOW_AUTOSIZE)
  *   @param name [String] Name of the window in the window caption that may be used as a window identifier.
  *   @param flags [Integer] Flags of the window. The supported flags are:
- *     * CVWINDOW_AUTOSIZE - If this is set, the window size is automatically adjusted
+ *     * CV_WINDOW_AUTOSIZE - If this is set, the window size is automatically adjusted
  *       to fit the displayed image, and you cannot change the window size manually.
+ *     * CV_WINDOW_NORMAL - If this is set, the user can resize the window (no constraint).
+ *     * CV_WINDOW_OPENGL - If this is set, the window will be created with OpenGL support.
+ * @opencv_func cvNamedWindow
  */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)

@@ -149,7 +149,9 @@ class TestOpenCV < OpenCVTestCase
     assert_equal(4, CV_FM_LMEDS)
 
     # Flags of window
+    assert_equal(0, CV_WINDOW_NORMAL)
     assert_equal(1, CV_WINDOW_AUTOSIZE)
+    assert_equal(4096, CV_WINDOW_OPENGL)
 
     # Object detection mode
     assert_equal(1, CV_HAAR_DO_CANNY_PRUNING)
