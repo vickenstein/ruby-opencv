@@ -1,4 +1,5 @@
 .gitignore
+.yardopts
 DEVELOPERS_NOTE.md
 Gemfile
 History.txt
