@@ -689,6 +689,7 @@ rb_to_CvMat(VALUE self)
 
 /*
  * Returns matrix corresponding to the rectangular sub-array of input image or matrix
+ *
  * @overload sub_rect(rect)
  *   @param rect [CvRect] Zero-based coordinates of the rectangle of interest.
  * @overload sub_rect(topleft, size)
@@ -701,8 +702,6 @@ rb_to_CvMat(VALUE self)
  *   @param height [Integer] Height of the rectangle of interest
  * @return [CvMat] Sub-array of matrix
  * @opencv_func cvGetSubRect
- * 
- * link:../../images/CvMat_sub_rect.png
  */
 VALUE
 rb_sub_rect(VALUE self, VALUE args)
