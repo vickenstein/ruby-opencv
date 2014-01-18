@@ -160,7 +160,7 @@ rb_get_dir(VALUE self)
 /*
  * Set orientation of the feature: 0..360 degrees.
  *
- * @overloda dir=(value)
+ * @overload dir=(value)
  *   @param [Number] Value to set.
  */
 VALUE
@@ -174,7 +174,7 @@ rb_set_dir(VALUE self, VALUE value)
  * Return value of the hessian
  *
  * @overload hessian
- * @reutrn [Number] Hessian
+ * @return [Number] Hessian
  */
 VALUE
 rb_get_hessian(VALUE self)
