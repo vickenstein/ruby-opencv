@@ -738,8 +738,6 @@ extern "C" {
 
     mOpenCV::cCvMat::init_ruby_class();
     mOpenCV::cIplImage::init_ruby_class();
-    mOpenCV::cCvMatND::init_ruby_class();
-    mOpenCV::cCvSparseMat::init_ruby_class();
     mOpenCV::cCvHistogram::init_ruby_class();
     mOpenCV::cCvCapture::init_ruby_class();
     mOpenCV::cCvVideoWriter::init_ruby_class();
@@ -748,7 +746,6 @@ extern "C" {
     mOpenCV::cCvTwoPoints::init_ruby_class();
     mOpenCV::cCvCircle32f::init_ruby_class();
 
-    mOpenCV::cCvConDensation::init_ruby_class();
     mOpenCV::cCvFeatureTree::init_ruby_class();
 
     mOpenCV::cCvConnectedComp::init_ruby_class();

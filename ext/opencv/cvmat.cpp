@@ -5224,96 +5224,6 @@ rb_match_shapes(int argc, VALUE *argv, VALUE self)
   return rb_float_new(result);
 }
 
-
-/**
- * Port from OpenCV sample: matching_to_many_images.cpp
- * call-seq:
- *   match_descriptors(images[, detector_type="SURF"][, descriptor_type="SURF"][, matcher_type="FlannBased"]) -> Hash
- *
- * Matching descriptors detected on one image to descriptors detected in image array.
- * Returns a Hash contains match count of each image index.
- * For example, a Hash {0 => 5, 2 => 10} means the images[0] has 5 key points matched, images[2] has 10 key points matched, 
- * and all of other images in the images array have no key point matched.
- * Hence images[2] is the best match in general.
- *
- * <i>images</i> is an array of CvMat objects.
- * <i>detector_type</i> is a string, default is "SURF", options: "SURF", "FAST", "SIFT", "STAR"
- * <i>descriptor_type</i> is a string, default is "SURF", options: "SURF", "SIFT", "BRIEF"
- * <i>matcher_type</i> is a string, default is "FlannBased", options: "FlannBased", "BruteForce"
- */
-VALUE
-rb_match_descriptors(int argc, VALUE *argv, VALUE self)
-{
-  VALUE images, detector_type, descriptor_type, matcher_type;
-  rb_scan_args(argc, argv, "13", &images, &detector_type, &descriptor_type, &matcher_type);
-  if (RARRAY_LEN(images) == 0) {
-    return rb_hash_new();
-  }
-  if (NIL_P(detector_type)) {
-    detector_type = rb_str_new2("SURF");
-  }
-  if (NIL_P(descriptor_type)) {
-    descriptor_type = rb_str_new2("SURF");
-  }
-  if (NIL_P(matcher_type)) {
-    matcher_type = rb_str_new2("FlannBased");
-  }
-
-  VALUE _matches = rb_hash_new();
-  try {
-    cv::Mat queryImage(CVMAT(self));
-    std::vector<cv::Mat> trainImages;
-    for(int i = 0, n = RARRAY_LEN(images); i < n; i++) {
-      trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
-    }
-
-    cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(StringValueCStr(detector_type));
-    if (featureDetector.empty()) {
-      rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", StringValueCStr(detector_type));
-    }
-    cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(StringValueCStr(descriptor_type));
-    if (descriptorExtractor.empty()) {
-      rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", StringValueCStr(descriptor_type));
-    }
-    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-    try {
-      descriptorMatcher = cv::DescriptorMatcher::create(StringValueCStr(matcher_type));
-    }
-    catch(cv::Exception& e) {
-      rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", StringValueCStr(matcher_type));
-    }
-
-    std::vector<cv::KeyPoint> queryKeypoints;
-    std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
-    featureDetector->detect(queryImage, queryKeypoints);
-    featureDetector->detect(trainImages, trainKeypoints);
-    cv::Mat queryDescriptors;
-    std::vector<cv::Mat> trainDescriptors;
-    descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
-    descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
-    std::vector<cv::DMatch> matches;
-    descriptorMatcher->add(trainDescriptors);
-    descriptorMatcher->train();
-    descriptorMatcher->match(queryDescriptors, matches);
-
-    for (size_t i = 0, n = matches.size(); i < n; i++) {
-      VALUE match = INT2FIX(matches[i].imgIdx);
-      VALUE count = rb_hash_lookup(_matches, match);
-      if (NIL_P(count)) {
-	count = INT2FIX(1);
-      } else {
-	count = INT2FIX(FIX2INT(count) + 1);
-      }
-      rb_hash_aset(_matches, match, count);
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return _matches;
-}
-
 /*
  * call-seq:
  *   mean_shift(window, criteria) -> comp
@@ -6099,7 +6009,6 @@ init_ruby_class()
   rb_define_method(rb_klass, "apply_color_map", RUBY_METHOD_FUNC(rb_apply_color_map), 1);
   rb_define_method(rb_klass, "match_template", RUBY_METHOD_FUNC(rb_match_template), -1);
   rb_define_method(rb_klass, "match_shapes", RUBY_METHOD_FUNC(rb_match_shapes), -1);
-  rb_define_method(rb_klass, "match_descriptors", RUBY_METHOD_FUNC(rb_match_descriptors), -1);
 
   rb_define_method(rb_klass, "mean_shift", RUBY_METHOD_FUNC(rb_mean_shift), 2);
   rb_define_method(rb_klass, "cam_shift", RUBY_METHOD_FUNC(rb_cam_shift), 2);

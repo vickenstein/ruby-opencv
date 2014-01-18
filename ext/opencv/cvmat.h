@@ -221,7 +221,6 @@ VALUE rb_apply_color_map(VALUE self, VALUE colormap);
 /* Matching*/
 VALUE rb_match_template(int argc, VALUE *argv, VALUE self);
 VALUE rb_match_shapes(int argc, VALUE *argv, VALUE self);
-VALUE rb_match_descriptors(int argc, VALUE *argv, VALUE self);
 
 /* Object Tracking */
 VALUE rb_mean_shift(VALUE self, VALUE window, VALUE criteria);

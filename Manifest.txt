@@ -34,12 +34,6 @@ examples/images/tiffany.jpg
 examples/inpaint.rb
 examples/match_kdtree.rb
 examples/match_template.rb
-examples/matching_to_many_images/matching_to_many_images.rb
-examples/matching_to_many_images/query.png
-examples/matching_to_many_images/train/1.png
-examples/matching_to_many_images/train/2.png
-examples/matching_to_many_images/train/3.png
-examples/matching_to_many_images/train/trainImages.txt
 examples/paint.rb
 examples/snake.rb
 ext/opencv/algorithm.cpp
@@ -56,8 +50,6 @@ ext/opencv/cvchain.cpp
 ext/opencv/cvchain.h
 ext/opencv/cvcircle32f.cpp
 ext/opencv/cvcircle32f.h
-ext/opencv/cvcondensation.cpp
-ext/opencv/cvcondensation.h
 ext/opencv/cvconnectedcomp.cpp
 ext/opencv/cvconnectedcomp.h
 ext/opencv/cvcontour.cpp
@@ -82,8 +74,6 @@ ext/opencv/cvline.cpp
 ext/opencv/cvline.h
 ext/opencv/cvmat.cpp
 ext/opencv/cvmat.h
-ext/opencv/cvmatnd.cpp
-ext/opencv/cvmatnd.h
 ext/opencv/cvmemstorage.cpp
 ext/opencv/cvmemstorage.h
 ext/opencv/cvmoments.cpp
@@ -106,8 +96,6 @@ ext/opencv/cvsize2d32f.cpp
 ext/opencv/cvsize2d32f.h
 ext/opencv/cvslice.cpp
 ext/opencv/cvslice.h
-ext/opencv/cvsparsemat.cpp
-ext/opencv/cvsparsemat.h
 ext/opencv/cvsurfparams.cpp
 ext/opencv/cvsurfparams.h
 ext/opencv/cvsurfpoint.cpp
@@ -221,7 +209,6 @@ test/test_cvmat.rb
 test/test_cvmat_drawing.rb
 test/test_cvmat_dxt.rb
 test/test_cvmat_imageprocessing.rb
-test/test_cvmat_matching.rb
 test/test_cvmoments.rb
 test/test_cvpoint.rb
 test/test_cvpoint2d32f.rb
