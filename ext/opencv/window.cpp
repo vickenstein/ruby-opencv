@@ -56,11 +56,13 @@ window_free(void *ptr)
 }
 
 /*
- * call-seq:
- *   new(name[, flags])
+ * Creates a window.
  *
- * Create new window named <i>name</i>.
- * If <i>flags</i> is CV_WINDOW_AUTOSIZE (default), window size automatically resize when image given.
+ * @overload new(name, flags = CV_WINDOW_AUTOSIZE)
+ *   @param name [String] Name of the window in the window caption that may be used as a window identifier.
+ *   @param flags [Integer] Flags of the window. The supported flags are:
+ *     * CVWINDOW_AUTOSIZE - If this is set, the window size is automatically adjusted
+ *       to fit the displayed image, and you cannot change the window size manually.
  */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
@@ -139,11 +141,14 @@ rb_destroy_all(VALUE klass)
 }
 
 /*
- * call-seq:
- *   resize(size)
- *   resize(width, height)
+ * Resizes window to the specified size.
  *
- * Set window size.
+ * @overload resize(size)
+ *   @param size [CvSize] The new window size.
+ * @overload resize(width, height)
+ *   @param width [Integer] The new window width.
+ *   @param height [Integer] The new window height.
+ * @opencv_func cvResizeWindow
  */
 VALUE
 rb_resize(int argc, VALUE *argv, VALUE self)
@@ -175,11 +180,14 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   move(point)
- *   move(x, y)
+ * Moves window to the specified position.
  *
- * Set window position.
+ * @overload move(point)
+ *   @param point [CvPoint] The new coordinate of the window.
+ * @overload move(x, y)
+ *   @param x [Integer] The new x-coordinate of the window.
+ *   @param y [Integer] The new y-coordinate of the window.
+ * @opencv_func cvMoveWindow
  */
 VALUE
 rb_move(int argc, VALUE *argv, VALUE self)
@@ -211,11 +219,11 @@ rb_move(int argc, VALUE *argv, VALUE self)
 }
       
 /*
- * call-seq:
- *   show_image(image)
+ * Displays an image in the specified window.
  *
- * Show the image. If the window was created with <i>flags</i> = CV_WINDOW_AUTOSIZE then the image is shown
- * with its original size, otherwize the image is scaled to fit the window.
+ * @overload show_image(image)
+ *   @param image [CvMat] Image to be shown.
+ * @opencv_func cvShowImage
  */
 VALUE
 rb_show_image(VALUE self, VALUE img)
@@ -238,13 +246,19 @@ trackbar_callback(int value, void* block)
 }
 
 /*
- * call-seq:
- *   set_trackbar(trackbar)
- *   set_trackbar(name,maxval[,val],&block)
- *   set_trackbar(name,maxval[,val]){|value| ... }
+ * Creates or sets a trackbar and attaches it to the specified window.
  *
- * Create Trackbar on this window. Return new Trackbar.
- * see Trackbar.new
+ * @overload set_trackbar(trackbar)
+ *   @param trackbar [TrackBar] The trackbar to set.
+ *
+ * @overload set_trackbar(name, count, value = nil) { |value| ... }
+ *   @param name [String] Name of the created trackbar.
+ *   @param count [Integer] Maximal position of the slider. The minimal position is always 0.
+ *   @param value [Integer] Optional value to an integer variable whose value reflects the position of the slider.
+ *     Upon creation, the slider position is defined by this variable.
+ *   @yield [value] Function to be called every time the slider changes position.
+ *     @yieldparam value [Integer] The trackbar position.
+ * @opencv_func cv::createTrackbar
  */
 VALUE
 rb_set_trackbar(int argc, VALUE *argv, VALUE self)
@@ -279,16 +293,13 @@ on_mouse(int event, int x, int y, int flags, void* param)
 }
 
 /*
- * call-seq:
- *   set_mouse_callback(&block)
- *   set_mouse_callback {|mouse_event| ... }
+ * Sets mouse handler for the specified window.
  *
- * Set mouse callback.
- * When the mouse is operated on the window, block will be called.
- * Return Proc object.
- * block given mouse event object, see GUI::Window::MouseEvent
+ * @overload set_mouse_callback { |mouse_event| ... }
+ *   @yield [mouse_event] Mouse callback.
+ *   @yieldparam mouse_event [MouseEvent] Mouse event
  *
- * e.g. display mouse event on console.
+ * @example display mouse event on console
  *   window = OpenCV::GUI::Window.new "sample window"
  *   image = OpenCV::IplImage::load "sample.png"
  *   window.show(image)

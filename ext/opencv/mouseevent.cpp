@@ -12,8 +12,6 @@
  * Document-module: OpenCV::GUI::MouseEvent
  *
  * MouseEvent object.
- * have
- * see OpenCV::GUI::Window#set_mouse_callback.
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_GUI

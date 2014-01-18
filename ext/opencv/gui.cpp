@@ -10,9 +10,6 @@
 #include "gui.h"
 /*
  * Document-module: OpenCV::GUI
- *
- * OpenCV simple GUI interface. Provides Window, Trackbar.
- * This GUI work on GTK or Microsoft Windows native GUI.
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_GUI
@@ -26,12 +23,13 @@ rb_module_GUI()
 }
 
 /*
- * call-seq:
- *   wait_key([delay]) -> int or nil
+ * Waits for a pressed key.
  *
- * Waits for a pressed key each GUI wedget.
- * Return the code of the pressed key or nil if no key were pressed until the specified timeout has elapsed.
- * <i>delay</i> should be Fixnum. Wait <i>delay</i> millisecond.
+ * @overload wait_key(delay = 0)
+ *   @param delay [Integer] Delay in milliseconds. 0 is the special value that means "forever".
+ * @return [Number] The code of the pressed key or <tt>nil</tt> if no key was pressed
+ *   before the specified time had elapsed.
+ * @opencv_func cvWaitKey
  */
 VALUE
 rb_wait_key(int argc, VALUE *argv, VALUE self)
