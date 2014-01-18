@@ -11,8 +11,7 @@
 /*
  * Document-class: OpenCV::CvChain
  *
- * Freeman chain code.
- * CvMat#find_contours(:method => :code)
+ * Freeman chain code
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVCHAIN
@@ -31,45 +30,19 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * cvseq = rb_define_class_under(opencv, "CvSeq");
-   * curve = rb_define_module_under(opencv, "Curve");
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  VALUE cvseq = cCvSeq::rb_class();
-  VALUE curve = mCurve::rb_module();
-
-  rb_klass = rb_define_class_under(opencv, "CvChain", cvseq);
-  rb_include_module(rb_klass, curve);
-  VALUE approx_chain_option = rb_hash_new();
-  rb_define_const(rb_klass, "APPROX_CHAIN_OPTION", approx_chain_option); 
-  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("method")), ID2SYM(rb_intern("approx_simple")));
-  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("parameter")), rb_float_new(0));
-  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("minimal_perimeter")), INT2FIX(0));
-  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("recursive")), Qfalse);
-
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "origin", RUBY_METHOD_FUNC(rb_origin), 0);
-  rb_define_method(rb_klass, "origin=", RUBY_METHOD_FUNC(rb_set_origin), 1);
-  rb_define_method(rb_klass, "codes", RUBY_METHOD_FUNC(rb_codes), 0);
-  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
-  rb_define_method(rb_klass, "approx_chains", RUBY_METHOD_FUNC(rb_approx_chains), -1);
-  rb_define_alias(rb_klass, "approx", "approx_chains");
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
   return Data_Wrap_Struct(klass, mark_root_object, unregister_object, NULL);
 }
 
+/*
+ * Create a new chain code
+ * @overload new(storage=nil)
+ *   @param storage [CvMemStorage,nil] Sequence location (If storage is nil, allocates a new storage automatically)
+ * @return [CvChain] New CvChain instance
+ * @opencv_func cvCreateSeq (seq_flags=CV_SEQ_ELTYPE_CODE)
+ */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
 {
@@ -96,10 +69,9 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   origin -> cvpoint
- *
- * Return Freeman chain code origin.
+ * Returns Freeman chain code origin
+ * @overload origin
+ * @return [CvPoint] Origin of the chain code
  */
 VALUE
 rb_origin(VALUE self)
@@ -108,10 +80,10 @@ rb_origin(VALUE self)
 }
 
 /*
- * call-seq:
- *   origin = point -> self
- *
- * Set Freeman chain code origin.
+ * Set Freeman chain code origin
+ * @overload origin=value
+ *   @param value [CvPoint] Origin of the chain code
+ * @return [CvChain] self
  */
 VALUE
 rb_set_origin(VALUE self, VALUE origin)
@@ -121,10 +93,11 @@ rb_set_origin(VALUE self, VALUE origin)
 }
 
 /*
- * call-seq:
- *   codes -> array(contain fixnum)
- *
- * Return Freeman chain codes.
+ * Returns the chain codes
+ * @overload codes
+ * @return [Array<Fixnum>] Chain codes
+ * @opencv_func cvStartReadChainPoints
+ * @opencv_func CV_READ_SEQ_ELEM
  */
 VALUE
 rb_codes(VALUE self)
@@ -147,10 +120,11 @@ rb_codes(VALUE self)
 }
 
 /*
- * call-seq:
- *   points -> array(contain cvpoint)
- *
- * Return points that represent by Freeman chain code.
+ * Returns the points of the chain codes
+ * @overload points
+ * @return [Array<CvPoint>] Points of the chain codes
+ * @opencv_func cvStartReadChainPoints
+ * @opencv_func CV_READ_CHAIN_POINT
  */
 VALUE
 rb_points(VALUE self)
@@ -174,26 +148,17 @@ rb_points(VALUE self)
 }
 
 /*
- * call-seq:
- *   approx_chains(<i>[approx_chain_option]</i>) -> cvcontour
- *
- * Approximates Freeman chain(s) with polygonal curve.
- * <i>approx_chain_option</i> should be Hash include these keys.
- *   :method - Approximation method.
- *      :approx_none - translate all the points from the chain code into points;
- *      :approx_simple(default) - compress horizontal, vertical, and diagonal segments, that is,
- *                                the function leaves only their ending points.
- *      :approx_tc89_l1
- *      :approx_tc89_kcos - apply one of the flavors of Teh-Chin chain approximation algorithm.
- *      If set the difference between the current pixel and seed pixel is considered,
- *      otherwise difference between neighbor pixels is considered (the range is floating).
- *   :parameter - Method parameter (not used now).
- *   :minimal_perimeter (default 0)
- *      Approximates only those contours whose perimeters are not less than minimal_perimeter. Other chains are removed from the resulting structure.
- *   :recursive (default false)
- *      If not nil or false, the function approximates all chains that access can be obtained to
- *      from self by h_next or v_next links. If 0, the single chain is approximated.
- *
+ * Approximates Freeman chains with a polygonal curve
+ * @overload approx_chain(options)
+ *   @param options [Hash] Parameters
+ *   @option options [Symbol] :method Approximation method (see the description of CvMat#find_contours)
+ *   @option options [Number] :minimal_perimeter Approximates only those contours whose perimeters
+ *     are not less than minimal_perimeter. Other chains are removed from the resulting structure.
+ *   @option options [Boolean] :recursive Recursion flag. If it is true, the function approximates
+ *     all chains that can be obtained from chain by using the h_next or v_next links.
+ *     Otherwise, the single input chain is approximated.
+ * @return [CvSeq<CvPoint>] Polygonal curve
+ * @opencv_func cvApproxChains
  */
 VALUE
 rb_approx_chains(int argc, VALUE *argv, VALUE self)
@@ -227,6 +192,41 @@ new_object()
     raise_cverror(e);
   }
   return cCvSeq::new_sequence(cCvChain::rb_class(), seq, T_FIXNUM, storage);
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE cvseq = rb_define_class_under(opencv, "CvSeq");
+  VALUE curve = rb_define_module_under(opencv, "Curve");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  VALUE cvseq = cCvSeq::rb_class();
+  VALUE curve = mCurve::rb_module();
+
+  rb_klass = rb_define_class_under(opencv, "CvChain", cvseq);
+  rb_include_module(rb_klass, curve);
+  VALUE approx_chain_option = rb_hash_new();
+  rb_define_const(rb_klass, "APPROX_CHAIN_OPTION", approx_chain_option); 
+  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("method")), ID2SYM(rb_intern("approx_simple")));
+  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("parameter")), rb_float_new(0));
+  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("minimal_perimeter")), INT2FIX(0));
+  rb_hash_aset(approx_chain_option, ID2SYM(rb_intern("recursive")), Qfalse);
+
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "origin", RUBY_METHOD_FUNC(rb_origin), 0);
+  rb_define_method(rb_klass, "origin=", RUBY_METHOD_FUNC(rb_set_origin), 1);
+  rb_define_method(rb_klass, "codes", RUBY_METHOD_FUNC(rb_codes), 0);
+  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
+  rb_define_method(rb_klass, "approx_chains", RUBY_METHOD_FUNC(rb_approx_chains), -1);
+  rb_define_alias(rb_klass, "approx", "approx_chains");
 }
 
 __NAMESPACE_END_CVCHAIN

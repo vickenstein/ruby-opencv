@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_GUI
 
 VALUE rb_module_GUI();
-void define_ruby_module();
+void init_ruby_module();
 
 VALUE rb_wait_key(int argc, VALUE *argv, VALUE self);
 

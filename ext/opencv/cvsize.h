@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVSIZE
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_compatible_q(VALUE klass, VALUE object);
 

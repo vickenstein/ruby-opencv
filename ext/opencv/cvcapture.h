@@ -21,7 +21,7 @@ __NAMESPACE_BEGIN_CVCAPTURE
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 void cvcapture_free(void *ptr);
 VALUE rb_open(int argc, VALUE *argv, VALUE klass);

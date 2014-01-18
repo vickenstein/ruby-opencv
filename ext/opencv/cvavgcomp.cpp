@@ -11,13 +11,7 @@
 /*
  * Document-class: OpenCV::CvAvgComp
  *
- * CvRect with parameter "neighbors".
- * CvHaarClassifierCascade#detect_object. 
- *
- *   typedef struct CvAvgComp {
- *     CvRect rect;
- *     int neighbors;
- *   }
+ * CvRect with parameter "neighbors"
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_AVGCOMP
@@ -30,23 +24,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * cvrect = rb_define_class_under(opencv, "CvRect", rb_cObject);
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv(), cvrect = cCvRect::rb_class();
-  rb_klass = rb_define_class_under(opencv, "CvAvgComp", cvrect);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "neighbors", RUBY_METHOD_FUNC(rb_neighbors), 0);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -55,12 +32,32 @@ rb_allocate(VALUE klass)
 }
 
 /*
- * Return neighbors.
+ * Return neighbors
+ * @overload neighbors
+ * @return [Integer] neighbors
  */
 VALUE
 rb_neighbors(VALUE self)
 {
   return INT2NUM(CVAVGCOMP(self)->neighbors);
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE cvrect = rb_define_class_under(opencv, "CvRect", rb_cObject);
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv(), cvrect = cCvRect::rb_class();
+  rb_klass = rb_define_class_under(opencv, "CvAvgComp", cvrect);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "neighbors", RUBY_METHOD_FUNC(rb_neighbors), 0);
 }
 
 __NAMESPACE_END_AVGCOMP

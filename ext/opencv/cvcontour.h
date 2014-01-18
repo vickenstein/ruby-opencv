@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_CVCONTOUR
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_initialize(int argc, VALUE *argv, VALUE self);
 VALUE rb_rect(VALUE self);

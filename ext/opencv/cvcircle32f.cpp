@@ -26,27 +26,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvCircle32f", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
-  rb_define_method(rb_klass, "radius", RUBY_METHOD_FUNC(rb_radius), 0);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
-  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
-  rb_define_alias(rb_klass, "to_a", "to_ary");
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -55,7 +34,9 @@ rb_allocate(VALUE klass)
 }
 
 /*
- * Return parameter on center.
+ * Returns center point of the circle
+ * @overload center
+ * @return [CvPoint2D32f] Center point of the circle
  */
 VALUE
 rb_center(VALUE self)
@@ -64,7 +45,9 @@ rb_center(VALUE self)
 }
 
 /*
- * Return parameter on radius.
+ * Returns radius of the circle
+ * @overload radius
+ * @return [Number] Radius of the circle
  */
 VALUE
 rb_radius(VALUE self)
@@ -73,10 +56,10 @@ rb_radius(VALUE self)
 }
 
 /*
- * call-seq:
- *   [<i>index</i>]
- *
- * Return value of <i>index</i> dimension.
+ * Accesses to parameters of the circle by array-like interface ([X-coordinate, Y-coordinate, radius])
+ * @overload []
+ *   @param index [Integer] Index
+ * @return [Number] X-coordinate, Y-coordinate or radius of the circle
  */
 VALUE
 rb_aref(VALUE self, VALUE index)
@@ -98,6 +81,11 @@ rb_aref(VALUE self, VALUE index)
   return Qnil;
 }
 
+/*
+ * Returns parameters of the circle as an array which contains [center<CvPoint2D32f>, radius<Number>]
+ * @overload to_ary
+ * @return [Array<CvPoint2D32f,Number>] An array which contains [center, radius]
+ */
 VALUE
 rb_to_ary(VALUE self)
 {
@@ -110,6 +98,28 @@ new_object(CvCircle32f circle32f)
   VALUE object = rb_allocate(rb_klass);
   *CVCIRCLE32F(object) = circle32f;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  
+  rb_klass = rb_define_class_under(opencv, "CvCircle32f", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
+  rb_define_method(rb_klass, "radius", RUBY_METHOD_FUNC(rb_radius), 0);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
+  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
+  rb_define_alias(rb_klass, "to_a", "to_ary");
 }
 
 __NAMESPACE_END_CVCIRCLE32F

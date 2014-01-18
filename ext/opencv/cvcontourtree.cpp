@@ -11,15 +11,9 @@
 /*
  * Document-class: OpenCV::CvContourTree
  *
- * Contour tree. CvContour#create_tree
+ * Contour tree
  *
- * C structure is here.
- *  typedef struct CvContourTree {
- *    CV_SEQUENCE_FIELDS()
- *    CvPoint p1;
- *    CvPoint p2;
- *  } CvContourTree;
- * 
+ * @see CvContour#create_tree
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVCONTOURTREE
@@ -32,32 +26,22 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * cvseq = rb_define_class_under(opencv, "CvSeq");
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  VALUE cvseq = cCvSeq::rb_class();
-  
-  rb_klass = rb_define_class_under(opencv, "CvContourTree", cvseq);
-  rb_define_method(rb_klass, "p1", RUBY_METHOD_FUNC(rb_p1), 0);
-  rb_define_method(rb_klass, "p2", RUBY_METHOD_FUNC(rb_p2), 0);
-  rb_define_method(rb_klass, "contour", RUBY_METHOD_FUNC(rb_contour), 1);
-}
-
+/*
+ * Returns the first point of the binary tree root segment
+ * @overload p1
+ * @return [CvPoint] First point of the binary tree root segment
+ */
 VALUE
 rb_p1(VALUE self)
 {
   return REFER_OBJECT(cCvPoint::rb_class(), &CVCONTOURTREE(self)->p1, self);
 }
 
+/*
+ * Returns the last point of the binary tree root segment
+ * @overload p2
+ * @return [CvPoint] Last point of the binary tree root segment
+ */
 VALUE
 rb_p2(VALUE self)
 {
@@ -65,12 +49,14 @@ rb_p2(VALUE self)
 }
 
 /*
- * call-seq:
- *   contour(<i>[criteria = 0]</i>) -> cvcontour
- *
  * Restores the contour from its binary tree representation.
- * The parameter criteria determines the accuracy and/or the number of tree levels
+ *
+ * The parameter +criteria+ determines the accuracy and/or the number of tree levels
  * used for reconstruction, so it is possible to build approximated contour.
+ * @overload contour(criteria = 0)
+ *   @param criteria [Integer] Criteria, where to stop reconstruction
+ * @return [CvContour] Contour tree
+ * @opencv_func cvContourFromContourTree
  */
 VALUE
 rb_contour(VALUE self, VALUE criteria)
@@ -85,6 +71,25 @@ rb_contour(VALUE self, VALUE criteria)
     raise_cverror(e);
   }
   return cCvSeq::new_sequence(cCvContour::rb_class(), contour, cCvPoint::rb_class(), storage);
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE cvseq = rb_define_class_under(opencv, "CvSeq");
+#endif
+  if (rb_klass)
+    return;
+  VALUE opencv = rb_module_opencv();
+  VALUE cvseq = cCvSeq::rb_class();
+
+  rb_klass = rb_define_class_under(opencv, "CvContourTree", cvseq);
+  rb_define_method(rb_klass, "p1", RUBY_METHOD_FUNC(rb_p1), 0);
+  rb_define_method(rb_klass, "p2", RUBY_METHOD_FUNC(rb_p2), 0);
+  rb_define_method(rb_klass, "contour", RUBY_METHOD_FUNC(rb_contour), 1);
 }
 
 __NAMESPACE_END_CVCONTOURTREE

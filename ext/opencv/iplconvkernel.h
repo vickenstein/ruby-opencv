@@ -21,7 +21,7 @@ __NAMESPACE_BEGIN_IPLCONVKERNEL
 VALUE rb_class();
 VALUE rb_allocate(VALUE klass);
 
-void define_ruby_class();
+void init_ruby_class();
 VALUE rb_initialize(int argc, VALUE *argv, VALUE self);
 VALUE rb_size(VALUE self);
 VALUE rb_cols(VALUE self);

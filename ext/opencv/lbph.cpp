@@ -50,8 +50,15 @@ rb_initialize(int argc, VALUE argv[], VALUE self)
 }
 
 void
-define_ruby_class()
+init_ruby_class()
 {
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE alghorithm = rb_define_class_under(opencv, "Algorithm", rb_cObject);
+  VALUE face_recognizer = rb_define_class_under(opencv, "FaceRecognizer", alghorithm);
+#endif
+
   if (rb_klass)
     return;
   /* 
@@ -60,7 +67,8 @@ define_ruby_class()
    * note: this comment is used by rdoc.
    */
   VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "LBPH", cFaceRecognizer::rb_class());
+  VALUE face_recognizer = cFaceRecognizer::rb_class();
+  rb_klass = rb_define_class_under(opencv, "LBPH", face_recognizer);
   rb_define_alloc_func(rb_klass, cFaceRecognizer::allocate_facerecognizer);
   rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
 }

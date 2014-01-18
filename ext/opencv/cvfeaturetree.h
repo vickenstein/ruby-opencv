@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVFEATURETREE
 
 VALUE rb_class();
-void define_ruby_class();
+void init_ruby_class();
 VALUE rb_allocate(VALUE klass);
 VALUE rb_initialize(VALUE self, VALUE desc);
 VALUE rb_find_features(VALUE self, VALUE desc, VALUE k, VALUE emax);

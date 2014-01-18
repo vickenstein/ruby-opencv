@@ -30,30 +30,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvSURFParams", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "hessian_threshold", RUBY_METHOD_FUNC(rb_get_hessian_threshold), 0);
-  rb_define_method(rb_klass, "hessian_threshold=", RUBY_METHOD_FUNC(rb_set_hessian_threshold), 1);
-  rb_define_method(rb_klass, "extended", RUBY_METHOD_FUNC(rb_get_extended), 0);
-  rb_define_method(rb_klass, "extended=", RUBY_METHOD_FUNC(rb_set_extended), 1);
-  rb_define_method(rb_klass, "n_octaves", RUBY_METHOD_FUNC(rb_get_n_octaves), 0);
-  rb_define_method(rb_klass, "n_octaves=", RUBY_METHOD_FUNC(rb_set_n_octaves), 1);
-  rb_define_method(rb_klass, "n_octave_layers", RUBY_METHOD_FUNC(rb_get_n_octave_layers), 0);
-  rb_define_method(rb_klass, "n_octave_layers=", RUBY_METHOD_FUNC(rb_set_n_octave_layers), 1);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -61,11 +37,15 @@ rb_allocate(VALUE klass)
   return Data_Make_Struct(klass, CvSURFParams, 0, -1, ptr);
 }
 
-/* 
- * call-seq:
- *   CvSURFParams.new(<i>hessian_threshold[,extended=false,n_octaves=3,n_octave_layers=4]</i>) -> cvsurfparams
- *
+/*
  * Create a CvSURFParams
+ *
+ * @overload CvSURFParams.new(hessian_threshold, extended = false, n_octaves = 3, n_octave_layers = 4)
+ *   @param hessian_threshold [Number]
+ *   @param extended [Boolean] If <tt>true</tt>, exteneded descriptors (128 elements each),
+ *     otherwise basic descriptors (64 elements each)
+ *   @param n_octaves [Integer] Number of octaves to be used for extraction
+ *   @param n_octave_layers [Integer] Number of layers within each octave
  */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
@@ -192,6 +172,35 @@ new_object(CvSURFParams* cvsurfparams)
   CvSURFParams *ptr = CVSURFPARAMS(object);
   ptr = cvsurfparams;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvSURFParams", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "hessian_threshold", RUBY_METHOD_FUNC(rb_get_hessian_threshold), 0);
+  rb_define_method(rb_klass, "hessian_threshold=", RUBY_METHOD_FUNC(rb_set_hessian_threshold), 1);
+  rb_define_method(rb_klass, "extended", RUBY_METHOD_FUNC(rb_get_extended), 0);
+  rb_define_method(rb_klass, "extended=", RUBY_METHOD_FUNC(rb_set_extended), 1);
+  rb_define_method(rb_klass, "n_octaves", RUBY_METHOD_FUNC(rb_get_n_octaves), 0);
+  rb_define_method(rb_klass, "n_octaves=", RUBY_METHOD_FUNC(rb_set_n_octaves), 1);
+  rb_define_method(rb_klass, "n_octave_layers", RUBY_METHOD_FUNC(rb_get_n_octave_layers), 0);
+  rb_define_method(rb_klass, "n_octave_layers=", RUBY_METHOD_FUNC(rb_set_n_octave_layers), 1);
 }
 
 __NAMESPACE_END_CVSURFPARAMS

@@ -6,6 +6,9 @@ require 'hoe'
 require 'rake/extensiontask'
 require 'fileutils'
 require './lib/opencv/psyched_yaml'
+require 'yard'
+require 'yard/rake/yardoc_task'
+require './yard_extension'
 
 SO_FILE = 'opencv.so'
 
@@ -87,4 +90,10 @@ task 'gem:precompile' => ['gem'] do
   FileUtils.rm_rf tmp_dir
 end
 
+# yard
+YARD::Rake::YardocTask.new do |t|
+  t.files   = ['lib/**/*.rb', 'ext/**/*.cpp']
+end
+
 # vim: syntax=ruby
+

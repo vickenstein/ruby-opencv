@@ -33,40 +33,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * cvmat = rb_define_class_under(opencv, "CvMat", rb_cObject);
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  VALUE cvmat = cCvMat::rb_class();
-  rb_klass = rb_define_class_under(opencv, "IplImage", cvmat);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_singleton_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load_image), -1);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1); 
-  rb_define_method(rb_klass, "get_roi", RUBY_METHOD_FUNC(rb_get_roi), 0);
-  rb_define_alias(rb_klass, "roi", "get_roi");
-  rb_define_method(rb_klass, "set_roi", RUBY_METHOD_FUNC(rb_set_roi), 1);
-  rb_define_alias(rb_klass, "roi=", "set_roi");
-  rb_define_method(rb_klass, "reset_roi", RUBY_METHOD_FUNC(rb_reset_roi), 0);
-  rb_define_method(rb_klass, "get_coi", RUBY_METHOD_FUNC(rb_get_coi), 0);
-  rb_define_alias(rb_klass, "coi", "get_coi");
-  rb_define_method(rb_klass, "set_coi", RUBY_METHOD_FUNC(rb_set_coi), 1);
-  rb_define_alias(rb_klass, "coi=", "set_coi");
-  rb_define_method(rb_klass, "reset_coi", RUBY_METHOD_FUNC(rb_reset_coi), 0); 
-  rb_define_method(rb_klass, "pyr_segmentation", RUBY_METHOD_FUNC(rb_pyr_segmentation), 3);
-  rb_define_method(rb_klass, "smoothness", RUBY_METHOD_FUNC(rb_smoothness), -1);
-
-  rb_define_singleton_method(rb_klass, "decode_image", RUBY_METHOD_FUNC(rb_decode_image), -1);
-  rb_define_alias(rb_singleton_class(rb_klass), "decode", "decode_image");
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -75,7 +41,7 @@ rb_allocate(VALUE klass)
 
 /*
  * call-seq:
- *   new(<i>width, height[, depth = CV_8U][, channel = 3]</i>)
+ *   new(width, height[, depth = CV_8U][, channel = 3])
  *
  * Create width * height image. Each element-value set 0.
  *
@@ -99,7 +65,7 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   IplImage::load(<i>filename[,iscolor = CV_LOAD_IMAGE_COLOR]</i>)
+ *   IplImage::load(filename[,iscolor = CV_LOAD_IMAGE_COLOR])
  *
  * Load an image from file.
  *  iscolor = CV_LOAD_IMAGE_COLOR, the loaded image is forced to be a 3-channel color image
@@ -183,8 +149,8 @@ rb_get_roi(VALUE self)
 
 /*
  * call-seq:
- *   set_roi(<i>rect</i>)
- *   set_roi(<i>rect</i>){|image| ...}
+ *   set_roi(rect)
+ *   set_roi(rect){|image| ...}
  *
  * Set ROI. <i>rect</i> should be CvRect or compatible object.
  * Return self.
@@ -244,8 +210,8 @@ rb_get_coi(VALUE self)
 
 /*
  * call-seq:
- *   set_coi(<i>coi</i>)
- *   set_coi(<i>coi</i>){|image| ...}
+ *   set_coi(coi)
+ *   set_coi(coi){|image| ...}
  *
  * Set COI. <i>coi</i> should be Fixnum.
  * Return self.
@@ -288,7 +254,7 @@ rb_reset_coi(VALUE self)
 
 /*
  * call-seq:
- *   IplImage.smoothness(<i>lowFreqRatio, blankDensity, messyDensity, highFreqRatio</i>) -> [ symbol, float, float ]
+ *   IplImage.smoothness(lowFreqRatio, blankDensity, messyDensity, highFreqRatio) -> [ symbol, float, float ]
  *
  * Determines if the image's smoothness is either, :smooth, :messy, or :blank.
  *
@@ -593,7 +559,7 @@ high_pass_range(const IplImage *pImage, float lostPercentage, int &outLow, int &
 
 /*
  * call-seq:
- *   pyr_segmentation(<i>level, threshold1, threshold2</i>) -> [iplimage, cvseq(include cvconnectedcomp)]
+ *   pyr_segmentation(level, threshold1, threshold2) -> [iplimage, cvseq(include cvconnectedcomp)]
  *
  * Does image segmentation by pyramids.
  * The pyramid builds up to the level <i>level<i>.
@@ -640,5 +606,46 @@ new_object(CvSize size, int type)
   return OPENCV_OBJECT(rb_klass, rb_cvCreateImage(size, cvIplDepth(type), CV_MAT_CN(type)));
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE cvmat = rb_define_class_under(opencv, "CvMat", rb_cObject);
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * cvmat = rb_define_class_under(opencv, "CvMat", rb_cObject);
+   *
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  VALUE cvmat = cCvMat::rb_class();
+  rb_klass = rb_define_class_under(opencv, "IplImage", cvmat);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_singleton_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load_image), -1);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1); 
+  rb_define_method(rb_klass, "get_roi", RUBY_METHOD_FUNC(rb_get_roi), 0);
+  rb_define_alias(rb_klass, "roi", "get_roi");
+  rb_define_method(rb_klass, "set_roi", RUBY_METHOD_FUNC(rb_set_roi), 1);
+  rb_define_alias(rb_klass, "roi=", "set_roi");
+  rb_define_method(rb_klass, "reset_roi", RUBY_METHOD_FUNC(rb_reset_roi), 0);
+  rb_define_method(rb_klass, "get_coi", RUBY_METHOD_FUNC(rb_get_coi), 0);
+  rb_define_alias(rb_klass, "coi", "get_coi");
+  rb_define_method(rb_klass, "set_coi", RUBY_METHOD_FUNC(rb_set_coi), 1);
+  rb_define_alias(rb_klass, "coi=", "set_coi");
+  rb_define_method(rb_klass, "reset_coi", RUBY_METHOD_FUNC(rb_reset_coi), 0); 
+  rb_define_method(rb_klass, "pyr_segmentation", RUBY_METHOD_FUNC(rb_pyr_segmentation), 3);
+  rb_define_method(rb_klass, "smoothness", RUBY_METHOD_FUNC(rb_smoothness), -1);
+
+  rb_define_singleton_method(rb_klass, "decode_image", RUBY_METHOD_FUNC(rb_decode_image), -1);
+  rb_define_alias(rb_singleton_class(rb_klass), "decode", "decode_image");
+}
+
 __NAMESPACE_END_IPLIMAGE
 __NAMESPACE_END_OPENCV
+

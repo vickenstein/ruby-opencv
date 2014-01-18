@@ -148,7 +148,6 @@ ext/opencv/window.h
 images/CvMat_sobel.png
 images/CvMat_sub_rect.png
 images/CvSeq_relationmap.png
-images/face_detect_from_lena.jpg
 lib/opencv.rb
 lib/opencv/psyched_yaml.rb
 lib/opencv/version.rb
@@ -249,3 +248,4 @@ test/test_pointset.rb
 test/test_preliminary.rb
 test/test_trackbar.rb
 test/test_window.rb
+yard_extension.rb

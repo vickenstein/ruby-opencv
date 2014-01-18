@@ -11,7 +11,7 @@
 /*
  * Document-class: OpenCV::CvHistogram
  *
- * Muti-dimensional histogram.
+ * Multi-dimensional histogram.
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVHISTOGRAM
@@ -22,57 +22,6 @@ VALUE
 rb_class()
 {
   return rb_klass;
-}
-
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvHistogram", rb_cObject);
-
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "is_uniform?", RUBY_METHOD_FUNC(rb_is_uniform), 0);
-  rb_define_method(rb_klass, "is_sparse?", RUBY_METHOD_FUNC(rb_is_sparse), 0);
-  rb_define_method(rb_klass, "has_range?", RUBY_METHOD_FUNC(rb_has_range), 0);
-  rb_define_method(rb_klass, "dims", RUBY_METHOD_FUNC(rb_dims), 0);
-  rb_define_method(rb_klass, "calc_hist", RUBY_METHOD_FUNC(rb_calc_hist), -1);
-  rb_define_method(rb_klass, "calc_hist!", RUBY_METHOD_FUNC(rb_calc_hist_bang), -1);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), -2);
-  rb_define_alias(rb_klass, "query_hist_value", "[]");
-  rb_define_method(rb_klass, "min_max_value", RUBY_METHOD_FUNC(rb_min_max_value), 0);
-  rb_define_method(rb_klass, "copy_hist", RUBY_METHOD_FUNC(rb_copy_hist), 0);
-
-  rb_define_method(rb_klass, "clear_hist", RUBY_METHOD_FUNC(rb_clear_hist), 0);
-  rb_define_alias(rb_klass, "clear", "clear_hist");
-  rb_define_method(rb_klass, "clear_hist!", RUBY_METHOD_FUNC(rb_clear_hist_bang), 0);
-  rb_define_alias(rb_klass, "clear!", "clear_hist!");
-
-  rb_define_method(rb_klass, "normalize_hist", RUBY_METHOD_FUNC(rb_normalize_hist), 1);
-  rb_define_alias(rb_klass, "normalize", "normalize_hist");
-  rb_define_method(rb_klass, "normalize_hist!", RUBY_METHOD_FUNC(rb_normalize_hist_bang), 1);
-  rb_define_alias(rb_klass, "normalize!", "normalize_hist!");
-
-  rb_define_method(rb_klass, "thresh_hist", RUBY_METHOD_FUNC(rb_thresh_hist), 1);
-  rb_define_alias(rb_klass, "thresh", "thresh_hist");
-  rb_define_method(rb_klass, "thresh_hist!", RUBY_METHOD_FUNC(rb_thresh_hist_bang), 1);
-  rb_define_alias(rb_klass, "thresh!", "thresh_hist!");
-
-  rb_define_method(rb_klass, "set_hist_bin_ranges", RUBY_METHOD_FUNC(rb_set_hist_bin_ranges), -1);
-  rb_define_method(rb_klass, "set_hist_bin_ranges!", RUBY_METHOD_FUNC(rb_set_hist_bin_ranges_bang), -1);
-
-  rb_define_method(rb_klass, "calc_back_project", RUBY_METHOD_FUNC(rb_calc_back_project), 1);
-  rb_define_method(rb_klass, "calc_back_project_patch", RUBY_METHOD_FUNC(rb_calc_back_project_patch), 4);
-
-  rb_define_singleton_method(rb_klass, "calc_prob_density", RUBY_METHOD_FUNC(rb_calc_prob_density), -1);
-  rb_define_singleton_method(rb_klass, "compare_hist", RUBY_METHOD_FUNC(rb_compare_hist), 3);
 }
 
 void
@@ -119,6 +68,23 @@ ary2intptr(VALUE ary, int* buff)
   return buff;
 }
 
+/*
+ * Creates a histogram
+ * @overload new(dims, sizes, type, ranges=nil, uniform=true)
+ * @param dims [Integer] Number of histogram dimensions
+ * @param sizes [Array<Integer>] Array of the histogram dimension sizes
+ * @param type [Integer]
+ *     Histogram representation format. CV_HIST_ARRAY means that the histogram data is represented
+ *     as a multi-dimensional dense array CvMatND. CV_HIST_SPARSE means that histogram data is
+ *     represented as a multi-dimensional sparse array CvSparseMat.
+ * @param ranges [Array<Integer>]
+ *     Array of ranges for the histogram bins. Its meaning depends on the uniform parameter value.
+ *     The ranges are used when the histogram is calculated or backprojected to determine which
+ *     histogram bin corresponds to which value/tuple of values from the input image(s).
+ * @param uniform [Boolean] Uniformity flag.
+ * @return [CvHistogram] Histogram
+ * @opencv_func cvCreateHist
+ */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
 {
@@ -157,9 +123,10 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   is_uniform? -> true or false
- *
+ * Returns <tt>self</tt> is uniform histogram or not
+ * @overload is_uniform?
+ * @return [Boolean] Uniform or not
+ * @opencv_func CV_IS_UNIFORM_HIST
  */
 VALUE
 rb_is_uniform(VALUE self)
@@ -168,9 +135,10 @@ rb_is_uniform(VALUE self)
 }
 
 /*
- * call-seq:
- *   is_sparse? -> true or false
- *
+ * Returns <tt>self</tt> is sparse histogram or not
+ * @overload is_sparse?
+ * @return [Boolean] Sparse or not
+ * @opencv_func CV_IS_SPARSE_HIST
  */
 VALUE
 rb_is_sparse(VALUE self)
@@ -179,21 +147,45 @@ rb_is_sparse(VALUE self)
 }
 
 /*
- * call-seq:
- *   has_range? -> true or false
- */
+ * Returns <tt>self</tt> has range or not
+ * @overload has_range?
+ * @return [Boolean] Has range or not
+ * @opencv_func CV_HIST_HAS_RANGES
+*/
 VALUE
 rb_has_range(VALUE self)
 {
   return CV_HIST_HAS_RANGES(CVHISTOGRAM(self)) ? Qtrue : Qfalse;
 }
 
+/*
+ * Calculates a histogram of a set of arrays.
+ * @overload calc_hist(images, accumulate=nil, mask=nil)
+ * @param images [Array<IplImage>]
+ *    Source arrays. They all should have the same depth, CV_8U or CV_32F, and the same size.
+ *    Each of them can have an arbitrary number of channels.
+ * @param accumulate [Boolean]
+ *    Accumulation flag. If it is set, the histogram is not cleared in the beginning when it is allocated.
+ *    This feature enables you to compute a single histogram from several sets of arrays,
+ *    or to update the histogram in time.
+ * @param mask [CvMat]
+ *    Optional mask. If the matrix is not empty, it must be an 8-bit array of the same size as images[i].
+ *    The non-zero mask elements mark the array elements counted in the histogram.
+ * @return [CvHistogram] Histogram of a set of arrays
+ * @opencv_func cvCalcHist
+ */
 VALUE
 rb_calc_hist(int argc, VALUE* argv, VALUE self)
 {
   return rb_calc_hist_bang(argc, argv, rb_copy_hist(self));
 }
 
+/*
+ * Calculates a histogram of a set of arrays.
+ * @overload calc_hist!(images, accumulate=nil, mask=nil)
+ * @see #calc_hist
+ * @opencv_func cvCalcHist
+ */
 VALUE
 rb_calc_hist_bang(int argc, VALUE* argv, VALUE self)
 {
@@ -218,8 +210,17 @@ rb_calc_hist_bang(int argc, VALUE* argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   [<i>idx1[,idx2]...</i>]
+ * Queries the value of the histogram bin.
+ * @overload [](idx0)
+ * @overload [](idx0, idx1)
+ * @overload [](idx0, idx1, idx2)
+ * @overload [](idx0, idx1, idx2, idx3, ...)
+ * @param idx* [Integer] *-th index
+ * @return [Number] The value of the specified bin of the 1D, 2D, 3D, or N-D histogram.
+ * @opencv_func cvQueryHistValue_1D
+ * @opencv_func cvQueryHistValue_2D
+ * @opencv_func cvQueryHistValue_3D
+ * @opencv_func cvQueryHistValue_nD
  */
 VALUE
 rb_aref(VALUE self, VALUE args)
@@ -256,6 +257,18 @@ rb_aref(VALUE self, VALUE args)
   return rb_float_new((double)value);
 }
 
+/*
+ * Finds the minimum and maximum histogram bins.
+ * @overload min_max_value
+ * @return [Array]
+ *    [min_value, max_value, min_idx, max_idx]: Array of the minimum / maximum value of the histogram
+ *    and their coordinates.
+ *    - min_value: The minimum value of the histogram.
+ *    - max_value: The maximum value of the histogram.
+ *    - min_idx: The array of coordinates for the minimum.
+ *    - max_idx: The array of coordinates for the maximum.
+ * @opencv_func cvGetMinMaxHistValue
+ */
 VALUE
 rb_min_max_value(VALUE self)
 {
@@ -286,8 +299,16 @@ rb_min_max_value(VALUE self)
 }
 
 /*
- * call-seq:
- *   dims -> [int[,int...]]
+ * Returns number of array dimensions
+ * @overload [](idx0, idx1, ...)
+ * @param idx* [Integer] *-th index
+ * @return [Array<Integer, Array<Integer>>]
+ *     [dims, sizes]: Number of array dimensions and its sizes.
+ *     - dims (Integer): Number of array dimensions
+ *     - sizes (Array<Integer>): Vector of the array dimension sizes.
+ *       For 2D arrays the number of rows (height) goes first,
+ *       number of columns (width) next.
+ * @opencv_func cvGetDims
  */
 VALUE
 rb_dims(VALUE self)
@@ -309,10 +330,10 @@ rb_dims(VALUE self)
 }
 
 /*
- * call-seq:
- *   copy_hist -> cvhist
- *
- * Clone histogram.
+ * Clones histogram
+ * @overload copy_hist
+ * @return [CvHistogram] Copy of the histogram
+ * @opencv_func cvCopyHist
  */
 VALUE
 rb_copy_hist(VALUE self)
@@ -328,8 +349,11 @@ rb_copy_hist(VALUE self)
 }
 
 /*
- * call-seq:
- *   clear_hist
+ * Sets all histogram bins to 0 in case of dense histogram
+ * and removes all histogram bins in case of sparse array.
+ * @overload clear_hist
+ * @return [CvHistogram] Cleared histogram
+ * @opencv_func cvClearHist
  */
 VALUE
 rb_clear_hist(VALUE self)
@@ -338,10 +362,13 @@ rb_clear_hist(VALUE self)
 }
 
 /*
- * call-seq:
- *   clear_hist!
- *
- * Sets all histogram bins to 0 in case of dense histogram and removes all histogram bins in case of sparse array.
+ * Sets all histogram bins to 0 in case of dense histogram
+ * and removes all histogram bins in case of sparse array.
+ * This method changes <tt>self</tt>.
+ * @overload clear_hist!
+ * @see #clear_hist
+ * @return [CvHistogram] Cleared histogram
+ * @opencv_func cvClearHist
  */
 VALUE
 rb_clear_hist_bang(VALUE self)
@@ -356,10 +383,12 @@ rb_clear_hist_bang(VALUE self)
 }
 
 /*
- * call-seq:
- *   normalize(<i>factor</i>) -> cvhist
- *
- * Return normalized the histogram bins by scaling them, such that the sum of the bins becomes equal to <i>factor</i>.
+ * Returns normalized the histogram bins by scaling them,
+ * such that the sum of the bins becomes equal to <tt>factor</tt>.
+ * @overload normalize(factor)
+ * @param factor [Number] Normalization factor. The sum of the bins becomes equal to this value.
+ * @return [CvHistogram] Normalized histogram
+ * @opencv_func cvNormalizeHist
  */
 VALUE
 rb_normalize_hist(VALUE self, VALUE factor)
@@ -368,10 +397,14 @@ rb_normalize_hist(VALUE self, VALUE factor)
 }
 
 /*
- * call-seq:
- *   normalize!(<i>factor</i>) -> self
- *
- * normalizes the histogram bins by scaling them, such that the sum of the bins becomes equal to <i>factor</i>.
+ * Returns normalized the histogram bins by scaling them,
+ * such that the sum of the bins becomes equal to <tt>factor</tt>.
+ * This method changes <tt>self</tt>.
+ * @overload normalize!(factor)
+ * @param factor [Number] Normalization factor. The sum of the bins becomes equal to this value.
+ * @return [CvHistogram] Normalized histogram
+ * @see #normalize
+ * @opencv_func cvNormalizeHist
  */
 VALUE
 rb_normalize_hist_bang(VALUE self, VALUE factor)
@@ -386,10 +419,11 @@ rb_normalize_hist_bang(VALUE self, VALUE factor)
 }
 
 /*
- * call-seq:
- *   thresh_hist(<i>threshold</i>) -> cvhist
- *
- * Return cleared histogram bins that are below the specified threshold.
+ * Returns cleared histogram bins that are below the specified threshold.
+ * @overload thresh_hist(threshold)
+ * @param threshold [Number] Threshold value
+ * @return [CvHistogram] Cleared histogram
+ * @opencv_func cvThreshHist
  */
 VALUE
 rb_thresh_hist(VALUE self, VALUE threshold)
@@ -398,10 +432,13 @@ rb_thresh_hist(VALUE self, VALUE threshold)
 }
 
 /*
- * call-seq:
- *   thresh_hist!(<i>threshold</i>) -> self
- *
  * Cleares histogram bins that are below the specified threshold.
+ * This method changes <tt>self</tt>.
+ * @overload thresh_hist!(threshold)
+ * @param threshold [Number] Threshold value
+ * @return [CvHistogram] Cleared histogram
+ * @see #thresh_hist
+ * @opencv_func cvThreshHist
  */
 VALUE
 rb_thresh_hist_bang(VALUE self, VALUE threshold)
@@ -415,12 +452,39 @@ rb_thresh_hist_bang(VALUE self, VALUE threshold)
   return self;
 }
 
+/*
+ * Sets the bounds of the histogram bins.
+ * @overload set_hist_bin_ranges(ranges, uniform=true)
+ * @param ranges [Array<Number>]
+ *     Array of ranges for the histogram bins. Its meaning depends on the uniform parameter value.
+ *     The ranges are used when the histogram is calculated or backprojected to determine
+ *     which histogram bin corresponds to which value/tuple of values from the input image(s).
+ * @param uniform [Boolean]
+ *     Uniformity flag.
+ * @return [CvHistogram]
+ *     Histogram
+ * @opencv_func cvSetHistBinRanges
+ */
 VALUE
 rb_set_hist_bin_ranges(int argc, VALUE* argv, VALUE self)
 {
   return rb_set_hist_bin_ranges_bang(argc, argv, rb_copy_hist(self));
 }
 
+/*
+ * Sets the bounds of the histogram bins. This method changes <tt>self</tt>.
+ * @overload set_hist_bin_ranges!(ranges, uniform=true)
+ * @param ranges [Array<Number>]
+ *     Array of ranges for the histogram bins. Its meaning depends on the uniform parameter value.
+ *     The ranges are used when the histogram is calculated or backprojected to determine
+ *     which histogram bin corresponds to which value/tuple of values from the input image(s).
+ * @param uniform [Boolean]
+ *     Uniformity flag.
+ * @return [CvHistogram]
+ *     Histogram
+ * @see #set_hist_bin_ranges
+ * @opencv_func cvSetHistBinRanges
+ */
 VALUE
 rb_set_hist_bin_ranges_bang(int argc, VALUE* argv, VALUE self)
 {
@@ -446,6 +510,17 @@ rb_set_hist_bin_ranges_bang(int argc, VALUE* argv, VALUE self)
   return self;
 }
 
+/*
+ * Calculates the back projection of a histogram.
+ * @overload calc_back_project(images)
+ * @param images [Array<IplImage>]
+ *     Source arrays. They all should have the same depth, CV_8U or CV_32F, and the same size.
+ *     Each of them can have an arbitrary number of channels.
+ * @return [CvMat,IplImage]
+ *     Destination back projection array that is a single-channel array of the same size and depth
+ *     as the first element of <tt>images</tt>
+ * @opencv_func cvCalcBackProject
+ */
 VALUE
 rb_calc_back_project(VALUE self, VALUE image)
 {
@@ -475,6 +550,24 @@ rb_calc_back_project(VALUE self, VALUE image)
   return back_project;
 }
 
+/*
+ * Locates a template within an image by using a histogram comparison.
+ * @overload calc_back_project_patch(images, patch_size, method, factor)
+ * @param images [Array<IplImage>] Source arrays.
+ * @param pach_size [CvSize] Size of the patch slid though the source image.
+ * @param method [Integer]
+ *     Comparison method that could be one of the following:
+ *     - <tt>CV_COMP_CORREL</tt>: Correlation
+ *     - <tt>CV_COMP_CHISQR</tt>: Chi-Square
+ *     - <tt>CV_COMP_INTERSECT</tt>: Intersection
+ *     - <tt>CV_COMP_BHATTACHARYYA</tt>: Bhattacharyya distance
+ *     - <tt>CV_COMP_HELLINGER</tt>: Synonym for <tt>CV_COMP_BHATTACHARYYA</tt>
+ * @param factor [Number]
+ *     Normalization factor for histograms that affects the normalization scale
+ *     of the destination image. Pass 1 if not sure.
+ * @return [CvMat,IplImage] Destination image.
+ * @opencv_func cvCalcBackProject
+ */
 VALUE
 rb_calc_back_project_patch(VALUE self, VALUE image, VALUE patch_size, VALUE method, VALUE factor)
 {
@@ -507,6 +600,22 @@ rb_calc_back_project_patch(VALUE self, VALUE image, VALUE patch_size, VALUE meth
   return dst;
 }
 
+/*
+ * Compares two histograms.
+ * @overload compare_hist(hist1, hist2, method)
+ * @param hist1 [CvHistogram] First compared histogram.
+ * @param hist2 [CvHistogram] Second compared histogram of the same size as <tt>hist1</tt>.
+ * @param method [Integer]
+ *     Comparison method that could be one of the following:
+ *     - <tt>CV_COMP_CORREL</tt>: Correlation
+ *     - <tt>CV_COMP_CHISQR</tt>: Chi-Square
+ *     - <tt>CV_COMP_INTERSECT</tt>: Intersection
+ *     - <tt>CV_COMP_BHATTACHARYYA</tt>: Bhattacharyya distance
+ *     - <tt>CV_COMP_HELLINGER</tt>: Synonym for <tt>CV_COMP_BHATTACHARYYA</tt>
+ * @return [Number] Distance of the two histograms.
+ * @scope class
+ * @opencv_func cvCompareHist
+ */
 VALUE
 rb_compare_hist(VALUE self, VALUE hist1, VALUE hist2, VALUE method)
 {
@@ -522,6 +631,15 @@ rb_compare_hist(VALUE self, VALUE hist1, VALUE hist2, VALUE method)
   return rb_float_new(result);
 }
 
+/*
+ * Divides one histogram by another.
+ * @overload calc_prob_density(hist1, hist2, scale=255)
+ * @param hist1 [CvHistogram] First histogram (the divisor).
+ * @param hist2 [CvHistogram] Second histogram.
+ * @param scale [Number] Scale factor for the destination histogram.
+ * @return [CvHistogram] Destination histogram.
+ * @opencv_func cvCalcProbDensity
+ */
 VALUE
 rb_calc_prob_density(int argc, VALUE* argv, VALUE self)
 {
@@ -540,6 +658,57 @@ rb_calc_prob_density(int argc, VALUE* argv, VALUE self)
   }
 
   return dst_hist;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvHistogram", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "is_uniform?", RUBY_METHOD_FUNC(rb_is_uniform), 0);
+  rb_define_method(rb_klass, "is_sparse?", RUBY_METHOD_FUNC(rb_is_sparse), 0);
+  rb_define_method(rb_klass, "has_range?", RUBY_METHOD_FUNC(rb_has_range), 0);
+  rb_define_method(rb_klass, "dims", RUBY_METHOD_FUNC(rb_dims), 0);
+  rb_define_method(rb_klass, "calc_hist", RUBY_METHOD_FUNC(rb_calc_hist), -1);
+  rb_define_method(rb_klass, "calc_hist!", RUBY_METHOD_FUNC(rb_calc_hist_bang), -1);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), -2);
+  rb_define_alias(rb_klass, "query_hist_value", "[]");
+  rb_define_method(rb_klass, "min_max_value", RUBY_METHOD_FUNC(rb_min_max_value), 0);
+  rb_define_method(rb_klass, "copy_hist", RUBY_METHOD_FUNC(rb_copy_hist), 0);
+
+  rb_define_method(rb_klass, "clear_hist", RUBY_METHOD_FUNC(rb_clear_hist), 0);
+  rb_define_alias(rb_klass, "clear", "clear_hist");
+  rb_define_method(rb_klass, "clear_hist!", RUBY_METHOD_FUNC(rb_clear_hist_bang), 0);
+  rb_define_alias(rb_klass, "clear!", "clear_hist!");
+
+  rb_define_method(rb_klass, "normalize_hist", RUBY_METHOD_FUNC(rb_normalize_hist), 1);
+  rb_define_alias(rb_klass, "normalize", "normalize_hist");
+  rb_define_method(rb_klass, "normalize_hist!", RUBY_METHOD_FUNC(rb_normalize_hist_bang), 1);
+  rb_define_alias(rb_klass, "normalize!", "normalize_hist!");
+
+  rb_define_method(rb_klass, "thresh_hist", RUBY_METHOD_FUNC(rb_thresh_hist), 1);
+  rb_define_alias(rb_klass, "thresh", "thresh_hist");
+  rb_define_method(rb_klass, "thresh_hist!", RUBY_METHOD_FUNC(rb_thresh_hist_bang), 1);
+  rb_define_alias(rb_klass, "thresh!", "thresh_hist!");
+
+  rb_define_method(rb_klass, "set_hist_bin_ranges", RUBY_METHOD_FUNC(rb_set_hist_bin_ranges), -1);
+  rb_define_method(rb_klass, "set_hist_bin_ranges!", RUBY_METHOD_FUNC(rb_set_hist_bin_ranges_bang), -1);
+
+  rb_define_method(rb_klass, "calc_back_project", RUBY_METHOD_FUNC(rb_calc_back_project), 1);
+  rb_define_method(rb_klass, "calc_back_project_patch", RUBY_METHOD_FUNC(rb_calc_back_project_patch), 4);
+
+  rb_define_singleton_method(rb_klass, "calc_prob_density", RUBY_METHOD_FUNC(rb_calc_prob_density), -1);
+  rb_define_singleton_method(rb_klass, "compare_hist", RUBY_METHOD_FUNC(rb_compare_hist), 3);
 }
 
 __NAMESPACE_END_CVHISTOGRAM

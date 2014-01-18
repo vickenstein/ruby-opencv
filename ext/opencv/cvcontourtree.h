@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_CVCONTOURTREE
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_p1(VALUE self);
 VALUE rb_p2(VALUE self);

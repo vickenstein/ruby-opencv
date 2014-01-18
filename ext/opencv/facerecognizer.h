@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_FACERECOGNIZER
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 VALUE rb_train(VALUE self, VALUE src, VALUE labels);
 VALUE rb_predict(VALUE self, VALUE src);
 VALUE rb_save(VALUE self, VALUE filename);

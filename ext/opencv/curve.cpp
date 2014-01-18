@@ -11,7 +11,7 @@
 /*
  * Document-class: OpenCV::Curve
  *
- * Curve sequence.
+ * Curve sequence
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CURVE
@@ -24,27 +24,11 @@ rb_module()
   return module;
 }
 
-void
-define_ruby_module()
-{
-  if (module)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  module = rb_define_module_under(opencv, "Curve");
-  rb_define_method(module, "closed?", RUBY_METHOD_FUNC(rb_closed_q), 0);
-  rb_define_method(module, "convex?", RUBY_METHOD_FUNC(rb_convex_q), 0);
-  rb_define_method(module, "hole?", RUBY_METHOD_FUNC(rb_hole_q), 0);
-  rb_define_method(module, "simple?", RUBY_METHOD_FUNC(rb_simple_q), 0);
-  rb_define_method(module, "arc_length", RUBY_METHOD_FUNC(rb_arc_length), -1);
-}
-
 /*
- * If curve is closed, return true. Otherwise return false.
+ * If the curve is closed, return true. Otherwise return false.
+ * @overload closed?
+ * @return [Boolean] Closed or not
+ * @opencv_func CV_IS_SEQ_CLOSED
  */
 VALUE
 rb_closed_q(VALUE self)
@@ -53,7 +37,10 @@ rb_closed_q(VALUE self)
 }
 
 /*
- * If curve is convex, return true. Otherwise return false.
+ * If the curve is convex, return true. Otherwise return false.
+ * @overload convex?
+ * @return [Boolean] Convex or not
+ * @opencv_func CV_IS_SEQ_CONVEX
  */
 VALUE
 rb_convex_q(VALUE self)
@@ -62,7 +49,10 @@ rb_convex_q(VALUE self)
 }
 
 /*
- * If curve is hole(inner contour), return true. Otherwise return false.
+ * If the curve is hole(inner contour), return true. Otherwise return false.
+ * @overload hole?
+ * @return [Boolean] Hole or not
+ * @opencv_func CV_IS_SEQ_HOLE
  */
 VALUE
 rb_hole_q(VALUE self)
@@ -71,7 +61,10 @@ rb_hole_q(VALUE self)
 }
 
 /*
- * no idia.
+ * If the curve is simple, return true. Otherwise return false.
+ * @overload simple?
+ * @return [Boolean] Simple or not
+ * @opencv_func CV_IS_SEQ_SIMPLE
  */
 VALUE
 rb_simple_q(VALUE self)
@@ -80,15 +73,17 @@ rb_simple_q(VALUE self)
 }
 
 /*
- * call-seq:
- *   arc_length(<i>[slice = nil][,is_closed = nil]</i>) -> float
- *
- * Calculates contour perimeter or curve length.
- * <i>slice</i> is starting and ending points of the curve.
- * <i>is_closed</i> is indicates whether the curve is closed or not. There are 3 cases:
- * * is_closed = true  - the curve is assumed to be unclosed.
- * * is_closed = false - the curve is assumed to be closed.
- * * is_closed = nil (default) use self#close?
+ * Calculates length of a curve
+ * @overload arc_length(slice = nil, is_closed = nil)
+ *   @param slice [Range,CvSlice,nil] Starting and ending points of the curve.
+ *     By default, the whole curve length is calculated.
+ *   @param is_closed [Boolean,nil] Indicates whether the curve is closed or not.
+ *     There are 3 cases:
+ *     * is_closed = true  - the curve is assumed to be unclosed.
+ *     * is_closed = false - the curve is assumed to be closed.
+ *     * is_closed = nil (default) use self#closed?
+ * @return [Number] Length of the curve
+ * @opencv_func cvArcLength
  */
 VALUE
 rb_arc_length(int argc, VALUE *argv, VALUE self)
@@ -105,6 +100,26 @@ rb_arc_length(int argc, VALUE *argv, VALUE self)
     raise_cverror(e);
   }
   return rb_float_new(length);
+}
+
+void
+init_ruby_module()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (module)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  module = rb_define_module_under(opencv, "Curve");
+  rb_define_method(module, "closed?", RUBY_METHOD_FUNC(rb_closed_q), 0);
+  rb_define_method(module, "convex?", RUBY_METHOD_FUNC(rb_convex_q), 0);
+  rb_define_method(module, "hole?", RUBY_METHOD_FUNC(rb_hole_q), 0);
+  rb_define_method(module, "simple?", RUBY_METHOD_FUNC(rb_simple_q), 0);
+  rb_define_method(module, "arc_length", RUBY_METHOD_FUNC(rb_arc_length), -1);
 }
 
 __NAMESPACE_END_CURVE

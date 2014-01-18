@@ -18,7 +18,7 @@
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVMEMSTORAGE
     
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_class();
 VALUE rb_allocate(VALUE klass);

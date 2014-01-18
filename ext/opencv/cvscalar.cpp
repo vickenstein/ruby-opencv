@@ -42,50 +42,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvScalar", rb_cObject);
-  /* CvScalar: class */
-  rb_define_const(opencv, "CvColor", rb_klass);
-  rb_define_alloc_func(rb_klass, rb_allocate);      
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
-  rb_define_method(rb_klass, "[]=", RUBY_METHOD_FUNC(rb_aset), 2);
-  rb_define_method(rb_klass, "sub", RUBY_METHOD_FUNC(rb_sub), -1);
-  rb_define_alias(rb_klass, "-", "sub");
-  
-  rb_define_method(rb_klass, "to_s", RUBY_METHOD_FUNC(rb_to_s), 0);
-  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
-  rb_define_alias(rb_klass, "to_a", "to_ary");
-
-  rb_define_const(rb_klass, "Black", cCvScalar::new_object(cvScalar(0x0,0x0,0x0)));
-  rb_define_const(rb_klass, "Silver", cCvScalar::new_object(cvScalar(0x0c,0x0c,0x0c)));
-  rb_define_const(rb_klass, "Gray", cCvScalar::new_object(cvScalar(0x80,0x80,0x80)));
-  rb_define_const(rb_klass, "White", cCvScalar::new_object(cvScalar(0xff,0xff,0xff)));
-  rb_define_const(rb_klass, "Maroon", cCvScalar::new_object(cvScalar(0x0,0x0,0x80)));
-  rb_define_const(rb_klass, "Red", cCvScalar::new_object(cvScalar(0x0,0x0,0xff)));
-  rb_define_const(rb_klass, "Purple", cCvScalar::new_object(cvScalar(0x80,0x0,0x80)));
-  rb_define_const(rb_klass, "Fuchsia", cCvScalar::new_object(cvScalar(0xff,0x0,0xff)));
-  rb_define_const(rb_klass, "Green", cCvScalar::new_object(cvScalar(0x0,0x80,0x0)));
-  rb_define_const(rb_klass, "Lime", cCvScalar::new_object(cvScalar(0x0,0xff,0x0)));
-  rb_define_const(rb_klass, "Olive", cCvScalar::new_object(cvScalar(0x0,0x80,0x80)));
-  rb_define_const(rb_klass, "Yellow", cCvScalar::new_object(cvScalar(0x0,0xff,0xff)));
-  rb_define_const(rb_klass, "Navy", cCvScalar::new_object(cvScalar(0x80,0x0,0x0)));
-  rb_define_const(rb_klass, "Blue", cCvScalar::new_object(cvScalar(0xff,0x0,0x0)));
-  rb_define_const(rb_klass, "Teal", cCvScalar::new_object(cvScalar(0x80,0x80,0x0)));
-  rb_define_const(rb_klass, "Aqua", cCvScalar::new_object(cvScalar(0xff,0xff,0x0)));
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -95,7 +51,7 @@ rb_allocate(VALUE klass)
 
 /*
  * call-seq:
- *   new(<i>[d1][,d2][,d3][,d4]</i>)
+ *   new([d1][,d2][,d3][,d4])
  *
  * Create new Scalar. Argument should be Fixnum (or nil as 0).
  */
@@ -229,6 +185,55 @@ new_object(CvScalar scalar)
   VALUE object = rb_allocate(rb_klass);
   *CVSCALAR(object) = scalar;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  
+  rb_klass = rb_define_class_under(opencv, "CvScalar", rb_cObject);
+  /* CvScalar: class */
+  rb_define_const(opencv, "CvColor", rb_klass);
+  rb_define_alloc_func(rb_klass, rb_allocate);      
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
+  rb_define_method(rb_klass, "[]=", RUBY_METHOD_FUNC(rb_aset), 2);
+  rb_define_method(rb_klass, "sub", RUBY_METHOD_FUNC(rb_sub), -1);
+  rb_define_alias(rb_klass, "-", "sub");
+  
+  rb_define_method(rb_klass, "to_s", RUBY_METHOD_FUNC(rb_to_s), 0);
+  rb_define_method(rb_klass, "to_ary", RUBY_METHOD_FUNC(rb_to_ary), 0);
+  rb_define_alias(rb_klass, "to_a", "to_ary");
+
+  rb_define_const(rb_klass, "Black", cCvScalar::new_object(cvScalar(0x0,0x0,0x0)));
+  rb_define_const(rb_klass, "Silver", cCvScalar::new_object(cvScalar(0x0c,0x0c,0x0c)));
+  rb_define_const(rb_klass, "Gray", cCvScalar::new_object(cvScalar(0x80,0x80,0x80)));
+  rb_define_const(rb_klass, "White", cCvScalar::new_object(cvScalar(0xff,0xff,0xff)));
+  rb_define_const(rb_klass, "Maroon", cCvScalar::new_object(cvScalar(0x0,0x0,0x80)));
+  rb_define_const(rb_klass, "Red", cCvScalar::new_object(cvScalar(0x0,0x0,0xff)));
+  rb_define_const(rb_klass, "Purple", cCvScalar::new_object(cvScalar(0x80,0x0,0x80)));
+  rb_define_const(rb_klass, "Fuchsia", cCvScalar::new_object(cvScalar(0xff,0x0,0xff)));
+  rb_define_const(rb_klass, "Green", cCvScalar::new_object(cvScalar(0x0,0x80,0x0)));
+  rb_define_const(rb_klass, "Lime", cCvScalar::new_object(cvScalar(0x0,0xff,0x0)));
+  rb_define_const(rb_klass, "Olive", cCvScalar::new_object(cvScalar(0x0,0x80,0x80)));
+  rb_define_const(rb_klass, "Yellow", cCvScalar::new_object(cvScalar(0x0,0xff,0xff)));
+  rb_define_const(rb_klass, "Navy", cCvScalar::new_object(cvScalar(0x80,0x0,0x0)));
+  rb_define_const(rb_klass, "Blue", cCvScalar::new_object(cvScalar(0xff,0x0,0x0)));
+  rb_define_const(rb_klass, "Teal", cCvScalar::new_object(cvScalar(0x80,0x80,0x0)));
+  rb_define_const(rb_klass, "Aqua", cCvScalar::new_object(cvScalar(0xff,0xff,0x0)));
 }
 
 __NAMESPACE_END_CVSCALAR

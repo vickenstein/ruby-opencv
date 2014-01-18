@@ -11,11 +11,7 @@
 /*
  * Document-class: OpenCV::CvHaarClassifierCascade
  *
- * CvHaarClassifierCascade object is "fast-object-detector".
- * This detector can discover object (e.g. human's face) from image.
- *
- * Find face-area from picture "lena"...
- * link:../images/face_detect_from_lena.jpg
+ * Haar Feature-based Cascade Classifier for Object Detection
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVHAARCLASSIFERCASCADE
@@ -26,23 +22,6 @@ VALUE
 rb_class()
 {
   return rb_klass;
-}
-
-void define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvHaarClassifierCascade", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_singleton_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load), 1);
-  rb_define_method(rb_klass, "detect_objects", RUBY_METHOD_FUNC(rb_detect_objects), -1);
 }
 
 VALUE
@@ -61,18 +40,13 @@ cvhaarclassifiercascade_free(void* ptr)
 }
 
 /*
- * call-seq:
- *   CvHaarClassiferCascade.load(<i>path</i>) -> object-detector
- * 
  * Load trained cascade of haar classifers from file.
- * Object detection classifiers are stored in XML or YAML files.
- * sample of object detection classifier files is included by OpenCV.
  *
- * You can found these at
- *    C:\Program Files\OpenCV\data\haarcascades\*.xml (Windows, default install path)
- *
- * e.g. you want to try to detect human's face.
- *    detector = CvHaarClassiferCascade.load("haarcascade_frontalface_alt.xml")
+ * @overload load(filename)
+ *   @param filename [String] Haar classifer file name
+ * @return [CvHaarClassifierCascade] Object detector
+ * @scope class
+ * @opencv_func cvLoad
  */
 VALUE
 rb_load(VALUE klass, VALUE path)
@@ -90,35 +64,23 @@ rb_load(VALUE klass, VALUE path)
 }
 
 /*
- * call-seq:
- *   detect_objects(image[, options]) -> cvseq(include CvAvgComp object)
- *   detect_objects(image[, options]){|cmp| ... } -> cvseq(include CvAvgComp object)
+ * Detects objects of different sizes in the input image.
  *
- * Detects objects in the image. This method finds rectangular regions in the
- * given image that are likely to contain objects the cascade has been trained
- * for and return those regions as a sequence of rectangles.
- *
- * * <i>option</i> should be Hash include these keys.
- *   :scale_factor (should be > 1.0)
- *      The factor by which the search window is scaled between the subsequent scans,
- *      1.1 mean increasing window by 10%.
- *   :storage
+ * @overload detect_objects(image, options = nil)
+ *   @param image [CvMat,IplImage] Matrix of the type CV_8U containing an image where objects are detected.
+ *   @param options [Hash] Options
+ *   @option options [Number] :scale_factor
+ *     Parameter specifying how much the image size is reduced at each image scale.
+ *   @option options [Number] :storage
  *      Memory storage to store the resultant sequence of the object candidate rectangles
- *   :flags
- *      Mode of operation. Currently the only flag that may be specified is CV_HAAR_DO_CANNY_PRUNING .
- *      If it is set, the function uses Canny edge detector to reject some image regions that contain
- *      too few or too much edges and thus can not contain the searched object. The particular threshold
- *      values are tuned for face detection and in this case the pruning speeds up the processing
- *   :min_neighbors
- *      Minimum number (minus 1) of neighbor rectangles that makes up an object.
- *      All the groups of a smaller number of rectangles than min_neighbors - 1 are rejected.
- *      If min_neighbors is 0, the function does not any grouping at all and returns all the detected
- *      candidate rectangles, whitch many be useful if the user wants to apply a customized grouping procedure.
- *   :min_size
- *      Minimum window size. By default, it is set to size of samples the classifier has been
- *      trained on (~20x20 for face detection).
- *   :max_size
- *      aximum window size to use. By default, it is set to the size of the image.
+ *   @option options [Number] :min_neighbors
+ *      Parameter specifying how many neighbors each candidate rectangle should have to retain it.
+ *   @option options [CvSize] :min_size
+ *      Minimum possible object size. Objects smaller than that are ignored.
+ *   @option options [CvSize] :max_size
+ *      Maximum possible object size. Objects larger than that are ignored.
+ * @return [CvSeq<CvAvgComp>] Detected objects as a list of rectangles
+ * @opencv_func cvHaarDetectObjects
  */
 VALUE
 rb_detect_objects(int argc, VALUE *argv, VALUE self)
@@ -162,6 +124,24 @@ rb_detect_objects(int argc, VALUE *argv, VALUE self)
     raise_cverror(e);
   }
   return result;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvHaarClassifierCascade", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_singleton_method(rb_klass, "load", RUBY_METHOD_FUNC(rb_load), 1);
+  rb_define_method(rb_klass, "detect_objects", RUBY_METHOD_FUNC(rb_detect_objects), -1);
 }
 
 __NAMESPACE_END_CVHAARCLASSIFERCASCADE

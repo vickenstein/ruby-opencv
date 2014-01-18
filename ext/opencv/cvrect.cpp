@@ -34,39 +34,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvRect", rb_cObject);            
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_singleton_method(rb_klass, "compatible?", RUBY_METHOD_FUNC(rb_compatible_q), 1);
-  rb_define_singleton_method(rb_klass, "max_rect", RUBY_METHOD_FUNC(rb_max_rect), 2);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-
-  rb_define_method(rb_klass, "x", RUBY_METHOD_FUNC(rb_x), 0);
-  rb_define_method(rb_klass, "x=", RUBY_METHOD_FUNC(rb_set_x), 1);
-  rb_define_method(rb_klass, "y", RUBY_METHOD_FUNC(rb_y), 0);
-  rb_define_method(rb_klass, "y=", RUBY_METHOD_FUNC(rb_set_y), 1);
-  rb_define_method(rb_klass, "width", RUBY_METHOD_FUNC(rb_width), 0);
-  rb_define_method(rb_klass, "width=", RUBY_METHOD_FUNC(rb_set_width), 1);
-  rb_define_method(rb_klass, "height", RUBY_METHOD_FUNC(rb_height), 0);
-  rb_define_method(rb_klass, "height=", RUBY_METHOD_FUNC(rb_set_height), 1);      
-  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
-  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
-  rb_define_method(rb_klass, "top_left", RUBY_METHOD_FUNC(rb_top_left), 0);
-  rb_define_method(rb_klass, "top_right", RUBY_METHOD_FUNC(rb_top_right), 0);
-  rb_define_method(rb_klass, "bottom_left", RUBY_METHOD_FUNC(rb_bottom_left), 0);
-  rb_define_method(rb_klass, "bottom_right", RUBY_METHOD_FUNC(rb_bottom_right), 0);
-}
-
 /*
  * call-seq:
  *   combatible?(obj)
@@ -327,6 +294,44 @@ new_object(CvRect rect)
   VALUE object = rb_allocate(rb_klass);
   *CVRECT(object) = rect;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvRect", rb_cObject);            
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_singleton_method(rb_klass, "compatible?", RUBY_METHOD_FUNC(rb_compatible_q), 1);
+  rb_define_singleton_method(rb_klass, "max_rect", RUBY_METHOD_FUNC(rb_max_rect), 2);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+
+  rb_define_method(rb_klass, "x", RUBY_METHOD_FUNC(rb_x), 0);
+  rb_define_method(rb_klass, "x=", RUBY_METHOD_FUNC(rb_set_x), 1);
+  rb_define_method(rb_klass, "y", RUBY_METHOD_FUNC(rb_y), 0);
+  rb_define_method(rb_klass, "y=", RUBY_METHOD_FUNC(rb_set_y), 1);
+  rb_define_method(rb_klass, "width", RUBY_METHOD_FUNC(rb_width), 0);
+  rb_define_method(rb_klass, "width=", RUBY_METHOD_FUNC(rb_set_width), 1);
+  rb_define_method(rb_klass, "height", RUBY_METHOD_FUNC(rb_height), 0);
+  rb_define_method(rb_klass, "height=", RUBY_METHOD_FUNC(rb_set_height), 1);      
+  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
+  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
+  rb_define_method(rb_klass, "top_left", RUBY_METHOD_FUNC(rb_top_left), 0);
+  rb_define_method(rb_klass, "top_right", RUBY_METHOD_FUNC(rb_top_right), 0);
+  rb_define_method(rb_klass, "bottom_left", RUBY_METHOD_FUNC(rb_bottom_left), 0);
+  rb_define_method(rb_klass, "bottom_right", RUBY_METHOD_FUNC(rb_bottom_right), 0);
 }
 
 __NAMESPACE_END_CVRECT

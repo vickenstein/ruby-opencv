@@ -200,7 +200,7 @@ void release_object(void *ptr);
 void release_iplconvkernel_object(void *ptr);
 
 VALUE rb_module_opencv();
-void define_ruby_module();
+void init_ruby_module();
 
 // Ruby/OpenCV inline functions  
 inline CvArr*
