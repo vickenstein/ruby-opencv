@@ -1,12 +1,12 @@
 # -*- encoding: utf-8 -*-
-# stub: ruby-opencv 0.0.12.pre.20140119031203 ruby lib
+# stub: ruby-opencv 0.0.12.20140119050230 ruby lib
 # stub: ext/opencv/extconf.rb
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.12.pre.20140119031203"
+  s.version = "0.0.12.20140119050230"
 
-  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]
   s.authors = ["lsxi", "ser1zw", "pcting"]
   s.date = "2014-01-18"
