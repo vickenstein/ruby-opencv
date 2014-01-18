@@ -1,12 +1,12 @@
 # -*- encoding: utf-8 -*-
-# stub: ruby-opencv 0.0.11.20140119025355 ruby lib
+# stub: ruby-opencv 0.0.12.pre.20140119031203 ruby lib
 # stub: ext/opencv/extconf.rb
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.11.20140119025355"
+  s.version = "0.0.12.pre.20140119031203"
 
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
+  s.required_rubygems_version = Gem::Requirement.new("> 1.3.1") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]
   s.authors = ["lsxi", "ser1zw", "pcting"]
   s.date = "2014-01-18"
@@ -28,19 +28,19 @@ Gem::Specification.new do |s|
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_development_dependency(%q<rdoc>, ["~> 4.0"])
-      s.add_development_dependency(%q<rake-compiler>, [">= 0"])
-      s.add_development_dependency(%q<hoe-gemspec>, [">= 0"])
+      s.add_development_dependency(%q<rake-compiler>, ["~> 0"])
+      s.add_development_dependency(%q<hoe-gemspec>, ["~> 0"])
       s.add_development_dependency(%q<hoe>, ["~> 3.8"])
     else
       s.add_dependency(%q<rdoc>, ["~> 4.0"])
-      s.add_dependency(%q<rake-compiler>, [">= 0"])
-      s.add_dependency(%q<hoe-gemspec>, [">= 0"])
+      s.add_dependency(%q<rake-compiler>, ["~> 0"])
+      s.add_dependency(%q<hoe-gemspec>, ["~> 0"])
       s.add_dependency(%q<hoe>, ["~> 3.8"])
     end
   else
     s.add_dependency(%q<rdoc>, ["~> 4.0"])
-    s.add_dependency(%q<rake-compiler>, [">= 0"])
-    s.add_dependency(%q<hoe-gemspec>, [">= 0"])
+    s.add_dependency(%q<rake-compiler>, ["~> 0"])
+    s.add_dependency(%q<hoe-gemspec>, ["~> 0"])
     s.add_dependency(%q<hoe>, ["~> 3.8"])
   end
 end
