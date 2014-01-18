@@ -257,7 +257,7 @@ trackbar_callback(int value, void* block)
  *   @param value [Integer] Optional value to an integer variable whose value reflects the position of the slider.
  *     Upon creation, the slider position is defined by this variable.
  *   @yield [value] Function to be called every time the slider changes position.
- *     @yieldparam value [Integer] The trackbar position.
+ *   @yieldparam value [Integer] The trackbar position.
  * @opencv_func cv::createTrackbar
  */
 VALUE
