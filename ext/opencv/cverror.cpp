@@ -11,51 +11,7 @@
 /*
  * Document-class: OpenCV::CvError
  * 
- * =Internal OpenCV errors
- *
- * This module collect OpenCV internal error wrapper classes.
- * * CvStatusBackTrace
- * * CvStatusError
- * * CvStatusInternal
- * * CvStatusNoMemory
- * * CvStatusBadArgument
- * * CvStatusNoConverge
- * * CvStatusAutoTrace
- *
- * * CvHeaderIsNull
- * * CvBadImageSize
- * * CvBadOffset
- * * CvBadDataPointer
- * * CvBadStep
- * * CvBadModelOrChannelSequence
- * * CvBadNumChannels
- * * CvBadAlphaChannel
- * * CvBadOrder
- * * CvBadOrigin
- * * CvBadAlign
- * * CvBadCallback
- * * CvBadTileSize
- * * CvBadCOI
- * * CvBadROISize
- * 
- * * CvMaskIsTiled
- *
- * * CvStatusNullPointer
- * * CvStatusVectorLengthError
- * * CvStatusFilterStructContentError
- * * CvStatusKernelStructContentError
- * * CvStatusFilterOffsetError
- * 
- * * CvStatusBadSize
- * * CvStatusDivByZero
- * * CvStatusInplaceNotSupported
- * * CvStatusObjectNotFound
- * * CvStatusUnmatchedFormant
- * * CvStatusUnsupportedFormats
- * * CvStatusOutOfRange
- * * CvStatusParseError
- * * CvStatusNotImplemented
- * * CvStsBadMemoryBlock
+ * OpenCV errors
  */
 
 __NAMESPACE_BEGIN_OPENCV
@@ -78,18 +34,32 @@ rb_class()
   return rb_klass;
 }
 
-void define_ruby_class()
+VALUE
+by_code(int error_code)
 {
+  VALUE klass = 0;
+  st_lookup(cv_error, (st_data_t)error_code, (st_data_t*)&klass);
+  return klass ? klass : rb_eStandardError;
+}
+
+void
+raise(cv::Exception e)
+{
+  rb_raise(by_code(e.code), "%s", e.what());
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
   if (rb_klass)
     return;
 
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
   VALUE opencv = rb_module_opencv();
-
   rb_klass = rb_define_class_under(opencv, "CvError", rb_eStandardError);
   REGISTER_CVERROR("CvStsBackTrace", CV_StsBackTrace);
   REGISTER_CVERROR("CvStsError", CV_StsError);
@@ -139,20 +109,6 @@ void define_ruby_class()
   REGISTER_CVERROR("CvStsAssert", CV_StsAssert);
   REGISTER_CVERROR("CvGpuNotSupported", CV_GpuNotSupported);
   REGISTER_CVERROR("CvGpuApiCallError", CV_GpuApiCallError);
-}
-    
-VALUE
-by_code(int error_code)
-{
-  VALUE klass = 0;
-  st_lookup(cv_error, (st_data_t)error_code, (st_data_t*)&klass);
-  return klass ? klass : rb_eStandardError;
-}
-
-void
-raise(cv::Exception e)
-{
-  rb_raise(by_code(e.code), "%s", e.what());
 }
 
 __NAMESPACE_END_CVERROR

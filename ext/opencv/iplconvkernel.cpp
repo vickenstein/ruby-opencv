@@ -29,30 +29,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();  
-  rb_klass = rb_define_class_under(opencv, "IplConvKernel", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_size), 0);
-  rb_define_method(rb_klass, "cols", RUBY_METHOD_FUNC(rb_cols), 0);
-  rb_define_alias(rb_klass, "columns", "cols");
-  rb_define_method(rb_klass, "rows", RUBY_METHOD_FUNC(rb_rows), 0);
-  rb_define_method(rb_klass, "anchor", RUBY_METHOD_FUNC(rb_anchor), 0);
-  rb_define_method(rb_klass, "anchor_x", RUBY_METHOD_FUNC(rb_anchor_x), 0);
-  rb_define_method(rb_klass, "anchor_y", RUBY_METHOD_FUNC(rb_anchor_y), 0);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -188,5 +164,35 @@ rb_anchor_y(VALUE self)
   return INT2NUM(IPLCONVKERNEL(self)->anchorY);
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();  
+  rb_klass = rb_define_class_under(opencv, "IplConvKernel", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_size), 0);
+  rb_define_method(rb_klass, "cols", RUBY_METHOD_FUNC(rb_cols), 0);
+  rb_define_alias(rb_klass, "columns", "cols");
+  rb_define_method(rb_klass, "rows", RUBY_METHOD_FUNC(rb_rows), 0);
+  rb_define_method(rb_klass, "anchor", RUBY_METHOD_FUNC(rb_anchor), 0);
+  rb_define_method(rb_klass, "anchor_x", RUBY_METHOD_FUNC(rb_anchor_x), 0);
+  rb_define_method(rb_klass, "anchor_y", RUBY_METHOD_FUNC(rb_anchor_y), 0);
+}
+
 __NAMESPACE_END_IPLCONVKERNEL
 __NAMESPACE_END_OPENCV
+

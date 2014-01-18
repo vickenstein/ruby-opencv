@@ -25,25 +25,6 @@ VALUE rb_class() {
   return rb_klass;
 }
 
-void define_ruby_class() {
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * GUI = rb_define_module_under(opencv, "GUI");
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE GUI = rb_module_GUI();
-  rb_klass = rb_define_class_under(GUI, "Trackbar", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "name", RUBY_METHOD_FUNC(rb_name), 0);
-  rb_define_method(rb_klass, "max", RUBY_METHOD_FUNC(rb_max), 0);
-  rb_define_method(rb_klass, "value", RUBY_METHOD_FUNC(rb_value), 0);
-  rb_define_method(rb_klass, "value=", RUBY_METHOD_FUNC(rb_set_value), 1);
-}
-
 VALUE rb_allocate(VALUE klass) {
   Trackbar *ptr;
   return Data_Make_Struct(klass, Trackbar, trackbar_mark, trackbar_free, ptr);
@@ -61,8 +42,8 @@ void trackbar_free(void *ptr) {
 
 /*
  * call-seq:
- *   new(<i>name,maxval[,val],&block</i>)
- *   new(<i>name,maxval[,val]</i>){|value| ... }
+ *   new(name,maxval[,val],&block)
+ *   new(name,maxval[,val]){|value| ... }
  *
  * Create new Trackbar.
  * <i>name</i> should be String.
@@ -113,6 +94,31 @@ VALUE rb_value(VALUE self) {
 VALUE rb_set_value(VALUE self, VALUE val) {
   TRACKBAR(self)->val = NUM2INT(val);
   return self;
+}
+
+void init_ruby_class() {
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE GUI = rb_define_module_under(opencv, "GUI");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * GUI = rb_define_module_under(opencv, "GUI");
+   *
+   * note: this comment is used by rdoc.
+   */
+  VALUE GUI = rb_module_GUI();
+  rb_klass = rb_define_class_under(GUI, "Trackbar", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "name", RUBY_METHOD_FUNC(rb_name), 0);
+  rb_define_method(rb_klass, "max", RUBY_METHOD_FUNC(rb_max), 0);
+  rb_define_method(rb_klass, "value", RUBY_METHOD_FUNC(rb_value), 0);
+  rb_define_method(rb_klass, "value=", RUBY_METHOD_FUNC(rb_set_value), 1);
 }
       
 __NAMESPACE_END_TRACKBAR

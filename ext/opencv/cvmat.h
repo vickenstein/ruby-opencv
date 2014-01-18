@@ -21,7 +21,7 @@ __NAMESPACE_BEGIN_CVMAT
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_allocate(VALUE klass);
 VALUE rb_initialize(int argc, VALUE *argv, VALUE self);
@@ -177,7 +177,7 @@ VALUE rb_warp_affine(int argc, VALUE *argv, VALUE self);
 VALUE rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale);
 VALUE rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest);
 VALUE rb_warp_perspective(int argc, VALUE *argv, VALUE self);
-VALUE rb_find_homograpy(int argc, VALUE *argv, VALUE self);
+VALUE rb_find_homography(int argc, VALUE *argv, VALUE self);
 VALUE rb_remap(int argc, VALUE *argv, VALUE self);
 VALUE rb_log_polar(int argc, VALUE *argv, VALUE self);
 
@@ -221,7 +221,6 @@ VALUE rb_apply_color_map(VALUE self, VALUE colormap);
 /* Matching*/
 VALUE rb_match_template(int argc, VALUE *argv, VALUE self);
 VALUE rb_match_shapes(int argc, VALUE *argv, VALUE self);
-VALUE rb_match_descriptors(int argc, VALUE *argv, VALUE self);
 
 /* Object Tracking */
 VALUE rb_mean_shift(VALUE self, VALUE window, VALUE criteria);

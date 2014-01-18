@@ -48,30 +48,12 @@ rb_allocate(VALUE klass)
 			  rb_release_feature_tree, ptr);
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvFeatureTree", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 1);
-
-  rb_define_method(rb_klass, "find_features", RUBY_METHOD_FUNC(rb_find_features), 3);
-}
-
 /*
- * call-seq:
- *   new(desc)
- *
  * Create a new kd-tree
+ * @overload new(desc)
+ *   @param desc [CvMat] Descriptors
+ * @return [CvFeatureTree] self
+ * @opencv_func cvCreateKDTree
  */
 VALUE
 rb_initialize(VALUE self, VALUE desc)
@@ -91,18 +73,15 @@ rb_initialize(VALUE self, VALUE desc)
 }
 
 /*
- * call-seq:
- *   find_features(desc, rows, cols, k, emax) -> array(results, dist)
- *
  * Find features from kd-tree
- *
- * desc:  m x d matrix of (row-)vectors to find the nearest neighbors of.
- * k: The number of neighbors to find.
- * emax: The maximum number of leaves to visit.
- *
- * return
- *    results: m x k set of row indices of matching vectors (referring to matrix passed to cvCreateFeatureTree). Contains -1 in some columns if fewer than k neighbors found.
- *    dist: m x k matrix of distances to k nearest neighbors.
+ * @overload find_features(desc, k, emax)
+ *   @param desc [CvMat] m x d matrix of (row-)vectors to find the nearest neighbors of.
+ *   @param k [Integer] The number of neighbors to find.
+ *   @param emax [Integer] The maximum number of leaves to visit.
+ * @return [Array] Array of [results, dist]
+ *    - results: m x k set of row indices of matching vectors (referring to matrix passed to cvCreateFeatureTree). Contains -1 in some columns if fewer than k neighbors found.
+ *    - dist: m x k matrix of distances to k nearest neighbors.
+ * @opencv_func cvFindFeatures
  */
 VALUE
 rb_find_features(VALUE self, VALUE desc, VALUE k, VALUE emax)
@@ -118,6 +97,25 @@ rb_find_features(VALUE self, VALUE desc, VALUE k, VALUE emax)
     raise_cverror(e);
   }
   return rb_assoc_new(results, dist);
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvFeatureTree", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 1);
+
+  rb_define_method(rb_klass, "find_features", RUBY_METHOD_FUNC(rb_find_features), 3);
 }
 
 __NAMESPACE_END_OPENCV

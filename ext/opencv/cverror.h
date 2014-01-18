@@ -18,7 +18,7 @@
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVERROR
 
-void define_ruby_class();
+void init_ruby_class();
 VALUE by_code(int error_code);
 void raise(cv::Exception e);
 

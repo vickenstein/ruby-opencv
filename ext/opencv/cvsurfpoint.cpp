@@ -35,32 +35,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvSURFPoint", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 5);
-  rb_define_method(rb_klass, "pt", RUBY_METHOD_FUNC(rb_get_pt), 0);
-  rb_define_method(rb_klass, "pt=", RUBY_METHOD_FUNC(rb_set_pt), 1);
-  rb_define_method(rb_klass, "laplacian", RUBY_METHOD_FUNC(rb_get_laplacian), 0);
-  rb_define_method(rb_klass, "laplacian=", RUBY_METHOD_FUNC(rb_set_laplacian), 1);
-  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_get_size), 0);
-  rb_define_method(rb_klass, "size=", RUBY_METHOD_FUNC(rb_set_size), 1);
-  rb_define_method(rb_klass, "dir", RUBY_METHOD_FUNC(rb_get_dir), 0);
-  rb_define_method(rb_klass, "dir=", RUBY_METHOD_FUNC(rb_set_dir), 1);
-  rb_define_method(rb_klass, "hessian", RUBY_METHOD_FUNC(rb_get_hessian), 0);
-  rb_define_method(rb_klass, "hessian=", RUBY_METHOD_FUNC(rb_set_hessian), 1);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -69,10 +43,18 @@ rb_allocate(VALUE klass)
 }
 
 /* 
- * call-seq:
- *   CvSURFPoint.new(<i>pt,laplacian,size,dir,hessian</i>) -> cvsurfpoint
- *
  * Create a CvSURFPoint
+ *
+ * @overload new(pt, laplacian, size, dir, hessian)
+ *   @param pt [CvPoint2D32f] Position of the feature within the image
+ *   @param laplacian [Integer] -1, 0 or +1. sign of the laplacian at the point.
+ *     Can be used to speedup feature comparison 
+ *     (normally features with laplacians of different signs can not match)
+ *   @param size [Integer] Size of the feature
+ *   @param dir [Number] Orientation of the feature: 0..360 degrees
+ *   @param hessian [Number] Value of the hessian (can be used to
+ *     approximately estimate the feature strengths)
+ * @return [CvSURFPoint] self
  */
 VALUE
 rb_initialize(VALUE self, VALUE pt, VALUE laplacian, VALUE size, VALUE dir, VALUE hessian)
@@ -88,9 +70,10 @@ rb_initialize(VALUE self, VALUE pt, VALUE laplacian, VALUE size, VALUE dir, VALU
 }
 
 /*
- * call-seq:
- *   pt -> cvpoint2d32f
  * Return position of the feature as CvPoint2D32f.
+ *
+ * @overload pt
+ * @return [CvPoint2D32f] Position of the feature.
  */
 VALUE
 rb_get_pt(VALUE self)
@@ -99,10 +82,10 @@ rb_get_pt(VALUE self)
 }
 
 /*
- * call-seq:
- *   pt = <i>value</i>
- *
- * Set position of the feature to <i>value</i>
+ * Set position of the feature.
+ * 
+ * @overload pt=(value)
+ *   @param value [CvPoint2D32f] Valuet to set.
  */
 VALUE
 rb_set_pt(VALUE self, VALUE value)
@@ -112,9 +95,10 @@ rb_set_pt(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   laplacian -> number
  * Return sign of the laplacian at the point (-1, 0 or +1)
+ *
+ * @overload laplacian
+ * @return [Integer] Sign of the laplacian at the point.
  */
 VALUE
 rb_get_laplacian(VALUE self)
@@ -123,9 +107,10 @@ rb_get_laplacian(VALUE self)
 }
 
 /*
- * call-seq:
- *   laplacian = <i>value</i> (-1, 0 or +1)
  * Set sign of the laplacian at the point
+ *
+ * @overload laplacian=(value)
+ *   @param value [Integer] Value to set.
  */
 VALUE
 rb_set_laplacian(VALUE self, VALUE value)
@@ -136,9 +121,10 @@ rb_set_laplacian(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   size -> number
- * Return size of feature
+ * Returns size of feature.
+ *
+ * @overload size
+ * @return [Integer] Size of feature.
  */
 VALUE
 rb_get_size(VALUE self)
@@ -147,9 +133,10 @@ rb_get_size(VALUE self)
 }
 
 /*
- * call-seq:
- *   size = <i>value</i>
  * Return size of feature
+ *
+ * @overload size=(value)
+ *   @param [Integer] Value to set.
  */
 VALUE
 rb_set_size(VALUE self, VALUE value)
@@ -159,9 +146,10 @@ rb_set_size(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   dir -> number
  * Return orientation of the feature: 0..360 degrees
+ *
+ * @overload dir
+ * @return [Number] Orientation of the feature.
  */
 VALUE
 rb_get_dir(VALUE self)
@@ -170,9 +158,10 @@ rb_get_dir(VALUE self)
 }
 
 /*
- * call-seq:
- *   dir = <i>value</i>
- * Set orientation of the feature: 0..360 degrees
+ * Set orientation of the feature: 0..360 degrees.
+ *
+ * @overload dir=(value)
+ *   @param [Number] Value to set.
  */
 VALUE
 rb_set_dir(VALUE self, VALUE value)
@@ -182,9 +171,10 @@ rb_set_dir(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   hessian -> number
  * Return value of the hessian
+ *
+ * @overload hessian
+ * @return [Number] Hessian
  */
 VALUE
 rb_get_hessian(VALUE self)
@@ -193,9 +183,10 @@ rb_get_hessian(VALUE self)
 }
 
 /*
- * call-seq:
- *   hessian = <i>value</i>
  * Set value of the hessian
+ *
+ * @overload hessian=(value)
+ *   @param [Number] Value to set.
  */
 VALUE
 rb_set_hessian(VALUE self, VALUE value)
@@ -219,5 +210,37 @@ new_object(CvSURFPoint* cvsurfpoint)
   return object;
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvSURFPoint", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), 5);
+  rb_define_method(rb_klass, "pt", RUBY_METHOD_FUNC(rb_get_pt), 0);
+  rb_define_method(rb_klass, "pt=", RUBY_METHOD_FUNC(rb_set_pt), 1);
+  rb_define_method(rb_klass, "laplacian", RUBY_METHOD_FUNC(rb_get_laplacian), 0);
+  rb_define_method(rb_klass, "laplacian=", RUBY_METHOD_FUNC(rb_set_laplacian), 1);
+  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_get_size), 0);
+  rb_define_method(rb_klass, "size=", RUBY_METHOD_FUNC(rb_set_size), 1);
+  rb_define_method(rb_klass, "dir", RUBY_METHOD_FUNC(rb_get_dir), 0);
+  rb_define_method(rb_klass, "dir=", RUBY_METHOD_FUNC(rb_set_dir), 1);
+  rb_define_method(rb_klass, "hessian", RUBY_METHOD_FUNC(rb_get_hessian), 0);
+  rb_define_method(rb_klass, "hessian=", RUBY_METHOD_FUNC(rb_set_hessian), 1);
+}
+
 __NAMESPACE_END_CVSURFPOINT
 __NAMESPACE_END_OPENCV
+

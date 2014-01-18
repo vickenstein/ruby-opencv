@@ -11,12 +11,7 @@
 /*
  * Document-class: OpenCV::CvBox2D
  *
- * C structure is here.
- *   typdef struct CvBox2D {
- *     CvPoint2D32f center; // center of the box.
- *     CvSize2D32f size;    // box width and length
- *     float angle;         // angle between the horizonal axis and the first side (i.e length) in radians
- *   } CvBox2D;
+ * Stores coordinates of a rotated rectangle.
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVBOX2D
@@ -29,29 +24,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvBox2D", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_private_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
-  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
-  rb_define_method(rb_klass, "center=", RUBY_METHOD_FUNC(rb_set_center), 1);
-  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_size), 0);
-  rb_define_method(rb_klass, "size=", RUBY_METHOD_FUNC(rb_set_size), 1);
-  rb_define_method(rb_klass, "angle", RUBY_METHOD_FUNC(rb_angle), 0);
-  rb_define_method(rb_klass, "angle=", RUBY_METHOD_FUNC(rb_set_angle), 1);
-  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -59,11 +31,13 @@ rb_allocate(VALUE klass)
   return Data_Make_Struct(klass, CvBox2D, 0, -1, ptr);
 }
 
-/* 
- * call-seq:
- *   CvBox2D.new(<i>[center][, size][, angle]</i>) -> cvbox2d
- *
+/*
  * Create a box
+ * @overload new(center=nil, size=nil, angle=nil)
+ *   @param center [CvPoint2D32f,nil] Center of the box
+ *   @param size [CvSize,nil] Size of the box
+ *   @param angle [Number,nil] Angle between the horizontal axis and the first side in degrees
+ * @return [CvBox2D] New box
  */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
@@ -84,9 +58,9 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   center -> cvpoint2d32f
- * Return center point of box as CvPoint2D32f.
+ * Returns center point of the box
+ * @overload center
+ * @return [CvPoint2D32f] Center of the box
  */
 VALUE
 rb_center(VALUE self)
@@ -95,10 +69,10 @@ rb_center(VALUE self)
 }
 
 /*
- * call-seq:
- *   center = <i>value</i>
- *
- * Set center to <i>value</i>
+ * Set center point of the box
+ * @overload center=value
+ *   @param value [CvPoint2D32f] Center of the box
+ * @return [CvBox2D] self
  */
 VALUE
 rb_set_center(VALUE self, VALUE value)
@@ -108,9 +82,9 @@ rb_set_center(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   size -> cvsize2d32f
- * Return size of box as CvSize2D32f.
+ * Returns size of the box
+ * @overload size
+ * @return [CvSize2D32f] Size of the box
  */
 VALUE
 rb_size(VALUE self)
@@ -119,10 +93,10 @@ rb_size(VALUE self)
 }
 
 /*
- * call-seq:
- *   size = <i>value</i>
- *
- * Set size to <i>value</i>
+ * Set size of the box
+ * @overload size=value
+ *   @param value [CvSize2D32f] Size of the box
+ * @return [CvBox2D] self
  */
 VALUE
 rb_set_size(VALUE self, VALUE value)
@@ -132,10 +106,9 @@ rb_set_size(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   angle -> float
- *
- * Return angle of box as Float.
+ * Returns angle of the box
+ * @overload angle
+ * @return [Float] Angle of the box
  */
 VALUE
 rb_angle(VALUE self)
@@ -144,10 +117,10 @@ rb_angle(VALUE self)
 }
 
 /*
- * call-seq:
- *   angle = <i>value</i>
- *
- * Set angle to <i>value</i>
+ * Set angle of the box
+ * @overload angle=value
+ *   @param value [Number] Angle of the box
+ * @return [CvBox2D] self
  */
 VALUE
 rb_set_angle(VALUE self, VALUE value)
@@ -157,9 +130,10 @@ rb_set_angle(VALUE self, VALUE value)
 }
 
 /*
- * call-seq:
- *   points -> array(include cvpoint2d32f)
- * Find box vertices. Return Array contain 4 CvPoint2D32f.
+ * Find box vertices
+ * @overload points
+ * @return [Array<CvPoint2D32f>] Vertices of the box
+ * @opencv_func cvBoxPoints
  */
 VALUE
 rb_points(VALUE self)
@@ -191,6 +165,30 @@ new_object(CvBox2D box)
   VALUE object = rb_allocate(rb_klass);
   *CVBOX2D(object) = box;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvBox2D", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "initialize", RUBY_METHOD_FUNC(rb_initialize), -1);
+  rb_define_method(rb_klass, "center", RUBY_METHOD_FUNC(rb_center), 0);
+  rb_define_method(rb_klass, "center=", RUBY_METHOD_FUNC(rb_set_center), 1);
+  rb_define_method(rb_klass, "size", RUBY_METHOD_FUNC(rb_size), 0);
+  rb_define_method(rb_klass, "size=", RUBY_METHOD_FUNC(rb_set_size), 1);
+  rb_define_method(rb_klass, "angle", RUBY_METHOD_FUNC(rb_angle), 0);
+  rb_define_method(rb_klass, "angle=", RUBY_METHOD_FUNC(rb_set_angle), 1);
+  rb_define_method(rb_klass, "points", RUBY_METHOD_FUNC(rb_points), 0);
 }
 
 __NAMESPACE_END_CVBOX2D

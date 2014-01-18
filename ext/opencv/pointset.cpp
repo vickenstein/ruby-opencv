@@ -23,29 +23,6 @@ rb_module()
   return module;
 }
 
-void
-define_ruby_module()
-{
-  if (module)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   *
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  module = rb_define_module_under(opencv, "PointSet");
-  rb_define_method(module, "contour_area", RUBY_METHOD_FUNC(rb_contour_area), -1);
-  rb_define_method(module, "fit_ellipse2", RUBY_METHOD_FUNC(rb_fit_ellipse2), 0);
-  
-  rb_define_method(module, "convex_hull2", RUBY_METHOD_FUNC(rb_convex_hull2), -1);
-  rb_define_method(module, "check_contour_convexity", RUBY_METHOD_FUNC(rb_check_contour_convexity), 0);
-  rb_define_alias(module, "convexity?", "check_contour_convexity");
-  rb_define_method(module, "convexity_defects", RUBY_METHOD_FUNC(rb_convexity_defects), 1);
-  rb_define_method(module, "min_area_rect2", RUBY_METHOD_FUNC(rb_min_area_rect2), 0);
-  rb_define_method(module, "min_enclosing_circle", RUBY_METHOD_FUNC(rb_min_enclosing_circle), 0);
-}
-
 /*
  * call-seq:
  *   contour_area -> float
@@ -90,7 +67,7 @@ rb_fit_ellipse2(VALUE self)
 
 /*
  * call-seq:
- *   convex_hull2(<i>[orientation_clockwise = true]</i>) -> cvcontour
+ *   convex_hull2([orientation_clockwise = true]) -> cvcontour
  *
  * Finds convex hull of 2D point set using Sklansky's algorithm.
  * 
@@ -136,7 +113,7 @@ rb_check_contour_convexity(VALUE self)
 
 /*
  * call-seq:
- *   convexity_defects(<i>hull</i>) -> cvseq(include CvConvexityDefect)
+ *   convexity_defects(hull) -> cvseq(include CvConvexityDefect)
  *
  * Finds convexity defects of contour.
  */
@@ -195,6 +172,34 @@ rb_min_enclosing_circle(VALUE self)
     raise_cverror(e);
   }
   return success ? circle : Qnil;
+}
+
+void
+init_ruby_module()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (module)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   *
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  module = rb_define_module_under(opencv, "PointSet");
+  rb_define_method(module, "contour_area", RUBY_METHOD_FUNC(rb_contour_area), -1);
+  rb_define_method(module, "fit_ellipse2", RUBY_METHOD_FUNC(rb_fit_ellipse2), 0);
+  
+  rb_define_method(module, "convex_hull2", RUBY_METHOD_FUNC(rb_convex_hull2), -1);
+  rb_define_method(module, "check_contour_convexity", RUBY_METHOD_FUNC(rb_check_contour_convexity), 0);
+  rb_define_alias(module, "convexity?", "check_contour_convexity");
+  rb_define_method(module, "convexity_defects", RUBY_METHOD_FUNC(rb_convexity_defects), 1);
+  rb_define_method(module, "min_area_rect2", RUBY_METHOD_FUNC(rb_min_area_rect2), 0);
+  rb_define_method(module, "min_enclosing_circle", RUBY_METHOD_FUNC(rb_min_enclosing_circle), 0);
 }
 
 __NAMESPACE_END_POINT_SET
@@ -272,3 +277,4 @@ VALUE_TO_POINT_SET(VALUE object)
 }
 
 __NAMESPACE_END_OPENCV
+

@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVHAARCLASSIFERCASCADE
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_allocate(VALUE klass);
 

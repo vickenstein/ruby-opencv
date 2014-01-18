@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CURVE
 
 VALUE rb_module();
 
-void define_ruby_module();
+void init_ruby_module();
 
 VALUE rb_closed_q(VALUE self);
 VALUE rb_convex_q(VALUE self);
