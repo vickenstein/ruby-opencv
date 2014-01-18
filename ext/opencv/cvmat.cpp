@@ -4207,6 +4207,32 @@ rb_smooth_bilateral(int argc, VALUE *argv, VALUE self)
   return dest;
 }
 
+/**
+ * Smooths the image in one of several ways.
+ *
+ * @overload smooth(smoothtype, size1 = 3, size2 = 0, sigma1 = 0, sigma2 = 0)
+ *   @param smoothtype [Integer] Type of the smoothing.
+ *     * CV_BLUR_NO_SCALE - linear convolution with <tt>size1 x size2</tt> box kernel (all 1's).
+ *       If you want to smooth different pixels with different-size box kernels,
+ *       you can use the integral image that is computed using <tt>CvMat#integral</tt>.
+ *     * CV_BLUR - linear convolution with <tt>size1 x size2</tt> box kernel (all 1's)
+ *       with subsequent scaling by <tt>1 / (size1 x size1)</tt>.
+ *     * CV_GAUSSIAN - linear convolution with a <tt>size1 x size2</tt> Gaussian kernel.
+ *     * CV_MEDIAN - median filter with a <tt>size1 x size1</tt> square aperture
+ *     * CV_BILATERAL - bilateral filter with a <tt>size1 x size1</tt> square aperture,
+ *       color sigma = <tt>sigma1</tt> and spatial sigma = <tt>sigma2</tt>.
+ *       If <tt>size1</tt> = 0, the aperture square side is set to <tt>CvMat#round(sigma2 * 1.5) * 2 + 1</tt>.
+ *   @param size1 [Integer] The first parameter of the smoothing operation, the aperture width.
+ *     Must be a positive odd number (1, 3, 5, ...)
+ *   @param size2 [Integer] The second parameter of the smoothing operation, the aperture height.
+ *     Ignored by <tt>CV_MEDIAN</tt> and <tt>CV_BILATERAL</tt> methods. In the case of simple
+ *     scaled/non-scaled and Gaussian blur if <tt>size2</tt> is zero, it is set to <tt>size1</tt>.
+ *     Otherwise it must be a positive odd number.
+ *   @param sigma1 [Integer] In the case of a Gaussian parameter this parameter may specify
+ *     Gaussian sigma (standard deviation). If it is zero, it is calculated from the kernel size.
+ * @return [CvMat] The destination image.
+ * @opencv_func cvSmooth
+ */
 VALUE
 rb_smooth(int argc, VALUE *argv, VALUE self)
 {
@@ -5638,7 +5664,8 @@ rb_find_fundamental_mat(int argc, VALUE *argv, VALUE klass)
  *   lT*[x, y, 1]T=0,
  * or
  *   a*x + b*y + c = 0
- * From the fundamental matrix definition (see cvFindFundamentalMatrix discussion), line l2 for a point p1 in the first image (which_image=1) can be computed as:
+ * From the fundamental matrix definition (see cvFindFundamentalMatrix discussion), line l2 for a point p1
+ * in the first image (which_image=1) can be computed as:
  *   l2=F*p1
  * and the line l1 for a point p2 in the second image (which_image=1) can be computed as:
  *   l1=FT*p2
