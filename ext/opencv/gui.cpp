@@ -27,7 +27,7 @@ rb_module_GUI()
 
 /*
  * call-seq:
- *   wait_key(<i>[delay]</i>) -> int or nil
+ *   wait_key([delay]) -> int or nil
  *
  * Waits for a pressed key each GUI wedget.
  * Return the code of the pressed key or nil if no key were pressed until the specified timeout has elapsed.

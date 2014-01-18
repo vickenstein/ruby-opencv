@@ -67,7 +67,7 @@ rb_fit_ellipse2(VALUE self)
 
 /*
  * call-seq:
- *   convex_hull2(<i>[orientation_clockwise = true]</i>) -> cvcontour
+ *   convex_hull2([orientation_clockwise = true]) -> cvcontour
  *
  * Finds convex hull of 2D point set using Sklansky's algorithm.
  * 
@@ -113,7 +113,7 @@ rb_check_contour_convexity(VALUE self)
 
 /*
  * call-seq:
- *   convexity_defects(<i>hull</i>) -> cvseq(include CvConvexityDefect)
+ *   convexity_defects(hull) -> cvseq(include CvConvexityDefect)
  *
  * Finds convexity defects of contour.
  */

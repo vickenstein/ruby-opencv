@@ -28,8 +28,8 @@ rb_class()
 
 /*
  * call-seq:
- *   CvVideoWriter.new(<i>filname, fourcc, fps, size[, is_color]</i>) -> cvvideowriter
- *   CvVideoWriter.new(<i>filname, fourcc, fps, size[, is_color]</i>){|vw| ... } -> nil
+ *   CvVideoWriter.new(filname, fourcc, fps, size[, is_color]) -> cvvideowriter
+ *   CvVideoWriter.new(filname, fourcc, fps, size[, is_color]){|vw| ... } -> nil
  *
  * Open new video writer. If block given, writer is closed automatically when end of block.
  * 
@@ -81,7 +81,7 @@ rb_initialize(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   write(<i>frame</i>)
+ *   write(frame)
  *
  * Write image as frame of video stream.
  * <i>frame</i> should be IplImage

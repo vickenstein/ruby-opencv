@@ -37,7 +37,7 @@ rb_allocate(VALUE klass)
 
 /*
  * call-seq:
- *   new(<i>start, end</i>)
+ *   new(start, end)
  *
  * Create new slice object.
  */

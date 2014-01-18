@@ -51,7 +51,7 @@ rb_allocate(VALUE klass)
 
 /*
  * call-seq:
- *   new(<i>[d1][,d2][,d3][,d4]</i>)
+ *   new([d1][,d2][,d3][,d4])
  *
  * Create new Scalar. Argument should be Fixnum (or nil as 0).
  */

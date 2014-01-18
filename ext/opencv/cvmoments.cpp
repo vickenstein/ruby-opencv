@@ -38,7 +38,7 @@ rb_allocate(VALUE klass)
 }
 /*
  * call-seq:
- *   CvMoments.new(<i>src[,is_binary = nil]</i>)
+ *   CvMoments.new(src[,is_binary = nil])
  *
  * Calculates all moments up to third order of a polygon or rasterized shape.
  * <i>src</i> should be CvMat or CvPolygon.

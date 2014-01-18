@@ -82,7 +82,7 @@ rb_allocate(VALUE klass)
 
 /*
  * call-seq:
- *   CvSeq.new(<i>type[,storage]</i>)
+ *   CvSeq.new(type[,storage])
  *
  * Return a new CvSeq. <i>type</i> should be following classes.
  *
@@ -335,7 +335,7 @@ rb_seq_push(VALUE self, VALUE args, int flag)
 
 /*
  * call-seq:
- *   push(<i>obj, ...</i>) -> self
+ *   push(obj, ...) -> self
  *     
  * Append - Pushes the given object(s) on the end of this sequence. This expression return the sequence itself,
  * so several append may be chained together.
@@ -499,7 +499,7 @@ rb_each_index(VALUE self)
 
 /*
  * call-seq:
- *   insert(<i>index,obj</i>) -> self
+ *   insert(index,obj) -> self
  *
  * Inserts the given values before element with the given index (which may be negative).
  */
@@ -527,7 +527,7 @@ rb_insert(VALUE self, VALUE index, VALUE object)
 
 /*
  * call-seq:
- *   remove(<i>index</i>) -> obj or nil
+ *   remove(index) -> obj or nil
  *
  * Deletes the elements at the specified index.
  */

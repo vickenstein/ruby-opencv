@@ -42,8 +42,8 @@ void trackbar_free(void *ptr) {
 
 /*
  * call-seq:
- *   new(<i>name,maxval[,val],&block</i>)
- *   new(<i>name,maxval[,val]</i>){|value| ... }
+ *   new(name,maxval[,val],&block)
+ *   new(name,maxval[,val]){|value| ... }
  *
  * Create new Trackbar.
  * <i>name</i> should be String.

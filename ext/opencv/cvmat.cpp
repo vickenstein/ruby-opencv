@@ -3982,7 +3982,7 @@ rb_log_polar(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   erode(<i>[element = nil, iteration = 1]</i>) -> cvmat
+ *   erode([element = nil, iteration = 1]) -> cvmat
  *
  * Create erodes image by using arbitrary structuring element.
  * <i>element</i> is structuring element used for erosion.
@@ -3997,7 +3997,7 @@ rb_erode(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   erode!(<i>[element = nil][,iteration = 1]</i>) -> self
+ *   erode!([element = nil][,iteration = 1]) -> self
  *
  * Erodes image by using arbitrary structuring element.
  * see also #erode.
@@ -4019,7 +4019,7 @@ rb_erode_bang(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   dilate(<i>[element = nil][,iteration = 1]</i>) -> cvmat
+ *   dilate([element = nil][,iteration = 1]) -> cvmat
  *
  * Create dilates image by using arbitrary structuring element.
  * <i>element</i> is structuring element used for erosion.
@@ -4034,7 +4034,7 @@ rb_dilate(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   dilate!(<i>[element = nil][,iteration = 1]</i>) -> self
+ *   dilate!([element = nil][,iteration = 1]) -> self
  *
  * Dilate image by using arbitrary structuring element.
  * see also #dilate.
@@ -4056,7 +4056,7 @@ rb_dilate_bang(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
+ *   morpholohy(operation[,element = nil][,iteration = 1]) -> cvmat
  *
  * Performs advanced morphological transformations.
  * <i>operation</i>
@@ -4097,7 +4097,7 @@ rb_morphology(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   smooth_blur_no_scale(<i>[p1 = 3, p2 = 3]</i>) -> cvmat
+ *   smooth_blur_no_scale([p1 = 3, p2 = 3]) -> cvmat
  *
  * Smooths the image by simple blur with no scaling.
  * * 8bit unsigned -> return 16bit unsigned
@@ -4128,7 +4128,7 @@ rb_smooth_blur_no_scale(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   smooth_blur(<i>[p1 = 3, p2 = 3]</i>) -> cvmat
+ *   smooth_blur([p1 = 3, p2 = 3]) -> cvmat
  *
  * Smooths the image by simple blur.
  * Summation over a pixel <i>p1</i> x <i>p2</i> neighborhood with subsequent scaling by 1 / (p1*p2).
@@ -4146,7 +4146,7 @@ rb_smooth_blur(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   smooth_gaussian(<i>[p1 = 3, p2 = 3, p3 = 0.0, p4 = 0.0]</i>) -> cvmat
+ *   smooth_gaussian([p1 = 3, p2 = 3, p3 = 0.0, p4 = 0.0]) -> cvmat
  *
  * Smooths the image by gaussian blur.
  * Convolving image with <i>p1</i> x <i>p2</i> Gaussian kernel.
@@ -4172,7 +4172,7 @@ rb_smooth_gaussian(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   smooth_median(<i>[p1 = 3]</i>) -> cvmat
+ *   smooth_median([p1 = 3]) -> cvmat
  *
  * Smooths the image by median blur.
  * Finding median of <i>p1</i> x <i>p1</i> neighborhood (i.e. the neighborhood is square).
@@ -4190,7 +4190,7 @@ rb_smooth_median(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   smooth_bilateral(<i>[p1 = 3][p2 = 3]</i>) -> cvmat
+ *   smooth_bilateral([p1 = 3][p2 = 3]) -> cvmat
  *
  * Smooths the image by bilateral filter.
  * Applying bilateral 3x3 filtering with color sigma=<i>p1</i> and space sigma=<i>p2</i>.
@@ -4277,7 +4277,7 @@ rb_smooth(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   filter2d(<i>kernel[,anchor]</i>) -> cvmat
+ *   filter2d(kernel[,anchor]) -> cvmat
  *
  * Convolves image with the kernel.
  * Convolution kernel, single-channel floating point matrix (or same depth of self's).
@@ -4304,7 +4304,7 @@ rb_filter2d(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   copy_make_border(<i>border_type, size, offset[,value = CvScalar.new(0)]</i>)
+ *   copy_make_border(border_type, size, offset[,value = CvScalar.new(0)])
  *
  * Copies image and makes border around it.
  * <i>border_type</i>:
@@ -4348,7 +4348,7 @@ rb_copy_make_border(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   integral(<i>need_sqsum = false, need_tilted_sum = false</i>) -> [cvmat, cvmat or nil, cvmat or nil]
+ *   integral(need_sqsum = false, need_tilted_sum = false) -> [cvmat, cvmat or nil, cvmat or nil]
  *
  * Calculates integral images.
  * If <i>need_sqsum</i> = true, calculate the integral image for squared pixel values.
@@ -4538,7 +4538,7 @@ rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   pyr_down(<i>[filter = :gaussian_5x5]</i>) -> cvmat
+ *   pyr_down([filter = :gaussian_5x5]) -> cvmat
  *
  * Return downsamples image.
  *
@@ -4578,7 +4578,7 @@ rb_pyr_down(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   pyr_up(<i>[filter = :gaussian_5x5]</i>) -> cvmat
+ *   pyr_up([filter = :gaussian_5x5]) -> cvmat
  *
  * Return upsamples image.
  *
@@ -4859,7 +4859,7 @@ rb_draw_chessboard_corners_bang(VALUE self, VALUE pattern_size, VALUE corners, V
 
 /*
  * call-seq:
- *   pyr_mean_shift_filtering(<i>sp, sr[,max_level = 1][termcrit = CvTermCriteria.new(5,1)]</i>) -> cvmat
+ *   pyr_mean_shift_filtering(sp, sr[,max_level = 1][termcrit = CvTermCriteria.new(5,1)]) -> cvmat
  *
  * Does meanshift image segmentation.
  *
@@ -5061,7 +5061,7 @@ rb_hough_circles(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   inpaint(<i>inpaint_method, mask, radius</i>) -> cvmat
+ *   inpaint(inpaint_method, mask, radius) -> cvmat
  *
  * Inpaints the selected region in the image
  * The radius of circlular neighborhood of each point inpainted that is considered by the algorithm.
@@ -5193,7 +5193,7 @@ rb_match_template(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   match_shapes(<i>object, method</i>) -> float
+ *   match_shapes(object, method) -> float
  *
  * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
  *
@@ -5228,7 +5228,7 @@ rb_match_shapes(int argc, VALUE *argv, VALUE self)
 /**
  * Port from OpenCV sample: matching_to_many_images.cpp
  * call-seq:
- *   match_descriptors(<i>images[, detector_type="SURF"][, descriptor_type="SURF"][, matcher_type="FlannBased"]</i>) -> Hash
+ *   match_descriptors(images[, detector_type="SURF"][, descriptor_type="SURF"][, matcher_type="FlannBased"]) -> Hash
  *
  * Matching descriptors detected on one image to descriptors detected in image array.
  * Returns a Hash contains match count of each image index.
@@ -5360,7 +5360,7 @@ rb_cam_shift(VALUE self, VALUE window, VALUE criteria)
 
 /*
  * call-seq:
- *   snake_image(<i>points, alpha, beta, gamma, window, criteria[, calc_gradient = true]</i>) -> array(pointset)
+ *   snake_image(points, alpha, beta, gamma, window, criteria[, calc_gradient = true]) -> array(pointset)
  *
  * Updates snake in order to minimize its total energy that is a sum of internal energy
  * that depends on contour shape (the smoother contour is, the smaller internal energy is)
@@ -5444,7 +5444,7 @@ rb_snake_image(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   optical_flow_hs(<i>prev[,velx = nil][,vely = nil][,options]</i>) -> [cvmat, cvmat]
+ *   optical_flow_hs(prev[,velx = nil][,vely = nil][,options]) -> [cvmat, cvmat]
  *
  * Calculates optical flow for two images (previous -> self) using Horn & Schunck algorithm.
  * Return horizontal component of the optical flow and vertical component of the optical flow.
@@ -5500,7 +5500,7 @@ rb_optical_flow_hs(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   optical_flow_lk(<i>prev, win_size</i>) -> [cvmat, cvmat]
+ *   optical_flow_lk(prev, win_size) -> [cvmat, cvmat]
  *
  * Calculates optical flow for two images (previous -> self) using Lucas & Kanade algorithm
  * Return horizontal component of the optical flow and vertical component of the optical flow.
@@ -5529,7 +5529,7 @@ rb_optical_flow_lk(VALUE self, VALUE prev, VALUE win_size)
 
 /*
  * call-seq:
- *   optical_flow_bm(<i>prev[,velx = nil][,vely = nil][,option]</i>) -> [cvmat, cvmat]
+ *   optical_flow_bm(prev[,velx = nil][,vely = nil][,option]) -> [cvmat, cvmat]
  *
  * Calculates optical flow for two images (previous -> self) using block matching method.
  * Return horizontal component of the optical flow and vertical component of the optical flow.
@@ -5592,7 +5592,7 @@ rb_optical_flow_bm(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   CvMat.find_fundamental_mat(<i>points1, points2[,options = {}]</i>) -> fundamental_matrix(cvmat) or nil
+ *   CvMat.find_fundamental_mat(points1, points2[,options = {}]) -> fundamental_matrix(cvmat) or nil
  *
  * Calculates fundamental matrix from corresponding points.
  * Size of the output fundamental matrix is 3x3 or 9x3 (7-point method may return up to 3 matrices)
@@ -5655,7 +5655,7 @@ rb_find_fundamental_mat(int argc, VALUE *argv, VALUE klass)
 
 /*
  * call-seq:
- *   CvMat.compute_correspond_epilines(<i>points, which_image, fundamental_matrix</i>) -> correspondent_lines(cvmat)
+ *   CvMat.compute_correspond_epilines(points, which_image, fundamental_matrix) -> correspondent_lines(cvmat)
  *
  * For points in one image of stereo pair computes the corresponding epilines in the other image.
  * Finds equation of a line that contains the corresponding point (i.e. projection of the same 3D point)

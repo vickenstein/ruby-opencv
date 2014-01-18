@@ -57,7 +57,7 @@ window_free(void *ptr)
 
 /*
  * call-seq:
- *   new(<i>name[, flags]</i>)
+ *   new(name[, flags])
  *
  * Create new window named <i>name</i>.
  * If <i>flags</i> is CV_WINDOW_AUTOSIZE (default), window size automatically resize when image given.
@@ -140,8 +140,8 @@ rb_destroy_all(VALUE klass)
 
 /*
  * call-seq:
- *   resize(<i>size</i>)
- *   resize(<i>width, height</i>)
+ *   resize(size)
+ *   resize(width, height)
  *
  * Set window size.
  */
@@ -176,8 +176,8 @@ rb_resize(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   move(<i>point</i>)
- *   move(<i>x, y</i>)
+ *   move(point)
+ *   move(x, y)
  *
  * Set window position.
  */
@@ -212,7 +212,7 @@ rb_move(int argc, VALUE *argv, VALUE self)
       
 /*
  * call-seq:
- *   show_image(<i>image</i>)
+ *   show_image(image)
  *
  * Show the image. If the window was created with <i>flags</i> = CV_WINDOW_AUTOSIZE then the image is shown
  * with its original size, otherwize the image is scaled to fit the window.
@@ -239,9 +239,9 @@ trackbar_callback(int value, void* block)
 
 /*
  * call-seq:
- *   set_trackbar(<i>trackbar</i>)
- *   set_trackbar(<i>name,maxval[,val],&block</i>)
- *   set_trackbar(<i>name,maxval[,val]</i>){|value| ... }
+ *   set_trackbar(trackbar)
+ *   set_trackbar(name,maxval[,val],&block)
+ *   set_trackbar(name,maxval[,val]){|value| ... }
  *
  * Create Trackbar on this window. Return new Trackbar.
  * see Trackbar.new
