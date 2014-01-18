@@ -30,7 +30,7 @@ hoespec = Hoe.spec 'ruby-opencv' do |s|
   s.test_globs = ['test/test_*.rb']
   s.urls = ['https://github.com/ruby-opencv/ruby-opencv/']
 
-  s.extra_dev_deps << ['rake-compiler', '>= 0'] << ['hoe-gemspec']
+  s.extra_dev_deps << ['rake-compiler', '~> 0'] << ['hoe-gemspec', '~> 0']
 
   Rake::ExtensionTask.new('opencv', spec) do |ext|
     ext.lib_dir = 'lib'
