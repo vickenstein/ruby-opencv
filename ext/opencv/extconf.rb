@@ -1,4 +1,11 @@
 #!/usr/bin/env ruby
+
+CC = RbConfig::CONFIG['CC']
+if CC =~ /clang/
+  RbConfig::MAKEFILE_CONFIG['try_header'] = :try_cpp
+  RbConfig::CONFIG['CPP'] = "#{CC} -E"
+end
+
 require "mkmf"
 
 def cv_version_suffix(incdir)
