@@ -51,6 +51,7 @@ when /mswin32/
     raise "#{lib}.lib not found." unless have_library(lib)
   }
   $CFLAGS << ' /EHsc'
+  CONFIG['CXXFLAGS'] << ' /EHsc'
 when /mingw32/
   suffix = cv_version_suffix(incdir)
   opencv_libraries.map! {|lib| lib + suffix }
