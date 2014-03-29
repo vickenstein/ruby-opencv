@@ -84,7 +84,7 @@ opencv_headers.each {|header|
   raise "#{header} not found." unless have_header(header)
 }
 opencv_headers_opt.each {|header|
-  raise "#{header} not found." unless have_header(header)
+  warn "#{header} not found." unless have_header(header)
 }
 have_header("stdarg.h")
 
