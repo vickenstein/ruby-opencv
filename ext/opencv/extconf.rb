@@ -1,4 +1,14 @@
 #!/usr/bin/env ruby
+
+CC = RbConfig::CONFIG['CC']
+if CC =~ /clang/
+  RbConfig::MAKEFILE_CONFIG['try_header'] = :try_cpp
+  RbConfig::CONFIG['CPP'] = "#{CC} -E"
+elsif RbConfig::CONFIG['arch'] =~ /mswin32/
+  RbConfig::MAKEFILE_CONFIG['try_header'] = :try_cpp
+  RbConfig::CONFIG['CPP'] = "#{CC} /P"
+end
+
 require "mkmf"
 
 def cv_version_suffix(incdir)
@@ -46,6 +56,7 @@ when /mswin32/
     warn "#{lib}.lib not found." unless have_library(lib)
   }
   $CFLAGS << ' /EHsc'
+  CONFIG['CXXFLAGS'] << ' /EHsc'
 when /mingw32/
   suffix = cv_version_suffix(incdir)
   opencv_libraries.map! {|lib| lib + suffix }
@@ -73,15 +84,7 @@ opencv_headers.each {|header|
   raise "#{header} not found." unless have_header(header)
 }
 opencv_headers_opt.each {|header|
-  unless have_header(header)
-    if CONFIG["arch"] =~ /mswin32/ and File.exists? "#{incdir}/#{header}"
-      # In mswin32, have_header('opencv2/nonfree/nonfree.hpp') fails because of a syntax problem.
-      warn "warning: #{header} found but `have_header` failed."
-      $defs << "-DHAVE_#{header.tr_cpp}"
-    else
-      warn "#{header} not found."
-    end
-  end
+  raise "#{header} not found." unless have_header(header)
 }
 have_header("stdarg.h")
 

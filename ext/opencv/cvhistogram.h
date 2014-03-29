@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVHISTOGRAM
 
 VALUE rb_class();
 VALUE rb_allocate(VALUE klass);
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_initialize(int argc, VALUE *argv, VALUE self);
 VALUE rb_is_uniform(VALUE self);

@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_POINT_SET
 
 VALUE rb_module();
 
-void define_ruby_module();
+void init_ruby_module();
 VALUE rb_contour_area(int argc, VALUE *argv, VALUE self);
 VALUE rb_fit_ellipse2(VALUE self);
 VALUE rb_convex_hull2(int argc, VALUE *argv, VALUE self);

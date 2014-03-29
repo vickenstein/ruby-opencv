@@ -24,20 +24,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "CvMemStorage", rb_cObject);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -63,6 +49,25 @@ new_object(int blocksize)
   return Data_Wrap_Struct(rb_klass, 0, cvmemstorage_free, storage);
 }
 
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  /* 
+   * opencv = rb_define_module("OpenCV");
+   * 
+   * note: this comment is used by rdoc.
+   */
+  VALUE opencv = rb_module_opencv();
+  rb_klass = rb_define_class_under(opencv, "CvMemStorage", rb_cObject);
+}
 
 __NAMESPACE_END_CVMEMSTORAGE
 __NAMESPACE_END_OPENCV
+

@@ -19,7 +19,7 @@ __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVSEQ
 
 VALUE rb_class();
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE seqblock_class(void *ptr);
 void register_elem_class(CvSeq *seq, VALUE klass);

@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVCONVEXITYDEFECT
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_start(VALUE self);
 VALUE rb_end(VALUE self);

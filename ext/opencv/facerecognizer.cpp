@@ -18,20 +18,19 @@ __NAMESPACE_BEGIN_FACERECOGNIZER
 
 VALUE rb_klass;
 
-std::map< long, cv::Ptr<cv::FaceRecognizer> > ptr_guard_map;
+std::map<void*, cv::Ptr<cv::FaceRecognizer> > ptr_guard_map;
 
 void
 guard_facerecognizer(void* data_ptr, cv::Ptr<cv::FaceRecognizer> ptr)
 {
-  ptr_guard_map[(long)data_ptr] = ptr;
+  ptr_guard_map[data_ptr] = ptr;
 }
 
 void
-release_facerecognizer(void *ptr)
+release_facerecognizer(void *data_ptr)
 {
-  long key = (long)ptr;
-  ptr_guard_map[key].release();
-  ptr_guard_map.erase(key);
+  ptr_guard_map[data_ptr].release();
+  ptr_guard_map.erase(data_ptr);
 }
 
 VALUE
@@ -153,8 +152,14 @@ rb_load(VALUE self, VALUE filename)
 }
 
 void
-define_ruby_class()
+init_ruby_class()
 {
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+  VALUE alghorithm = rb_define_class_under(opencv, "Algorithm", rb_cObject);
+#endif
+
   if (rb_klass)
     return;
   /* 
@@ -163,7 +168,8 @@ define_ruby_class()
    * note: this comment is used by rdoc.
    */
   VALUE opencv = rb_module_opencv();
-  rb_klass = rb_define_class_under(opencv, "FaceRecognizer", cAlgorithm::rb_class());
+  VALUE alghorithm = cAlgorithm::rb_class();
+  rb_klass = rb_define_class_under(opencv, "FaceRecognizer", alghorithm);
   rb_define_method(rb_klass, "train", RUBY_METHOD_FUNC(rb_train), 2);
   rb_define_method(rb_klass, "predict", RUBY_METHOD_FUNC(rb_predict), 1);
   rb_define_method(rb_klass, "save", RUBY_METHOD_FUNC(rb_save), 1);
@@ -172,3 +178,4 @@ define_ruby_class()
 
 __NAMESPACE_END_FACERECOGNIZER
 __NAMESPACE_END_OPENCV
+

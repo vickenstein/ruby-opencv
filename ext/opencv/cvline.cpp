@@ -11,6 +11,8 @@
 /*
  * Document-class: OpenCV::CvLine
  *
+ * Line parameters represented by a two-element (rho, theta)
+ * for CvMat#hough_lines
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVLINE
@@ -23,28 +25,6 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvLine", rb_cObject);
-  rb_define_alloc_func(rb_klass, rb_allocate);
-  rb_define_method(rb_klass, "rho", RUBY_METHOD_FUNC(rb_rho), 0);
-  rb_define_method(rb_klass, "rho=", RUBY_METHOD_FUNC(rb_set_rho), 1);
-  rb_define_method(rb_klass, "theta", RUBY_METHOD_FUNC(rb_theta), 0);
-  rb_define_method(rb_klass, "theta=", RUBY_METHOD_FUNC(rb_set_theta), 1);
-  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
-  rb_define_method(rb_klass, "[]=", RUBY_METHOD_FUNC(rb_aset), 2);
-}
-
 VALUE
 rb_allocate(VALUE klass)
 {
@@ -53,7 +33,9 @@ rb_allocate(VALUE klass)
 }
 
 /*
- * Return parameter on rho.
+ * Returns distance from the coordinate origin (0, 0)
+ * @overload rho
+ * @return [Number] Distance from the coordinate origin
  */
 VALUE
 rb_rho(VALUE self)
@@ -62,10 +44,9 @@ rb_rho(VALUE self)
 }
 
 /*
- * call-seq:
- *   rho = val
- *
- * Set rho parameter, return self.
+ * Set distance from the coordinate origin (0, 0)
+ * @overload rho=(value)
+ * @param value [Number] Distance from the coordinate origin
  */
 VALUE
 rb_set_rho(VALUE self, VALUE rho)
@@ -75,7 +56,9 @@ rb_set_rho(VALUE self, VALUE rho)
 }
 
 /*
- * Return parameter on theta.
+ * Returns line rotation angle in radians
+ * @overload theta
+ * @return [Number] Line rotation angle in radians
  */
 VALUE
 rb_theta(VALUE self)
@@ -84,10 +67,9 @@ rb_theta(VALUE self)
 }
 
 /*
- * call-seq:
- *   y = val
- *
- * Set theta parameter, return self.
+ * Set line rotation angle in radians
+ * @overload theta=(value)
+ * @param value [Number] Line rotation angle
  */
 VALUE
 rb_set_theta(VALUE self, VALUE theta)
@@ -97,10 +79,10 @@ rb_set_theta(VALUE self, VALUE theta)
 }
 
 /*
- * call-seq:
- *   [<i>index</i>]
- *
- * Return value of <i>index</i> dimension.
+ * Returns value of rho, theta
+ * @overload [](index)
+ * @param index [Integer] Index
+ * @return [Number] If index = 0, returns rho, else if index = 1, returns theta.
  */
 VALUE
 rb_aref(VALUE self, VALUE index)
@@ -120,10 +102,11 @@ rb_aref(VALUE self, VALUE index)
 }
 
 /*
- * call-seq:
- *   [<i>index</i>] = <i>value</i>
- *
- * Set value of <i>index</i> dimension to <i>value</i>
+ * Set value of rho, theta
+ * @overload []=(index, value)
+ * @param index [Integer] Index
+ * @param value [Number] Value
+ * @return [Number] If index = 0, set rho, else if index = 1, set theta.
  */
 VALUE
 rb_aset(VALUE self, VALUE index, VALUE value)
@@ -148,6 +131,28 @@ new_object(CvLine line)
   VALUE object = rb_allocate(rb_klass);
   *CVLINE(object) = line;
   return object;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+  VALUE opencv = rb_module_opencv();
+
+  rb_klass = rb_define_class_under(opencv, "CvLine", rb_cObject);
+  rb_define_alloc_func(rb_klass, rb_allocate);
+  rb_define_method(rb_klass, "rho", RUBY_METHOD_FUNC(rb_rho), 0);
+  rb_define_method(rb_klass, "rho=", RUBY_METHOD_FUNC(rb_set_rho), 1);
+  rb_define_method(rb_klass, "theta", RUBY_METHOD_FUNC(rb_theta), 0);
+  rb_define_method(rb_klass, "theta=", RUBY_METHOD_FUNC(rb_set_theta), 1);
+  rb_define_method(rb_klass, "[]", RUBY_METHOD_FUNC(rb_aref), 1);
+  rb_define_method(rb_klass, "[]=", RUBY_METHOD_FUNC(rb_aset), 2);
 }
 
 __NAMESPACE_END_CVLINE

@@ -11,15 +11,7 @@
 /*
  * Document-class: OpenCV::CvConvexityDefect
  *
- * Convexity.
- * C structure is here.
- *   typedef struct CvConvexityDefect {
- *     CvPoint* start;
- *     CvPoint* end;
- *     CvPoint* depth_point;
- *     float depth;
- *   } CvConvexityDefect;
- *
+ * Convexity defect
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVCONVEXITYDEFECT
@@ -32,30 +24,10 @@ rb_class()
   return rb_klass;
 }
 
-void
-define_ruby_class()
-{
-  if (rb_klass)
-    return;
-  /* 
-   * opencv = rb_define_module("OpenCV");
-   * 
-   * note: this comment is used by rdoc.
-   */
-  VALUE opencv = rb_module_opencv();
-  
-  rb_klass = rb_define_class_under(opencv, "CvConvexityDefect", rb_cObject);
-  rb_define_method(rb_klass, "start", RUBY_METHOD_FUNC(rb_start), 0);
-  rb_define_method(rb_klass, "end", RUBY_METHOD_FUNC(rb_end), 0);
-  rb_define_method(rb_klass, "depth_point", RUBY_METHOD_FUNC(rb_depth_point), 0);
-  rb_define_method(rb_klass, "depth", RUBY_METHOD_FUNC(rb_depth), 0);
-}
-
 /*
- * call-seq:
- *   start -> cvpoint
- *
- * Return start point as CvPoint.
+ * Returns the point of the contour where the defect begins
+ * @overload start
+ * @return [CvPoint] Start point of the contour
  */
 VALUE
 rb_start(VALUE self)
@@ -64,10 +36,9 @@ rb_start(VALUE self)
 }
 
 /*
- * call-seq:
- *   end -> cvpoint
- *
- * Return end point as CvPoint.
+ * Returns the point of the contour where the defect ends
+ * @overload end
+ * @return [CvPoint] End point of the contour
  */
 VALUE
 rb_end(VALUE self)
@@ -76,10 +47,9 @@ rb_end(VALUE self)
 }
 
 /*
- * call-seq:
- *   depth_point -> cvpoint
- *
- * Return depth point as CvPoint.
+ * Returns the farthest from the convex hull point within the defect
+ * @overload depth_point
+ * @return [CvPoint] The farthest from the convex hull point within the defect
  */
 VALUE
 rb_depth_point(VALUE self)
@@ -88,15 +58,34 @@ rb_depth_point(VALUE self)
 }
 
 /*
- * call-seq:
- *   depth -> float
- *
- * Return depth.
+ * Returns distance between the farthest point and the convex hull
+ * @overload depth
+ * @return [Number] Distance between the farthest point and the convex hull
  */
 VALUE
 rb_depth(VALUE self)
 {
   return rb_float_new(CVCONVEXITYDEFECT(self)->depth);
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
+  if (rb_klass)
+    return;
+
+  VALUE opencv = rb_module_opencv();
+
+  rb_klass = rb_define_class_under(opencv, "CvConvexityDefect", rb_cObject);
+  rb_define_method(rb_klass, "start", RUBY_METHOD_FUNC(rb_start), 0);
+  rb_define_method(rb_klass, "end", RUBY_METHOD_FUNC(rb_end), 0);
+  rb_define_method(rb_klass, "depth_point", RUBY_METHOD_FUNC(rb_depth_point), 0);
+  rb_define_method(rb_klass, "depth", RUBY_METHOD_FUNC(rb_depth), 0);
 }
 
 __NAMESPACE_END_CVCONVEXITYDEFECT

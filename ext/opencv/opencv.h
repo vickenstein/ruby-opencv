@@ -112,8 +112,6 @@ extern "C" {
 
 #include "cvmat.h"
 #include "iplimage.h"
-#include "cvmatnd.h"
-#include "cvsparsemat.h"
 #include "cvhistogram.h"
 #include "cvcapture.h"
 #include "cvvideowriter.h"
@@ -121,8 +119,6 @@ extern "C" {
 #include "cvline.h"
 #include "cvtwopoints.h"
 #include "cvcircle32f.h"
-
-#include "cvcondensation.h"
 
 #include "cvconnectedcomp.h"
 #include "cvavgcomp.h"
@@ -203,7 +199,7 @@ void release_object(void *ptr);
 void release_iplconvkernel_object(void *ptr);
 
 VALUE rb_module_opencv();
-void define_ruby_module();
+void init_ruby_module();
 
 // Ruby/OpenCV inline functions  
 inline CvArr*

@@ -11,36 +11,6 @@
 /*
  * Document-class: OpenCV::CvMat
  *
- * CvMat is basic 2D matrix class in OpenCV.
- *
- * C structure is here.
- *  typedef struct CvMat {
- *    int type;
- *    int step;
- *    int *refcount;
- *    union
- *    {
- *      uchar  *ptr;
- *      short  *s;
- *      int    *i;
- *      float  *fl;
- *      double *db;
- *    } data;
- *  #ifdef __cplusplus
- *    union
- *    {
- *      int rows;
- *      int height;
- *    };
- *    union
- *    {
- *      int cols;
- *      int width;
- *    };
- *  #else
- *    int rows; // number of row
- *    int cols; // number of columns
- *  } CvMat;
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVMAT
@@ -134,15 +104,5658 @@ rb_class()
   return rb_klass;
 }
 
-void define_ruby_class()
+VALUE
+rb_allocate(VALUE klass)
 {
+  return OPENCV_OBJECT(klass, 0);
+}
+
+/*
+ * Creates a matrix
+ * @overload new(rows, cols, depth = CV_8U, channels = 3)
+ * @param row [Integer] Number of rows in the matrix
+ * @param col [Integer] Number of columns in the matrix
+ * @param depth [Integer, Symbol] Depth type in the matrix.
+ *   The type of the matrix elements in the form of constant <b><tt>CV_<bit depth><S|U|F></tt></b>
+ *   or symbol <b><tt>:cv<bit depth><s|u|f></tt></b>, where S=signed, U=unsigned, F=float.
+ * @param channels [Integer] Number of channels in the matrix
+ * @return [CvMat] Created matrix
+ * @opencv_func cvCreateMat
+ * @example
+ *   mat1 = CvMat.new(3, 4) # Creates a 3-channels 3x4 matrix whose elements are 8bit unsigned.
+ *   mat2 = CvMat.new(5, 6, CV_32F, 1) # Creates a 1-channel 5x6 matrix whose elements are 32bit float.
+ *   mat3 = CvMat.new(5, 6, :cv32f, 1) # Same as CvMat.new(5, 6, CV_32F, 1)
+ */
+VALUE
+rb_initialize(int argc, VALUE *argv, VALUE self)
+{
+  VALUE row, column, depth, channel;
+  rb_scan_args(argc, argv, "22", &row, &column, &depth, &channel);
+
+  int ch = (argc < 4) ? 3 : NUM2INT(channel);
+  CvMat *ptr = rb_cvCreateMat(NUM2INT(row), NUM2INT(column),
+			      CV_MAKETYPE(CVMETHOD("DEPTH", depth, CV_8U), ch));
+  free(DATA_PTR(self));
+  DATA_PTR(self) = ptr;
+
+  return self;
+}
+
+/*
+ * Load an image from the specified file
+ * @overload load(filename, iscolor = 1)
+ * @param filename [String] Name of file to be loaded
+ * @param iscolor [Integer] Flags specifying the color type of a loaded image:
+ *   - <b>> 0</b> Return a 3-channel color image.
+ *   - <b>= 0</b> Return a grayscale image.
+ *   - <b>< 0</b> Return the loaded image as is.
+ * @return [CvMat] Loaded image
+ * @opencv_func cvLoadImageM
+ * @scope class
+ */
+VALUE
+rb_load_imageM(int argc, VALUE *argv, VALUE self)
+{
+  VALUE filename, iscolor;
+  rb_scan_args(argc, argv, "11", &filename, &iscolor);
+  Check_Type(filename, T_STRING);
+
+  int _iscolor;
+  if (NIL_P(iscolor)) {
+    _iscolor = CV_LOAD_IMAGE_COLOR;
+  }
+  else {
+    Check_Type(iscolor, T_FIXNUM);
+    _iscolor = FIX2INT(iscolor);
+  }
+
+  CvMat *mat = NULL;
+  try {
+    mat = cvLoadImageM(StringValueCStr(filename), _iscolor);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  if (mat == NULL) {
+    rb_raise(rb_eStandardError, "file does not exist or invalid format image.");
+  }
+  return OPENCV_OBJECT(rb_klass, mat);
+}
+
+/*
+ * Encodes an image into a memory buffer.
+ *
+ * @overload encode_image(ext, params = nil)
+ *   @param ext [String] File extension that defines the output format ('.jpg', '.png', ...)
+ *   @param params [Hash] - Format-specific parameters.
+ *   @option params [Integer] CV_IMWRITE_JPEG_QUALITY (95) For JPEG, it can be a quality
+ *     ( CV_IMWRITE_JPEG_QUALITY ) from 0 to 100 (the higher is the better).
+ *   @option params [Integer] CV_IMWRITE_PNG_COMPRESSION (3) For PNG, it can be the compression
+ *     level ( CV_IMWRITE_PNG_COMPRESSION ) from 0 to 9. A higher value means a smaller size
+ *     and longer compression time.
+ *   @option params [Integer] CV_IMWRITE_PXM_BINARY (1) For PPM, PGM, or PBM, it can be a binary
+ *     format flag ( CV_IMWRITE_PXM_BINARY ), 0 or 1.
+ * @return [Array<Integer>] Encoded image as array of bytes.
+ * @opencv_func cvEncodeImage
+ * @example
+ *   jpg = CvMat.load('image.jpg')
+ *   bytes1 = jpg.encode_image('.jpg') # Encodes a JPEG image which quality is 95
+ *   bytes2 = jpg.encode_image('.jpg', CV_IMWRITE_JPEG_QUALITY => 10) # Encodes a JPEG image which quality is 10
+ *
+ *   png = CvMat.load('image.png')
+ *   bytes3 = mat.encode_image('.png', CV_IMWRITE_PNG_COMPRESSION => 1)  # Encodes a PNG image which compression level is 1
+ */
+VALUE
+rb_encode_imageM(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _ext, _params;
+  rb_scan_args(argc, argv, "11", &_ext, &_params);
+  Check_Type(_ext, T_STRING);
+  const char* ext = RSTRING_PTR(_ext);
+  CvMat* buff = NULL;
+  int* params = NULL;
+
+  if (!NIL_P(_params)) {
+    params = hash_to_format_specific_param(_params);
+  }
+
+  try {
+    buff = cvEncodeImage(ext, CVARR(self), params);
+  }
+  catch (cv::Exception& e) {
+    if (params != NULL) {
+      free(params);
+      params = NULL;
+    }
+    raise_cverror(e);
+  }
+  if (params != NULL) {
+    free(params);
+    params = NULL;
+  }
+
+  const int size = buff->rows * buff->cols;
+  VALUE array = rb_ary_new2(size);
+  for (int i = 0; i < size; i++) {
+    rb_ary_store(array, i, CHR2FIX(CV_MAT_ELEM(*buff, char, 0, i)));
+  }
+
+  try {
+    cvReleaseMat(&buff);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return array;
+}
+
+CvMat*
+prepare_decoding(int argc, VALUE *argv, int* iscolor, int* need_release)
+{
+  VALUE _buff, _iscolor;
+  rb_scan_args(argc, argv, "11", &_buff, &_iscolor);
+  *iscolor = NIL_P(_iscolor) ? CV_LOAD_IMAGE_COLOR : NUM2INT(_iscolor);
+
+  CvMat* buff = NULL;
+  *need_release = 0;
+  switch (TYPE(_buff)) {
+  case T_STRING:
+    _buff = rb_funcall(_buff, rb_intern("unpack"), 1, rb_str_new("c*", 2));
+  case T_ARRAY: {
+    int cols = RARRAY_LEN(_buff);
+    *need_release = 1;
+    try {
+      buff = rb_cvCreateMat(1, cols, CV_8UC1);
+      VALUE *ary_ptr = RARRAY_PTR(_buff);
+      for (int i = 0; i < cols; i++) {
+	CV_MAT_ELEM(*buff, char, 0, i) = NUM2CHR(ary_ptr[i]);
+      }
+    }
+    catch (cv::Exception& e) {
+      raise_cverror(e);
+    }
+    break;
+  }
+  case T_DATA:
+    if (rb_obj_is_kind_of(_buff, cCvMat::rb_class()) == Qtrue) {
+      buff = CVMAT(_buff);
+      break;
+    }
+  default:
+    raise_typeerror(_buff, "CvMat, Array or String");
+  }
+
+  return buff;
+}
+
+/*
+ * Reads an image from a buffer in memory.
+ * @overload decode_image(buf, iscolor = 1)
+ * @param buf [CvMat, Array, String] Input array of bytes
+ * @param iscolor [Integer] Flags specifying the color type of a decoded image (the same flags as CvMat#load)
+ * @return [CvMat] Loaded matrix
+ * @opencv_func cvDecodeImageM
+ */
+VALUE
+rb_decode_imageM(int argc, VALUE *argv, VALUE self)
+{
+  int iscolor, need_release;
+  CvMat* buff = prepare_decoding(argc, argv, &iscolor, &need_release);
+  CvMat* mat_ptr = NULL;
+  try {
+    mat_ptr = cvDecodeImageM(buff, iscolor);
+    if (need_release) {
+      cvReleaseMat(&buff);
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return OPENCV_OBJECT(rb_klass, mat_ptr);
+}
+
+/*
+ * nodoc
+ */
+VALUE
+rb_method_missing(int argc, VALUE *argv, VALUE self)
+{
+  VALUE name, args, method;
+  rb_scan_args(argc, argv, "1*", &name, &args);
+  method = rb_funcall(name, rb_intern("to_s"), 0);
+  if (RARRAY_LEN(args) != 0 || !rb_respond_to(rb_module_opencv(), rb_intern(StringValuePtr(method))))
+    return rb_call_super(argc, argv);
+  return rb_funcall(rb_module_opencv(), rb_intern(StringValuePtr(method)), 1, self);
+}
+
+/*
+ * @overload to_s
+ * @return [String] String representation of the matrix
+ */
+VALUE
+rb_to_s(VALUE self)
+{
+  const int i = 6;
+  VALUE str[i];
+  str[0] = rb_str_new2("<%s:%dx%d,depth=%s,channel=%d>");
+  str[1] = rb_str_new2(rb_class2name(CLASS_OF(self)));
+  str[2] = rb_width(self);
+  str[3] = rb_height(self);
+  str[4] = rb_depth(self);
+  str[5] = rb_channel(self);
+  return rb_f_sprintf(i, str);
+}
+
+/*
+ * Tests whether a coordinate or rectangle is inside of the matrix
+ * @overload inside?(point)
+ *   @param obj [#x, #y] Tested coordinate
+ * @overload inside?(rect)
+ *   @param obj [#x, #y, #width, #height] Tested rectangle
+ * @return [Boolean] If the point or rectangle is inside of the matrix, return <tt>true</tt>.
+ *   If not, return <tt>false</tt>.
+ */
+VALUE
+rb_inside_q(VALUE self, VALUE object)
+{
+  if (cCvPoint::rb_compatible_q(cCvPoint::rb_class(), object)) {
+    CvMat *mat = CVMAT(self);
+    int x = NUM2INT(rb_funcall(object, rb_intern("x"), 0));
+    int y = NUM2INT(rb_funcall(object, rb_intern("y"), 0));
+    if (cCvRect::rb_compatible_q(cCvRect::rb_class(), object)) {
+      int width = NUM2INT(rb_funcall(object, rb_intern("width"), 0));
+      int height = NUM2INT(rb_funcall(object, rb_intern("height"), 0));
+      return (x >= 0) && (y >= 0) && (x < mat->width) && ((x + width) < mat->width)
+	&& (y < mat->height) && ((y + height) < mat->height) ? Qtrue : Qfalse;
+    }
+    else {
+      return (x >= 0) && (y >= 0) && (x < mat->width) && (y < mat->height) ? Qtrue : Qfalse;
+    }
+  }
+  rb_raise(rb_eArgError, "argument 1 should have method \"x\", \"y\"");
+  return Qnil;
+}
+
+/*
+ * Creates a structuring element from the matrix for morphological operations.
+ * @overload to_IplConvKernel(anchor)
+ * @param anchor [CvPoint] Anchor position within the element
+ * @return [IplConvKernel] Created IplConvKernel
+ * @opencv_func cvCreateStructuringElementEx
+ */
+VALUE
+rb_to_IplConvKernel(VALUE self, VALUE anchor)
+{
+  CvMat *src = CVMAT(self);
+  CvPoint p = VALUE_TO_CVPOINT(anchor);
+  IplConvKernel *kernel = rb_cvCreateStructuringElementEx(src->cols, src->rows, p.x, p.y,
+							  CV_SHAPE_CUSTOM, src->data.i);
+  return DEPEND_OBJECT(cIplConvKernel::rb_class(), kernel, self);
+}
+
+/*
+ * Creates a mask (1-channel 8bit unsinged image whose elements are 0) from the matrix.
+ * The size of the mask is the same as source matrix.
+ * @overload create_mask
+ * @return [CvMat] Created mask
+ */
+VALUE
+rb_create_mask(VALUE self)
+{
+  VALUE mask = cCvMat::new_object(cvGetSize(CVARR(self)), CV_8UC1);
+  try {
+    cvZero(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return mask;
+}
+
+/*
+ * Returns number of columns of the matrix.
+ * @overload width
+ * @return [Integer] Number of columns of the matrix
+ */
+VALUE
+rb_width(VALUE self)
+{
+  return INT2NUM(CVMAT(self)->width);
+}
+
+/*
+ * Returns number of rows of the matrix.
+ * @overload rows
+ * @return [Integer] Number of rows of the matrix
+ */
+VALUE
+rb_height(VALUE self)
+{
+  return INT2NUM(CVMAT(self)->height);
+}
+
+/*
+ * Returns depth type of the matrix
+ * @overload depth
+ * @return [Symbol] Depth type in the form of symbol <b><tt>:cv<bit depth><s|u|f></tt></b>,
+ *   where s=signed, u=unsigned, f=float.
+ */
+VALUE
+rb_depth(VALUE self)
+{
+  return rb_hash_lookup(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
+			INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
+}
+
+/*
+ * Returns number of channels of the matrix
+ * @overload channel
+ * @return [Integer] Number of channels of the matrix
+ */
+VALUE
+rb_channel(VALUE self)
+{
+  return INT2FIX(CV_MAT_CN(CVMAT(self)->type));
+}
+
+/*
+ * @overload data
+ * @deprecated This method will be removed.
+ */
+VALUE
+rb_data(VALUE self)
+{
+  IplImage *image = IPLIMAGE(self);
+  return rb_str_new((char *)image->imageData, image->imageSize);
+}
+
+/*
+ * Makes a clone of an object.
+ * @overload clone
+ * @return [CvMat] Clone of the object
+ * @opencv_func cvClone
+ */
+VALUE
+rb_clone(VALUE self)
+{
+  VALUE clone = rb_obj_clone(self);
+  try {
+    DATA_PTR(clone) = cvClone(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return clone;
+}
+
+/*
+ * Copies one array to another.
+ *
+ * The function copies selected elements from an input array to an output array:
+ *     dst(I) = src(I) if mask(I) != 0
+ *
+ * @overload copy(dst = nil, mask = nil)
+ * @param dst [CvMat] The destination array.
+ * @param mask [CvMat] Operation mask, 8-bit single channel array;
+ *     specifies elements of the destination array to be changed.
+ * @return [CvMat] Copy of the array
+ * @opencv_func cvCopy
+ */
+VALUE
+rb_copy(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _dst, _mask;
+  rb_scan_args(argc, argv, "02", &_dst, &_mask);
+
+  CvMat* mask = MASK(_mask);
+  CvArr *src = CVARR(self);
+  if (NIL_P(_dst)) {
+    CvSize size = cvGetSize(src);
+    _dst = new_mat_kind_object(size, self);
+  }
+
+  try {
+    cvCopy(src, CVARR_WITH_CHECK(_dst), mask);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return _dst;
+}
+
+VALUE
+copy(VALUE mat)
+{
+  return rb_clone(mat);
+}
+
+inline VALUE
+rb_to_X_internal(VALUE self, int depth)
+{
+  CvMat *src = CVMAT(self);
+  VALUE dest = new_object(src->rows, src->cols, CV_MAKETYPE(depth, CV_MAT_CN(src->type)));
+  try {
+    cvConvert(src, CVMAT(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Converts the matrix to 8bit unsigned.
+ * @overload to_8u
+ * @return [CvMat] Converted matrix which depth is 8bit unsigned.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_8u(VALUE self)
+{
+  return rb_to_X_internal(self, CV_8U);
+}
+
+/*
+ * Converts the matrix to 8bit signed.
+ * @overload to_8s
+ * @return [CvMat] Converted matrix which depth is 8bit signed.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_8s(VALUE self)
+{
+  return rb_to_X_internal(self, CV_8S);
+}
+
+/*
+ * Converts the matrix to 16bit unsigned.
+ * @overload to_16u
+ * @return [CvMat] Converted matrix which depth is 16bit unsigned.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE rb_to_16u(VALUE self)
+{
+  return rb_to_X_internal(self, CV_16U);
+}
+
+/*
+ * Converts the matrix to 16bit signed.
+ * @overload to_16s
+ * @return [CvMat] Converted matrix which depth is 16bit signed.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_16s(VALUE self)
+{
+  return rb_to_X_internal(self, CV_16S);
+}
+
+/*
+ * Converts the matrix to 32bit signed.
+ * @overload to_32s
+ * @return [CvMat] Converted matrix which depth is 32bit signed.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_32s(VALUE self)
+{
+  return rb_to_X_internal(self, CV_32S);
+}
+
+/*
+ * Converts the matrix to 32bit float.
+ * @overload to_32f
+ * @return [CvMat] Converted matrix which depth is 32bit float.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_32f(VALUE self)
+{
+  return rb_to_X_internal(self, CV_32F);
+}
+
+/*
+ * Converts the matrix to 64bit float.
+ * @overload to_64f
+ * @return [CvMat] Converted matrix which depth is 64bit float.
+ *   The size and channels of the new matrix are same as the source.
+ * @opencv_func cvConvert
+ */
+VALUE
+rb_to_64f(VALUE self)
+{
+  return rb_to_X_internal(self, CV_64F);
+}
+
+/*
+ * Returns whether the matrix is a vector.
+ * @overload vector?
+ * @return [Boolean] If width or height of the matrix is 1, returns <tt>true</tt>.
+ *   if not, returns <tt>false</tt>.
+ */
+VALUE
+rb_vector_q(VALUE self)
+{
+  CvMat *mat = CVMAT(self);
+  return (mat->width == 1|| mat->height == 1) ? Qtrue : Qfalse;
+}
+
+/*
+ * Returns whether the matrix is a square.
+ * @overload square?
+ * @return [Boolean] If width = height, returns <tt>true</tt>.
+ *   if not, returns <tt>false</tt>.
+ */
+VALUE
+rb_square_q(VALUE self)
+{
+  CvMat *mat = CVMAT(self);
+  return mat->width == mat->height ? Qtrue : Qfalse;
+}
+
+/************************************************************
+       cxcore function
+************************************************************/
+/*
+ * Converts an object to CvMat
+ * @overload to_CvMat
+ * @return [CvMat] Converted matrix
+ */
+VALUE
+rb_to_CvMat(VALUE self)
+{
+  // CvMat#to_CvMat aborts when self's class is CvMat.
+  if (CLASS_OF(self) == rb_klass)
+    return self;
+
+  CvMat *mat = NULL;
+  try {
+    mat = cvGetMat(CVARR(self), RB_CVALLOC(CvMat));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return DEPEND_OBJECT(rb_klass, mat, self);
+}
+
+/*
+ * Returns matrix corresponding to the rectangular sub-array of input image or matrix
+ *
+ * @overload sub_rect(rect)
+ *   @param rect [CvRect] Zero-based coordinates of the rectangle of interest.
+ * @overload sub_rect(topleft, size)
+ *   @param topleft [CvPoint] Top-left coordinates of the rectangle of interest
+ *   @param size [CvSize] Size of the rectangle of interest
+ * @overload sub_rect(x, y, width, height)
+ *   @param x [Integer] X-coordinate of the rectangle of interest
+ *   @param y [Integer] Y-coordinate of the rectangle of interest
+ *   @param width [Integer] Width of the rectangle of interest
+ *   @param height [Integer] Height of the rectangle of interest
+ * @return [CvMat] Sub-array of matrix
+ * @opencv_func cvGetSubRect
+ */
+VALUE
+rb_sub_rect(VALUE self, VALUE args)
+{
+  CvRect area;
+  CvPoint topleft;
+  CvSize size;
+  switch(RARRAY_LEN(args)) {
+  case 1:
+    area = VALUE_TO_CVRECT(RARRAY_PTR(args)[0]);
+    break;
+  case 2:
+    topleft = VALUE_TO_CVPOINT(RARRAY_PTR(args)[0]);
+    size = VALUE_TO_CVSIZE(RARRAY_PTR(args)[1]);
+    area.x = topleft.x;
+    area.y = topleft.y;
+    area.width = size.width;
+    area.height = size.height;
+    break;
+  case 4:
+    area.x = NUM2INT(RARRAY_PTR(args)[0]);
+    area.y = NUM2INT(RARRAY_PTR(args)[1]);
+    area.width = NUM2INT(RARRAY_PTR(args)[2]);
+    area.height = NUM2INT(RARRAY_PTR(args)[3]);
+    break;
+  default:
+    rb_raise(rb_eArgError, "wrong number of arguments (%ld of 1 or 2 or 4)", RARRAY_LEN(args));
+  }
+
+  CvMat* mat = NULL;
+  try {
+    mat = cvGetSubRect(CVARR(self), RB_CVALLOC(CvMat), area);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return DEPEND_OBJECT(rb_klass, mat, self);
+}
+
+void
+rb_get_range_index(VALUE index, int* start, int *end) {
+  if (rb_obj_is_kind_of(index, rb_cRange)) {
+    *start = NUM2INT(rb_funcall3(index, rb_intern("begin"), 0, NULL));
+    *end = NUM2INT(rb_funcall3(index, rb_intern("end"), 0, NULL));
+    if (rb_funcall3(index, rb_intern("exclude_end?"), 0, NULL) == Qfalse) {
+      (*end)++;
+    }
+  }
+  else {
+    *start = NUM2INT(index);
+    *end = *start + 1;
+  }
+}
+
+/*
+ * Returns array of row or row span.
+ * @overload get_rows(index, delta_row = 1)
+ *   @param index [Integer] Zero-based index of the selected row
+ *   @param delta_row [Integer] Index step in the row span.
+ *   @return [CvMat] Selected row
+ * @overload get_rows(range, delta_row = 1)
+ *   @param range [Range] Zero-based index range of the selected row
+ *   @param delta_row [Integer] Index step in the row span.
+ *   @return [CvMat] Selected rows
+ * @opencv_func cvGetRows
+ */
+VALUE
+rb_get_rows(int argc, VALUE* argv, VALUE self)
+{
+  VALUE row_val, delta_val;
+  rb_scan_args(argc, argv, "11", &row_val, &delta_val);
+
+  int start, end;
+  rb_get_range_index(row_val, &start, &end);
+  int delta = NIL_P(delta_val) ? 1 : NUM2INT(delta_val);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetRows(CVARR(self), submat, start, end, delta);
+  }
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
+}
+
+/*
+ * Returns array of column or column span.
+ * @overload get_cols(index)
+ *   @param index [Integer] Zero-based index of the selected column
+ *   @return [CvMat] Selected column
+ * @overload get_cols(range)
+ *   @param range [Range] Zero-based index range of the selected column
+ *   @return [CvMat] Selected columns
+ * @opencv_func cvGetCols
+ */
+VALUE
+rb_get_cols(VALUE self, VALUE col)
+{
+  int start, end;
+  rb_get_range_index(col, &start, &end);
+  CvMat* submat = RB_CVALLOC(CvMat);
+  try {
+    cvGetCols(CVARR(self), submat, start, end);
+  }
+  catch (cv::Exception& e) {
+    cvFree(&submat);
+    raise_cverror(e);
+  }
+
+  return DEPEND_OBJECT(rb_klass, submat, self);
+}
+
+/*
+ * Calls <i>block</i> once for each row in the matrix, passing that
+ * row as a parameter.
+ * @yield [row] Each row in the matrix
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvGetRow
+ * @todo To return an enumerator if no block is given
+ */
+VALUE
+rb_each_row(VALUE self)
+{
+  int rows = CVMAT(self)->rows;
+  CvMat* row = NULL;
+  for (int i = 0; i < rows; ++i) {
+    try {
+      row = cvGetRow(CVARR(self), RB_CVALLOC(CvMat), i);
+    }
+    catch (cv::Exception& e) {
+      if (row != NULL)
+	cvReleaseMat(&row);
+      raise_cverror(e);
+    }
+    rb_yield(DEPEND_OBJECT(rb_klass, row, self));
+  }
+  return self;
+}
+
+/*
+ * Calls <i>block</i> once for each column in the matrix, passing that
+ * column as a parameter.
+ * @yield [col] Each column in the matrix
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvGetCol
+ * @todo To return an enumerator if no block is given
+ */
+VALUE
+rb_each_col(VALUE self)
+{
+  int cols = CVMAT(self)->cols;
+  CvMat *col = NULL;
+  for (int i = 0; i < cols; ++i) {
+    try {
+      col = cvGetCol(CVARR(self), RB_CVALLOC(CvMat), i);
+    }
+    catch (cv::Exception& e) {
+      if (col != NULL)
+	cvReleaseMat(&col);
+      raise_cverror(e);
+    }
+    rb_yield(DEPEND_OBJECT(rb_klass, col, self));
+  }
+  return self;
+}
+
+/*
+ * Returns a specified diagonal of the matrix
+ * @overload diag(val = 0)
+ * @param val [Integer] Index of the array diagonal. Zero value corresponds to the main diagonal,
+ *   -1 corresponds to the diagonal above the main, 1 corresponds to the diagonal below the main,
+ *   and so forth.
+ * @return [CvMat] Specified diagonal
+ * @opencv_func cvGetDiag
+ */
+VALUE
+rb_diag(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val;
+  if (rb_scan_args(argc, argv, "01", &val) < 1)
+    val = INT2FIX(0);
+  CvMat* diag = NULL;
+  try {
+    diag = cvGetDiag(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(val));
+  }
+  catch (cv::Exception& e) {
+    cvReleaseMat(&diag);
+    raise_cverror(e);
+  }
+  return DEPEND_OBJECT(rb_klass, diag, self);
+}
+
+/*
+ * Returns size of the matrix
+ * @overload size
+ * @return [CvSize] Size of the matrix
+ * @opencv_func cvGetSize
+ */
+VALUE
+rb_size(VALUE self)
+{
+  CvSize size;
+  try {
+    size = cvGetSize(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvSize::new_object(size);
+}
+
+/*
+ * Returns array dimensions sizes
+ * @overload dims
+ * @return [Array<Integer>] Array dimensions sizes.
+ *   For 2d arrays the number of rows (height) goes first, number of columns (width) next.
+ * @opencv_func cvGetDims
+ */
+VALUE
+rb_dims(VALUE self)
+{
+  int size[CV_MAX_DIM];
+  int dims = 0;
+  try {
+    dims = cvGetDims(CVARR(self), size);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  VALUE ary = rb_ary_new2(dims);
+  for (int i = 0; i < dims; ++i) {
+    rb_ary_store(ary, i, INT2NUM(size[i]));
+  }
+  return ary;
+}
+
+/*
+ * Returns array size along the specified dimension.
+ * @overload dim_size(index)
+ * @param index [Intger] Zero-based dimension index
+ *   (for matrices 0 means number of rows, 1 means number of columns;
+ *   for images 0 means height, 1 means width)
+ * @return [Integer] Array size
+ * @opencv_func cvGetDimSize
+ */
+VALUE
+rb_dim_size(VALUE self, VALUE index)
+{
+  int dimsize = 0;
+  try {
+    dimsize = cvGetDimSize(CVARR(self), NUM2INT(index));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return INT2NUM(dimsize);
+}
+
+/*
+ * Returns a specific array element.
+ * @overload [](idx0)
+ * @overload [](idx0, idx1)
+ * @overload [](idx0, idx1, idx2)
+ * @overload [](idx0, idx1, idx2, ...)
+ * @param idx-n [Integer] Zero-based component of the element index
+ * @return [CvScalar] Array element
+ * @opencv_func cvGet1D
+ * @opencv_func cvGet2D
+ * @opencv_func cvGet3D
+ * @opencv_func cvGetND
+ */
+VALUE
+rb_aref(VALUE self, VALUE args)
+{
+  int index[CV_MAX_DIM];
+  for (int i = 0; i < RARRAY_LEN(args); ++i)
+    index[i] = NUM2INT(rb_ary_entry(args, i));
+  
+  CvScalar scalar = cvScalarAll(0);
+  try {
+    switch (RARRAY_LEN(args)) {
+    case 1:
+      scalar = cvGet1D(CVARR(self), index[0]);
+      break;
+    case 2:
+      scalar = cvGet2D(CVARR(self), index[0], index[1]);
+      break;
+    default:
+      scalar = cvGetND(CVARR(self), index);
+      break;      
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvScalar::new_object(scalar);
+}
+
+/*
+ * Changes the particular array element
+ * @overload []=(idx0, value)
+ * @overload []=(idx0, idx1, value)
+ * @overload []=(idx0, idx1, idx2, value)
+ * @overload []=(idx0, idx1, idx2, ..., value)
+ * @param idx-n [Integer] Zero-based component of the element index
+ * @param value [CvScalar] The assigned value
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSet1D
+ * @opencv_func cvSet2D
+ * @opencv_func cvSet3D
+ * @opencv_func cvSetND
+ */
+VALUE
+rb_aset(VALUE self, VALUE args)
+{
+  CvScalar scalar = VALUE_TO_CVSCALAR(rb_ary_pop(args));
+  int index[CV_MAX_DIM];
+  for (int i = 0; i < RARRAY_LEN(args); ++i)
+    index[i] = NUM2INT(rb_ary_entry(args, i));
+
+  try {
+    switch (RARRAY_LEN(args)) {
+    case 1:
+      cvSet1D(CVARR(self), index[0], scalar);
+      break;
+    case 2:
+      cvSet2D(CVARR(self), index[0], index[1], scalar);
+      break;
+    default:
+      cvSetND(CVARR(self), index, scalar);
+      break;
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Assigns user data to the array header
+ * @overload set_data(data)
+ * @param data [Array<Integer>] User data
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSetData
+ */
+VALUE
+rb_set_data(VALUE self, VALUE data)
+{
+  data = rb_funcall(data, rb_intern("flatten"), 0);
+  const int DATA_LEN = RARRAY_LEN(data);
+  CvMat *self_ptr = CVMAT(self);
+  int depth = CV_MAT_DEPTH(self_ptr->type);
+  void* array = NULL;
+
+  switch (depth) {
+  case CV_8U:
+    array = rb_cvAlloc(sizeof(uchar) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((uchar*)array)[i] = (uchar)(NUM2INT(rb_ary_entry(data, i)));
+    break;
+  case CV_8S:
+    array = rb_cvAlloc(sizeof(char) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((char*)array)[i] = (char)(NUM2INT(rb_ary_entry(data, i)));
+    break;
+  case CV_16U:
+    array = rb_cvAlloc(sizeof(ushort) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((ushort*)array)[i] = (ushort)(NUM2INT(rb_ary_entry(data, i)));
+    break;
+  case CV_16S:
+    array = rb_cvAlloc(sizeof(short) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((short*)array)[i] = (short)(NUM2INT(rb_ary_entry(data, i)));
+    break;
+  case CV_32S:
+    array = rb_cvAlloc(sizeof(int) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((int*)array)[i] = NUM2INT(rb_ary_entry(data, i));
+    break;
+  case CV_32F:
+    array = rb_cvAlloc(sizeof(float) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((float*)array)[i] = (float)NUM2DBL(rb_ary_entry(data, i));
+    break;
+  case CV_64F:
+    array = rb_cvAlloc(sizeof(double) * DATA_LEN);
+    for (int i = 0; i < DATA_LEN; ++i)
+      ((double*)array)[i] = NUM2DBL(rb_ary_entry(data, i));
+    break;
+  default:
+    rb_raise(rb_eArgError, "Invalid CvMat depth");
+    break;
+  }
+
+  try {
+    cvSetData(self_ptr, array, self_ptr->step);    
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return self;
+}
+
+/*
+ * Returns a matrix which is set every element to a given value.
+ * The function copies the scalar value to every selected element of the destination array:
+ *   mat[I] = value if mask(I) != 0
+ *
+ * @overload set(value, mask = nil) Fill value
+ * @param value [CvScalar] Fill value
+ * @param mask [CvMat] Operation mask, 8-bit single channel array;
+ *   specifies elements of the destination array to be changed
+ * @return [CvMat] Matrix which is set every element to a given value.
+ * @opencv_func cvSet
+ */
+VALUE
+rb_set(int argc, VALUE *argv, VALUE self)
+{
+  return rb_set_bang(argc, argv, copy(self));
+}
+
+/*
+ * Sets every element of the matrix to a given value.
+ * The function copies the scalar value to every selected element of the destination array:
+ *   mat[I] = value if mask(I) != 0
+ *
+ * @overload set!(value, mask = nil)
+ * @param (see #set)
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSet
+ */
+VALUE
+rb_set_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE value, mask;
+  rb_scan_args(argc, argv, "11", &value, &mask);
+  try {
+    cvSet(CVARR(self), VALUE_TO_CVSCALAR(value), MASK(mask));    
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Saves an image to a specified file.
+ * The image format is chosen based on the filename extension.
+ * @overload save_image(filename)
+ * @param filename [String] Name of the file
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSaveImage 
+ */
+VALUE
+rb_save_image(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _filename, _params;
+  rb_scan_args(argc, argv, "11", &_filename, &_params);
+  Check_Type(_filename, T_STRING);
+  int *params = NULL;
+  if (!NIL_P(_params)) {
+    params = hash_to_format_specific_param(_params);
+  }
+
+  try {
+    cvSaveImage(StringValueCStr(_filename), CVARR(self), params);
+  }
+  catch (cv::Exception& e) {
+    if (params != NULL) {
+      free(params);
+      params = NULL;
+    }
+    raise_cverror(e);
+  }
+  if (params != NULL) {
+    free(params);
+    params = NULL;
+  }
+
+  return self;
+}
+
+/*
+ * Returns cleared array.
+ * @overload set_zero
+ * @return [CvMat] Cleared array
+ * @opencv_func cvSetZero
+ */
+VALUE
+rb_set_zero(VALUE self)
+{
+  return rb_set_zero_bang(copy(self));
+}
+
+/*
+ * Clears the array.
+ * @overload set_zero!
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSetZero
+ */
+VALUE
+rb_set_zero_bang(VALUE self)
+{
+  try {
+    cvSetZero(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns a scaled identity matrix.
+ *   arr(i, j) = value if i = j, 0 otherwise
+ * @overload identity(value)
+ * @param value [CvScalar] Value to assign to diagonal elements.
+ * @return [CvMat] Scaled identity matrix.
+ * @opencv_func cvSetIdentity
+ */
+VALUE
+rb_set_identity(int argc, VALUE *argv, VALUE self)
+{
+  return rb_set_identity_bang(argc, argv, copy(self));
+}
+
+/*
+ * Initializes a scaled identity matrix.
+ *   arr(i, j) = value if i = j, 0 otherwise
+ * @overload identity!(value)
+ * @param (see #identity)
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvSetIdentity
+ */
+VALUE
+rb_set_identity_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val;
+  CvScalar value;
+  if (rb_scan_args(argc, argv, "01",  &val) < 1)
+    value = cvRealScalar(1);
+  else
+    value = VALUE_TO_CVSCALAR(val);
+
+  try {
+    cvSetIdentity(CVARR(self), value);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns initialized matrix as following:
+ *   arr(i,j)=(end-start)*(i*cols(arr)+j)/(cols(arr)*rows(arr))
+ * @overload range(start, end)
+ * @param start [Number] The lower inclusive boundary of the range
+ * @param end [Number] The upper exclusive boundary of the range
+ * @return [CvMat] Initialized matrix
+ * @opencv_func cvRange
+ */
+VALUE
+rb_range(VALUE self, VALUE start, VALUE end)
+{
+  return rb_range_bang(copy(self), start, end);
+}
+
+/*
+ * Initializes the matrix as following:
+ *   arr(i,j)=(end-start)*(i*cols(arr)+j)/(cols(arr)*rows(arr))
+ * @overload range!(start, end)
+ * @param (see #range)
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvRange
+ */
+VALUE
+rb_range_bang(VALUE self, VALUE start, VALUE end)
+{
+  try {
+    cvRange(CVARR(self), NUM2DBL(start), NUM2DBL(end));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Changes shape of matrix/image without copying data.
+ * @overload reshape(cn, rows=0)
+ *   @param cn [Integer] New number of channels. If the parameter is 0, the number of channels remains the same.
+ *   @param rows [Integer] New number of rows. If the parameter is 0, the number of rows remains the same.
+ * @return [CvMat] Changed matrix
+ * @opencv_func cvReshape
+ * @example
+ *   mat = CvMat.new(3, 3, CV_8U, 3)  #=> 3x3 3-channel matrix
+ *   vec = mat.reshape(:rows => 1)    #=> 1x9 3-channel matrix
+ *   ch1 = mat.reshape(:channel => 1) #=> 9x3 1-channel matrix
+ */
+VALUE
+rb_reshape(int argc, VALUE *argv, VALUE self)
+{
+  VALUE cn, rows;
+  CvMat *mat = NULL;
+  rb_scan_args(argc, argv, "11", &cn, &rows);
+  try {
+    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(cn), IF_INT(rows, 0));
+  }
+  catch (cv::Exception& e) {
+    if (mat != NULL)
+      cvReleaseMat(&mat);
+    raise_cverror(e);
+  }
+  return DEPEND_OBJECT(rb_klass, mat, self);
+}
+
+/*
+ * Fills the destination array with repeated copies of the source array.
+ *
+ * @overload repeat(dst)
+ * @param dst [CvMat] Destination array of the same type as <tt>self</tt>.
+ * @return [CvMat] Destination array
+ * @opencv_func cvRepeat
+ */
+VALUE
+rb_repeat(VALUE self, VALUE object)
+{
+  try {
+    cvRepeat(CVARR(self), CVARR_WITH_CHECK(object));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return object;
+}
+
+/*
+ * Returns a fliped 2D array around vertical, horizontal, or both axes.
+ *
+ * @overload flip(flip_mode)
+ * @param flip_mode [Symbol] Flag to specify how to flip the array.
+ *   - <tt>:x</tt> - Flipping around the x-axis.
+ *   - <tt>:y</tt> - Flipping around the y-axis.
+ *   - <tt>:xy</tt> - Flipping around both axes.
+ * @return [CvMat] Flipped array
+ * @opencv_func cvFlip
+ */
+VALUE
+rb_flip(int argc, VALUE *argv, VALUE self)
+{
+  return rb_flip_bang(argc, argv, copy(self));
+}
+
+/*
+ * Flips a 2D array around vertical, horizontal, or both axes.
+ *
+ * @overload flip!(flip_mode)
+ * @param (see #flip)
+ * @return (see #flip)
+ * @opencv_func (see #flip)
+ */
+VALUE
+rb_flip_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE format;
+  int mode = 1;
+  if (rb_scan_args(argc, argv, "01", &format) > 0) {
+    Check_Type(format, T_SYMBOL);
+    ID flip_mode = rb_to_id(format);
+    if (flip_mode == rb_intern("x")) {
+      mode = 1;
+    }
+    else if (flip_mode == rb_intern("y")) {
+      mode = 0;
+    }
+    else if (flip_mode == rb_intern("xy")) {
+      mode = -1;
+    }
+  }
+  try {
+    cvFlip(CVARR(self), NULL, mode);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Divides a multi-channel array into several single-channel arrays.
+ *
+ * @overload split
+ * @return [Array<CvMat>] Array of single-channel arrays
+ * @opencv_func cvSplit
+ * @see merge
+ * @example
+ *   img = CvMat.new(640, 480, CV_8U, 3) #=> 3-channel image
+ *   a = img.split                       #=> [img-ch1, img-ch2, img-ch3]
+ */
+VALUE
+rb_split(VALUE self)
+{
+  CvArr* self_ptr = CVARR(self);
+  int type = cvGetElemType(self_ptr);
+  int depth = CV_MAT_DEPTH(type), channel = CV_MAT_CN(type);
+  VALUE dest = rb_ary_new2(channel);
+  try {
+    CvArr *dest_ptr[] = { NULL, NULL, NULL, NULL };
+    CvSize size = cvGetSize(self_ptr);
+    for (int i = 0; i < channel; ++i) {
+      VALUE tmp = new_mat_kind_object(size, self, depth, 1);
+      rb_ary_store(dest, i, tmp);
+      dest_ptr[i] = CVARR(tmp);
+    }
+    cvSplit(self_ptr, dest_ptr[0], dest_ptr[1], dest_ptr[2], dest_ptr[3]);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dest;
+}
+
+/*
+ * Composes a multi-channel array from several single-channel arrays.
+ *
+ * @overload merge(src1 = nil, src2 = nil, src3 = nil, src4 = nil)
+ * @param src-n [CvMat] Source arrays to be merged.
+ *     All arrays must have the same size and the same depth.
+ * @return [CvMat] Merged array
+ * @opencv_func cvMerge
+ * @see split
+ * @scope class
+ */
+VALUE
+rb_merge(VALUE klass, VALUE args)
+{
+  int len = RARRAY_LEN(args);
+  if (len <= 0 || len > 4) {
+    rb_raise(rb_eArgError, "wrong number of argument (%d for 1..4)", len);
+  }
+  CvMat *src[] = { NULL, NULL, NULL, NULL }, *prev_src = NULL;
+  for (int i = 0; i < len; ++i) {
+    VALUE object = rb_ary_entry(args, i);
+    if (NIL_P(object))
+      src[i] = NULL;
+    else {
+      src[i] = CVMAT_WITH_CHECK(object);
+      if (CV_MAT_CN(src[i]->type) != 1)
+        rb_raise(rb_eArgError, "image should be single-channel CvMat.");
+      if (prev_src == NULL)
+        prev_src = src[i];
+      else {
+        if (!CV_ARE_SIZES_EQ(prev_src, src[i]))
+          rb_raise(rb_eArgError, "image size should be same.");
+        if (!CV_ARE_DEPTHS_EQ(prev_src, src[i]))
+          rb_raise(rb_eArgError, "image depth should be same.");
+      }
+    }
+  }
+  // TODO: adapt IplImage
+  VALUE dest = Qnil;
+  try {
+    dest = new_object(cvGetSize(src[0]), CV_MAKETYPE(CV_MAT_DEPTH(src[0]->type), len));
+    cvMerge(src[0], src[1], src[2], src[3], CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Returns shuffled matrix by swapping randomly chosen pairs of the matrix elements on each iteration 
+ * (where each element may contain several components in case of multi-channel arrays)
+ *
+ * @overload rand_shuffle(seed = -1, iter_factor = 1)
+ * @param seed [Integer] Integer value used to initiate a random sequence
+ * @param iter_factor [Integer] The relative parameter that characterizes intensity of
+ *     the shuffling performed. The number of iterations (i.e. pairs swapped) is
+ *     round(iter_factor*rows(mat)*cols(mat)), so <tt>iter_factor</tt> = 0 means that no shuffling is done,
+ *     <tt>iter_factor</tt> = 1 means that the function swaps rows(mat)*cols(mat) random pairs etc
+ * @return [CvMat] Shuffled matrix
+ * @opencv_func cvRandShuffle
+ */
+VALUE
+rb_rand_shuffle(int argc, VALUE *argv, VALUE self)
+{
+  return rb_rand_shuffle_bang(argc, argv, copy(self));
+}
+
+/*
+ * Shuffles the matrix by swapping randomly chosen pairs of the matrix elements on each iteration 
+ * (where each element may contain several components in case of multi-channel arrays)
+ *
+ * @overload rand_shuffle!(seed = -1, iter_factor = 1)
+ * @param (see #rand_shuffle)
+ * @return (see #rand_shuffle)
+ * @opencv_func (see #rand_shuffle)
+ */
+VALUE
+rb_rand_shuffle_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE seed, iter;
+  rb_scan_args(argc, argv, "02", &seed, &iter);
+  try {
+    if (NIL_P(seed))
+      cvRandShuffle(CVARR(self), NULL, IF_INT(iter, 1));
+    else {
+      CvRNG rng = cvRNG(rb_num2ll(seed));
+      cvRandShuffle(CVARR(self), &rng, IF_INT(iter, 1));
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Performs a look-up table transform of an array.
+ *
+ * @overload lut(lut)
+ * @param lut [CvMat] Look-up table of 256 elements. In case of multi-channel source array,
+ *     the table should either have a single channel (in this case the same table is used
+ *     for all channels) or the same number of channels as in the source array.
+ * @return [CvMat] Transformed array
+ * @opencv_func cvLUT
+ */
+VALUE
+rb_lut(VALUE self, VALUE lut)
+{
+  VALUE dest = copy(self);
+  try {
+    cvLUT(CVARR(self), CVARR(dest), CVARR_WITH_CHECK(lut));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Converts one array to another with optional linear transformation.
+ *
+ * @overload convert_scale(params)
+ *   @param params [Hash] Transform parameters
+ *   @option params [Integer] :depth (same as self) Depth of the destination array
+ *   @option params [Number] :scale (1.0) Scale factor
+ *   @option params [Number] :shift (0.0) Value added to the scaled source array elements
+ * @return [CvMat] Converted array
+ * @opencv_func cvConvertScale
+ */
+VALUE
+rb_convert_scale(VALUE self, VALUE hash)
+{
+  Check_Type(hash, T_HASH);
+  CvMat* self_ptr = CVMAT(self);
+  VALUE depth = LOOKUP_HASH(hash, "depth");
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
+
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self,
+			       CVMETHOD("DEPTH", depth, CV_MAT_DEPTH(self_ptr->type)),
+			       CV_MAT_CN(self_ptr->type));
+    cvConvertScale(self_ptr, CVARR(dest), IF_DBL(scale, 1.0), IF_DBL(shift, 0.0));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Scales, computes absolute values, and converts the result to 8-bit.
+ *
+ * @overload convert_scale_abs(params)
+ *   @param params [Hash] Transform parameters
+ *   @option params [Number] :scale (1.0) Scale factor
+ *   @option params [Number] :shift (0.0) Value added to the scaled source array elements
+ * @return [CvMat] Converted array
+ * @opencv_func cvConvertScaleAbs
+ */
+VALUE
+rb_convert_scale_abs(VALUE self, VALUE hash)
+{
+  Check_Type(hash, T_HASH);
+  CvMat* self_ptr = CVMAT(self);
+  VALUE scale = LOOKUP_HASH(hash, "scale");
+  VALUE shift = LOOKUP_HASH(hash, "shift");
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, CV_MAT_CN(CVMAT(self)->type));
+    cvConvertScaleAbs(self_ptr, CVARR(dest), IF_DBL(scale, 1.0), IF_DBL(shift, 0.0));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Computes the per-element sum of two arrays or an array and a scalar.
+ *
+ * @overload add(val, mask = nil)
+ * @param val [CvMat, CvScalar] Array or scalar to add
+ * @param mask [CvMat] Optional operation mask, 8-bit single channel array, 
+ *     that specifies elements of the destination array to be changed.
+ * @return [CvMat] Result array
+ * @opencv_func cvAdd
+ * @opencv_func cvAddS
+ */
+VALUE
+rb_add(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, mask, dest;
+  rb_scan_args(argc, argv, "11", &val, &mask);
+  dest = copy(self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvAdd(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
+    else
+      cvAddS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the per-element difference between two arrays or array and a scalar.
+ *
+ * @overload sub(val, mask = nil)
+ * @param val [CvMat, CvScalar] Array or scalar to subtract
+ * @param mask [CvMat] Optional operation mask, 8-bit single channel array, 
+ *     that specifies elements of the destination array to be changed.
+ * @return [CvMat] Result array
+ * @opencv_func cvSub
+ * @opencv_func cvSubS
+ */
+VALUE
+rb_sub(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, mask, dest;
+  rb_scan_args(argc, argv, "11", &val, &mask);
+  dest = copy(self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvSub(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
+    else
+      cvSubS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the per-element scaled product of two arrays.
+ *
+ * @overload mul(val, scale = 1.0)
+ * @param val [CvMat, CvScalar] Array or scalar to multiply
+ * @param scale [Number] Optional scale factor.
+ * @return [CvMat] Result array
+ * @opencv_func cvMul
+ */
+VALUE
+rb_mul(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, scale, dest;
+  if (rb_scan_args(argc, argv, "11", &val, &scale) < 2)
+    scale = rb_float_new(1.0);
+  dest = new_mat_kind_object(cvGetSize(CVARR(self)), self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvMul(CVARR(self), CVARR(val), CVARR(dest), NUM2DBL(scale));
+    else {
+      CvScalar scl = VALUE_TO_CVSCALAR(val);
+      VALUE mat = new_object(cvGetSize(CVARR(self)), cvGetElemType(CVARR(self)));
+      cvSet(CVARR(mat), scl);
+      cvMul(CVARR(self), CVARR(mat), CVARR(dest), NUM2DBL(scale));
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the product of two arrays.
+ *   dst = self * val + shiftvec
+ *
+ * @overload mat_mul(val, shiftvec = nil)
+ * @param val [CvMat] Array to multiply
+ * @param shiftvec [CvMat] Optional translation vector
+ * @return [CvMat] Result array
+ * @opencv_func cvMatMul
+ * @opencv_func cvMatMulAdd
+ */
+VALUE
+rb_mat_mul(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, shiftvec, dest;
+  rb_scan_args(argc, argv, "11", &val, &shiftvec);
+  CvArr* self_ptr = CVARR(self);  
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  try {
+    if (NIL_P(shiftvec))
+      cvMatMul(self_ptr, CVARR_WITH_CHECK(val), CVARR(dest));
+    else
+      cvMatMulAdd(self_ptr, CVARR_WITH_CHECK(val), CVARR_WITH_CHECK(shiftvec), CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs per-element division of two arrays or a scalar by an array.
+ *
+ * @overload div(val, scale = 1.0)
+ * @param val [CvMat, CvScalar] Array or scalar to divide
+ * @param scale [Number] Scale factor
+ * @return [CvMat] Result array
+ * @opencv_func cvDiv
+ */
+VALUE
+rb_div(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, scale;
+  if (rb_scan_args(argc, argv, "11", &val, &scale) < 2)
+    scale = rb_float_new(1.0);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvDiv(self_ptr, CVARR(val), CVARR(dest), NUM2DBL(scale));
+    else {
+      CvScalar scl = VALUE_TO_CVSCALAR(val);
+      VALUE mat = new_mat_kind_object(cvGetSize(self_ptr), self);
+      CvArr* mat_ptr = CVARR(mat);
+      cvSet(mat_ptr, scl);
+      cvDiv(self_ptr, mat_ptr, CVARR(dest), NUM2DBL(scale));
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Computes the weighted sum of two arrays.
+ * This function calculates the weighted sum of two arrays as follows:
+ *   dst(I) = src1(I) * alpha + src2(I) * beta + gamma
+ *
+ * @overload add_weighted(src1, alpha, src2, beta, gamma)
+ * @param src1 [CvMat] The first source array.
+ * @param alpha [Number] Weight for the first array elements.
+ * @param src2 [CvMat] The second source array.
+ * @param beta [Number] Weight for the second array elements.
+ * @param gamma [Number] Scalar added to each sum.
+ * @return [CvMat] Result array
+ * @opencv_func cvAddWeighted
+ */
+VALUE
+rb_add_weighted(VALUE klass, VALUE src1, VALUE alpha, VALUE src2, VALUE beta, VALUE gamma)
+{
+  CvArr* src1_ptr = CVARR_WITH_CHECK(src1);
+  VALUE dst = new_mat_kind_object(cvGetSize(src1_ptr), src1);
+  try {
+    cvAddWeighted(src1_ptr, NUM2DBL(alpha),
+		  CVARR_WITH_CHECK(src2), NUM2DBL(beta),
+		  NUM2DBL(gamma), CVARR(dst));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dst;
+}
+
+/*
+ * Calculates the per-element bit-wise conjunction of two arrays or an array and a scalar.
+ *
+ * @overload and(val, mask = nil)
+ * @param val [CvMat, CvScalar] Array or scalar to calculate bit-wise conjunction
+ * @param mask [CvMat] Optional operation mask, 8-bit single channel array, that specifies
+ *     elements of the destination array to be changed.
+ * @return [CvMat] Result array
+ * @opencv_func cvAnd
+ * @opencv_func cvAndS
+ */
+VALUE
+rb_and(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, mask, dest;
+  rb_scan_args(argc, argv, "11", &val, &mask);
+  dest = copy(self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvAnd(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
+    else
+      cvAndS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the per-element bit-wise disjunction of two arrays or an array and a scalar.
+ *
+ * @overload or(val, mask = nil)
+ * @param val [CvMat, CvScalar] Array or scalar to calculate bit-wise disjunction
+ * @param mask [CvMat] Optional operation mask, 8-bit single channel array, that specifies
+ *     elements of the destination array to be changed.
+ * @return [CvMat] Result array
+ * @opencv_func cvOr
+ * @opencv_func cvOrS
+ */
+VALUE
+rb_or(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, mask, dest;
+  rb_scan_args(argc, argv, "11", &val, &mask);
+  dest = copy(self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvOr(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
+    else
+      cvOrS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the per-element bit-wise "exclusive or" operation on two arrays or an array and a scalar.
+ *
+ * @overload xor(val, mask = nil)
+ * @param val [CvMat, CvScalar] Array or scalar to calculate bit-wise xor operation.
+ * @param mask [CvMat] Optional operation mask, 8-bit single channel array, that specifies
+ *     elements of the destination array to be changed.
+ * @return [CvMat] Result array
+ * @opencv_func cvXor
+ * @opencv_func cvXorS
+ */
+VALUE
+rb_xor(int argc, VALUE *argv, VALUE self)
+{
+  VALUE val, mask, dest;
+  rb_scan_args(argc, argv, "11", &val, &mask);
+  dest = copy(self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvXor(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
+    else
+      cvXorS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Returns an array which elements are bit-wise invertion of source array.
+ *
+ * @overload not
+ * @return [CvMat] Result array
+ * @opencv_func cvNot
+ */
+VALUE
+rb_not(VALUE self)
+{
+  return rb_not_bang(copy(self));
+}
+
+/*
+ * Inverts every bit of an array.
+ *
+ * @overload not!
+ * @return [CvMat] Result array
+ * @opencv_func cvNot
+ */
+VALUE
+rb_not_bang(VALUE self)
+{
+  try {
+    cvNot(CVARR(self), CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+VALUE
+rb_cmp_internal(VALUE self, VALUE val, int operand)
+{
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, 1);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvCmp(self_ptr, CVARR(val), CVARR(dest), operand);
+    else if (CV_MAT_CN(cvGetElemType(self_ptr)) == 1 && rb_obj_is_kind_of(val, rb_cNumeric))
+      cvCmpS(self_ptr, NUM2DBL(val), CVARR(dest), operand);
+    else {
+      VALUE mat = new_mat_kind_object(cvGetSize(CVARR(self)), self);
+      cvSet(CVARR(mat), VALUE_TO_CVSCALAR(val));
+      cvCmp(self_ptr, CVARR(mat), CVARR(dest), operand);
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs the per-element comparison "equal" of two arrays or an array and scalar value.
+ *
+ * @overload eq(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_eq(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_EQ);
+}
+
+/*
+ * Performs the per-element comparison "greater than" of two arrays or an array and scalar value.
+ *
+ * @overload gt(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_gt(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_GT);
+}
+
+/*
+ * Performs the per-element comparison "greater than or equal" of two arrays or an array and scalar value.
+ *
+ * @overload ge(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_ge(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_GE);
+}
+
+/*
+ * Performs the per-element comparison "less than" of two arrays or an array and scalar value.
+ *
+ * @overload lt(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_lt(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_LT);
+}
+
+/*
+ * Performs the per-element comparison "less than or equal" of two arrays or an array and scalar value.
+ *
+ * @overload le(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_le(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_LE);
+}
+
+/*
+ * Performs the per-element comparison "not equal" of two arrays or an array and scalar value.
+ *
+ * @overload ne(val)
+ * @param val [CvMat, CvScalar, Number] Array, scalar or number to compare
+ * @return [CvMat] Result array
+ * @opencv_func cvCmp
+ * @opencv_func cvCmpS
+ */
+VALUE
+rb_ne(VALUE self, VALUE val)
+{
+  return rb_cmp_internal(self, val, CV_CMP_NE);
+}
+
+/*
+ * Checks if array elements lie between the elements of two other arrays.
+ *
+ * @overload in_range(min, max)
+ * @param min [CvMat, CvScalar] Inclusive lower boundary array or a scalar.
+ * @param max [CvMat, CvScalar] Inclusive upper boundary array or a scalar.
+ * @return [CvMat] Result array
+ * @opencv_func cvInRange
+ * @opencv_func cvInRangeS
+ */
+VALUE
+rb_in_range(VALUE self, VALUE min, VALUE max)
+{
+  CvArr* self_ptr = CVARR(self);
+  CvSize size = cvGetSize(self_ptr);
+  VALUE dest = new_object(size, CV_8UC1);
+  try {
+    if (rb_obj_is_kind_of(min, rb_klass) && rb_obj_is_kind_of(max, rb_klass))
+      cvInRange(self_ptr, CVARR(min), CVARR(max), CVARR(dest));
+    else if (rb_obj_is_kind_of(min, rb_klass)) {
+      VALUE tmp = new_object(size, cvGetElemType(self_ptr));
+      cvSet(CVARR(tmp), VALUE_TO_CVSCALAR(max));
+      cvInRange(self_ptr, CVARR(min), CVARR(tmp), CVARR(dest));
+    }
+    else if (rb_obj_is_kind_of(max, rb_klass)) {
+      VALUE tmp = new_object(size, cvGetElemType(self_ptr));
+      cvSet(CVARR(tmp), VALUE_TO_CVSCALAR(min));
+      cvInRange(self_ptr, CVARR(tmp), CVARR(max), CVARR(dest));
+    }
+    else
+      cvInRangeS(self_ptr, VALUE_TO_CVSCALAR(min), VALUE_TO_CVSCALAR(max), CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Computes the per-element absolute difference between two arrays or between an array and a scalar.
+ *
+ * @overload abs_diff(val)
+ * @param val [CvMat, CvScalar] Array or scalar to compute absolute difference
+ * @return [CvMat] Result array
+ * @opencv_func cvAbsDiff
+ * @opencv_func cvAbsDiffS
+ */
+VALUE
+rb_abs_diff(VALUE self, VALUE val)
+{
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  try {
+    if (rb_obj_is_kind_of(val, rb_klass))
+      cvAbsDiff(self_ptr, CVARR(val), CVARR(dest));
+    else
+      cvAbsDiffS(self_ptr, CVARR(dest), VALUE_TO_CVSCALAR(val));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Normalizes the norm or value range of an array.
+ *
+ * @overload normalize(alpha = 1.0, beta = 0.0, norm_type = NORM_L2, dtype = -1, mask = nil)
+ *   @param alpha [Number] Norm value to normalize to or the lower range boundary
+ *     in case of the range normalization.
+ *   @param beta [Number] Upper range boundary in case of the range normalization.
+ *     It is not used for the norm normalization.
+ *   @param norm_type [Integer] Normalization type.
+ *   @param dtype [Integer] when negative, the output array has the same type as src;
+ *     otherwise, it has the same number of channels as src and the depth
+ *   @param mask [CvMat] Optional operation mask.
+ * @return [CvMat] Normalized array.
+ * @opencv_func cv::normalize
+ */
+VALUE
+rb_normalize(int argc, VALUE *argv, VALUE self)
+{
+  VALUE alpha_val, beta_val, norm_type_val, dtype_val, mask_val;
+  rb_scan_args(argc, argv, "05", &alpha_val, &beta_val, &norm_type_val, &dtype_val, &mask_val);
+
+  double alpha = NIL_P(alpha_val) ? 1.0 : NUM2DBL(alpha_val);
+  double beta = NIL_P(beta_val) ? 0.0 : NUM2DBL(beta_val);
+  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
+  int dtype = NIL_P(dtype_val) ? -1 : NUM2INT(dtype_val);
+  VALUE dst;
+
+  try {
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat dst_mat;
+
+    if (NIL_P(mask_val)) {
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype);
+    }
+    else {
+      cv::Mat mask(MASK(mask_val));
+      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype, mask);
+    }
+    dst = new_mat_kind_object(cvGetSize(CVARR(self)), self, dst_mat.depth(), dst_mat.channels());
+
+    CvMat tmp = dst_mat;
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dst;
+}
+
+/*
+ * Counts non-zero array elements.
+ *
+ * @overload count_non_zero
+ * @return [Integer] The number of non-zero elements.
+ * @opencv_func cvCountNonZero
+ */
+VALUE
+rb_count_non_zero(VALUE self)
+{
+  int n = 0;
+  try {
+    n = cvCountNonZero(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return INT2NUM(n);
+}
+
+/*
+ * Calculates the sum of array elements.
+ *
+ * @overload sum
+ * @return [CvScalar] The sum of array elements.
+ * @opencv_func cvSum
+ */
+VALUE
+rb_sum(VALUE self)
+{
+  CvScalar sum;
+  try {
+    sum = cvSum(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvScalar::new_object(sum);
+}
+
+/*
+ * Calculates an average (mean) of array elements.
+ * @overload avg(mask = nil)
+ * @param mask [CvMat] Optional operation mask.
+ * @return [CvScalar] The average of array elements.
+ * @opencv_func cvAvg
+ */
+VALUE
+rb_avg(int argc, VALUE *argv, VALUE self)
+{
+  VALUE mask;
+  rb_scan_args(argc, argv, "01", &mask);
+  CvScalar avg;
+  try {
+    avg = cvAvg(CVARR(self), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvScalar::new_object(avg);
+}
+
+/*
+ * Calculates a mean and standard deviation of array elements.
+ * @overload avg_sdv(mask = nil)
+ * @param mask [CvMat] Optional operation mask.
+ * @return [Array<CvScalar>] <tt>[mean, stddev]</tt>,
+ *     where <tt>mean</tt> is the computed mean value and <tt>stddev</tt> is the computed standard deviation.
+ * @opencv_func cvAvgSdv
+ */
+VALUE
+rb_avg_sdv(int argc, VALUE *argv, VALUE self)
+{
+  VALUE mask, mean, std_dev;
+  rb_scan_args(argc, argv, "01", &mask);
+  mean = cCvScalar::new_object();
+  std_dev = cCvScalar::new_object();
+  try {
+    cvAvgSdv(CVARR(self), CVSCALAR(mean), CVSCALAR(std_dev), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, mean, std_dev);
+}
+
+/*
+ * Calculates a standard deviation of array elements.
+ * @overload sdv(mask = nil)
+ * @param mask [CvMat] Optional operation mask.
+ * @return [CvScalar] The standard deviation of array elements.
+ * @opencv_func cvAvgSdv
+ */
+VALUE
+rb_sdv(int argc, VALUE *argv, VALUE self)
+{
+  VALUE mask, std_dev;
+  rb_scan_args(argc, argv, "01", &mask);
+  std_dev = cCvScalar::new_object();
+  try {
+    cvAvgSdv(CVARR(self), NULL, CVSCALAR(std_dev), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return std_dev;
+}
+
+/*
+ * Finds the global minimum and maximum in an array.
+ *
+ * @overload min_max_loc(mask = nil)
+ * @param mask [CvMat] Optional mask used to select a sub-array.
+ * @return [Array<Number, CvPoint>] <tt>[min_val, max_val, min_loc, max_loc]</tt>, where
+ *   <tt>min_val</tt>, <tt>max_val</tt> are minimum, maximum values as <tt>Number</tt> and 
+ *   <tt>min_loc</tt>, <tt>max_loc</tt> are minimum, maximum locations as <tt>CvPoint</tt>, respectively.
+ * @opencv_func cvMinMaxLoc
+ */
+VALUE
+rb_min_max_loc(int argc, VALUE *argv, VALUE self)
+{
+  VALUE mask, min_loc, max_loc;
+  double min_val = 0.0, max_val = 0.0;
+  rb_scan_args(argc, argv, "01", &mask);
+  min_loc = cCvPoint::new_object();
+  max_loc = cCvPoint::new_object();
+  try {
+    cvMinMaxLoc(CVARR(self), &min_val, &max_val, CVPOINT(min_loc), CVPOINT(max_loc), MASK(mask));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(4, rb_float_new(min_val), rb_float_new(max_val), min_loc, max_loc);
+}
+
+/*
+ * Calculates the dot product of two arrays in Euclidean metrics.
+ *
+ * @overload dot_product(mat)
+ * @param mat [CvMat] An array to calculate the dot product.
+ * @return [Number] The dot product of two arrays.
+ * @opencv_func cvDotProduct
+ */
+VALUE
+rb_dot_product(VALUE self, VALUE mat)
+{
+  double result = 0.0;
+  try {
+    result = cvDotProduct(CVARR(self), CVARR_WITH_CHECK(mat));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_float_new(result);
+}
+
+/*
+ * Calculates the cross product of two 3D vectors.
+ *
+ * @overload cross_product(mat)
+ * @param mat [CvMat] A vector to calculate the cross product.
+ * @return [CvMat] The cross product of two vectors.
+ * @opencv_func cvCrossProduct
+ */
+VALUE
+rb_cross_product(VALUE self, VALUE mat)
+{
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvCrossProduct(self_ptr, CVARR_WITH_CHECK(mat), CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs the matrix transformation of every array element.
+ *
+ * @overload transform(transmat, shiftvec = nil)
+ * @param transmat [CvMat] Transformation 2x2 or 2x3 floating-point matrix.
+ * @param shiftvec [CvMat] Optional translation vector.
+ * @return [CvMat] Transformed array.
+ * @opencv_func cvTransform
+ */
+VALUE
+rb_transform(int argc, VALUE *argv, VALUE self)
+{
+  VALUE transmat, shiftvec;
+  rb_scan_args(argc, argv, "11", &transmat, &shiftvec);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvTransform(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(transmat),
+		NIL_P(shiftvec) ? NULL : CVMAT_WITH_CHECK(shiftvec));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs the perspective matrix transformation of vectors.
+ *
+ * @overload perspective_transform(mat)
+ * @param mat [CvMat] 3x3 or 4x4 floating-point transformation matrix.
+ * @return [CvMat] Transformed vector.
+ * @opencv_func cvPerspectiveTransform
+ */
+VALUE
+rb_perspective_transform(VALUE self, VALUE mat)
+{
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvPerspectiveTransform(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(mat));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the product of a matrix and its transposition.
+ *
+ * This function calculates the product of <tt>self</tt> and its transposition:
+ *   if :order = 0
+ *     dst = scale * (self - delta) * (self - delta)T
+ *   otherwise
+ *     dst = scale * (self - delta)T * (self - delta)
+ *
+ * @overload mul_transposed(options)
+ *   @param options [Hash] Options
+ *   @option options [Integer] :order (0) Flag specifying the multiplication ordering, should be 0 or 1.
+ *   @option options [CvMat] :delta (nil) Optional delta matrix subtracted from source before the multiplication.
+ *   @option options [Number] :scale (1.0) Optional scale factor for the matrix product.
+ * @return [CvMat] Result array.
+ * @opencv_func cvMulTransposed
+ */
+VALUE
+rb_mul_transposed(int argc, VALUE *argv, VALUE self)
+{
+  VALUE options = Qnil;
+  VALUE _delta = Qnil, _scale = Qnil, _order = Qnil;
+
+  if (rb_scan_args(argc, argv, "01", &options) > 0) {
+    Check_Type(options, T_HASH);
+    _delta = LOOKUP_HASH(options, "delta");
+    _scale = LOOKUP_HASH(options, "scale");
+    _order = LOOKUP_HASH(options, "order");
+  }
+
+  CvArr* delta = NIL_P(_delta) ? NULL : CVARR_WITH_CHECK(_delta);
+  double scale = NIL_P(_scale) ? 1.0 : NUM2DBL(_scale);
+  int order = NIL_P(_order) ? 0 : NUM2INT(_order);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  try {
+    cvMulTransposed(self_ptr, CVARR(dest), order, delta, scale);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dest;
+}
+
+
+/*
+ * Returns the trace of a matrix.
+ *
+ * @overload trace
+ * @return [CvScalar] The trace of a matrix.
+ * @opencv_func cvTrace
+ */
+VALUE
+rb_trace(VALUE self)
+{
+  CvScalar scalar;
+  try {
+    scalar = cvTrace(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvScalar::new_object(scalar);
+}
+
+/*
+ * Transposes a matrix.
+ *
+ * @overload transpose
+ * @return [CvMat] Transposed matrix.
+ * @opencv_func cvTranspose
+ */
+VALUE
+rb_transpose(VALUE self)
+{
+  CvMat* self_ptr = CVMAT(self);
+  VALUE dest = new_mat_kind_object(cvSize(self_ptr->rows, self_ptr->cols), self);
+  try {
+    cvTranspose(self_ptr, CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Returns the determinant of a square floating-point matrix.
+ *
+ * @overload det
+ * @return [Number] The determinant of the matrix.
+ * @opencv_func cvDet
+ */
+VALUE
+rb_det(VALUE self)
+{
+  double det = 0.0;
+  try {
+    det = cvDet(CVARR(self));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_float_new(det);
+}
+
+/*
+ * Finds inverse or pseudo-inverse of matrix.
+ *
+ * @overload invert(inversion_method = :lu)
+ * @param inversion_method [Symbol] Inversion method.
+ *   * <tt>:lu</tt> - Gaussian elimincation with optimal pivot element chose.
+ *   * <tt>:svd</tt> - Singular value decomposition(SVD) method.
+ *   * <tt>:svd_sym</tt> - SVD method for a symmetric positively-defined matrix.
+ * @return [Number] Inverse or pseudo-inverse of matrix.
+ * @opencv_func cvInvert
+ */
+VALUE
+rb_invert(int argc, VALUE *argv, VALUE self)
+{
+  VALUE symbol;
+  rb_scan_args(argc, argv, "01", &symbol);
+  int method = CVMETHOD("INVERSION_METHOD", symbol, CV_LU);
+  VALUE dest = Qnil;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvInvert(self_ptr, CVARR(dest), method);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Solves one or more linear systems or least-squares problems.
+ *
+ * @overload solve(src1, src2, inversion_method = :lu)
+ * @param src1 [CvMat] Input matrix on the left-hand side of the system.
+ * @param src2 [CvMat] Input matrix on the right-hand side of the system.
+ * @param inversion_method [Symbol] Inversion method.
+ *   * <tt>:lu</tt> - Gaussian elimincation with optimal pivot element chose.
+ *   * <tt>:svd</tt> - Singular value decomposition(SVD) method.
+ *   * <tt>:svd_sym</tt> - SVD method for a symmetric positively-defined matrix.
+ * @return [Number] Output solution.
+ * @scope class
+ * @opencv_func cvSolve
+ */
+VALUE
+rb_solve(int argc, VALUE *argv, VALUE self)
+{
+  VALUE src1, src2, symbol;
+  rb_scan_args(argc, argv, "21", &src1, &src2, &symbol);
+  VALUE dest = Qnil;
+  CvArr* src2_ptr = CVARR_WITH_CHECK(src2);
+  try {
+    dest = new_mat_kind_object(cvGetSize(src2_ptr), src2);
+    cvSolve(CVARR_WITH_CHECK(src1), src2_ptr, CVARR(dest), CVMETHOD("INVERSION_METHOD", symbol, CV_LU));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs SVD of a matrix
+ * @overload svd(flag = 0)
+ * @param flag [Integer] Operation flags.
+ *   * <tt>CV_SVD_MODIFY_A</tt> - Use the algorithm to modify the decomposed matrix. It can save space and speed up processing.
+ *   * <tt>CV_SVD_U_T</tt> - Indicate that only a vector of singular values <tt>w</tt> is to be computed, while <tt>u</tt> and <tt>v</tt> will be set to empty matrices.
+ *   * <tt>CV_SVD_V_T</tt> - When the matrix is not square, by default the algorithm produces <tt>u</tt> and <tt>v</tt> matrices of sufficiently large size for the further A reconstruction. If, however, <tt>CV_SVD_V_T</tt> flag is specified, <tt>u</tt> and <tt>v</tt> will be full-size square orthogonal matrices.
+ * @return [Array<CvMat>] Array of the computed values <tt>[w, u, v]</tt>, where
+ *   * <tt>w</tt> - Computed singular values
+ *   * <tt>u</tt> - Computed left singular vectors
+ *   * <tt>v</tt> - Computed right singular vectors
+ * @opencv_func cvSVD
+ */
+VALUE
+rb_svd(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _flag = Qnil;
+  int flag = 0;
+  if (rb_scan_args(argc, argv, "01", &_flag) > 0) {
+    flag = NUM2INT(_flag);
+  }
+
+  CvMat* self_ptr = CVMAT(self);
+  VALUE w = new_mat_kind_object(cvSize(self_ptr->cols, self_ptr->rows), self);
+  
+  int rows = 0;
+  int cols = 0;
+  if (flag & CV_SVD_U_T) {
+    rows = MIN(self_ptr->rows, self_ptr->cols);
+    cols = self_ptr->rows;
+  }
+  else {
+    rows = self_ptr->rows;
+    cols = MIN(self_ptr->rows, self_ptr->cols);
+  }
+  VALUE u = new_mat_kind_object(cvSize(cols, rows), self);
+
+  if (flag & CV_SVD_V_T) {
+    rows = MIN(self_ptr->rows, self_ptr->cols);
+    cols = self_ptr->cols;
+  }
+  else {
+    rows = self_ptr->cols;
+    cols = MIN(self_ptr->rows, self_ptr->cols);
+  }
+  VALUE v = new_mat_kind_object(cvSize(cols, rows), self);
+
+  cvSVD(self_ptr, CVARR(w), CVARR(u), CVARR(v), flag);
+
+  return rb_ary_new3(3, w, u, v);
+}
+
+/*
+ * Computes eigenvalues and eigenvectors of symmetric matrix.
+ * <i>self</i> should be symmetric square matrix. <i>self</i> is modified during the processing.
+ *
+ * @overload eigenvv
+ * @return [Array<CvMat>] Array of <tt>[eigenvalues, eigenvectors]</tt>
+ * @opencv_func cvEigenVV
+ */
+VALUE
+rb_eigenvv(int argc, VALUE *argv, VALUE self)
+{
+  VALUE epsilon, lowindex, highindex;
+  rb_scan_args(argc, argv, "03", &epsilon, &lowindex, &highindex);
+  double eps = (NIL_P(epsilon)) ? 0.0 : NUM2DBL(epsilon);
+  int lowidx = (NIL_P(lowindex)) ? -1 : NUM2INT(lowindex);
+  int highidx = (NIL_P(highindex)) ? -1 : NUM2INT(highindex);
+  VALUE eigen_vectors = Qnil, eigen_values = Qnil;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    CvSize size = cvGetSize(self_ptr);
+    int type = cvGetElemType(self_ptr);
+    eigen_vectors = new_object(size, type);
+    eigen_values = new_object(size.height, 1, type);
+    // NOTE: eps, lowidx, highidx are ignored in the current OpenCV implementation.
+    cvEigenVV(self_ptr, CVARR(eigen_vectors), CVARR(eigen_values), eps, lowidx, highidx);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, eigen_vectors, eigen_values);
+}
+
+
+/*
+ * Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-point array.
+ *
+ * @overload dft(flags = CV_DXT_FORWARD, nonzero_rows = 0)
+ *   @param flags [Integer] transformation flags, representing a combination of the following values:
+ *     * <tt>CV_DXT_FORWARD</tt> - Performs a 1D or 2D transform.
+ *     * <tt>CV_DXT_INVERSE</tt> - Performs an inverse 1D or 2D transform instead of the default forward transform.
+ *     * <tt>CV_DXT_SCALE</tt> - Scales the result: divide it by the number of array elements. 
+ *       Normally, it is combined with <tt>CV_DXT_INVERSE</tt>.
+ *     * <tt>CV_DXT_INV_SCALE</tt> - <tt>CV_DXT_INVERSE</tt> + <tt>CV_DXT_SCALE</tt>
+ *   @param nonzero_rows [Integer] when the parameter is not zero, the function assumes that only
+ *       the first <i>nonzero_rows</i> rows of the input array (CV_DXT_INVERSE is not set)
+ *       or only the first nonzero_rows of the output array (CV_DXT_INVERSE is set) contain non-zeros.
+ * @return [CvMat] Output array
+ * @opencv_func cvDFT
+ */
+VALUE
+rb_dft(int argc, VALUE *argv, VALUE self)
+{
+  VALUE flag_value, nonzero_row_value;
+  rb_scan_args(argc, argv, "02", &flag_value, &nonzero_row_value);
+
+  int flags = NIL_P(flag_value) ? CV_DXT_FORWARD : NUM2INT(flag_value);
+  int nonzero_rows = NIL_P(nonzero_row_value) ? 0 : NUM2INT(nonzero_row_value);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvDFT(self_ptr, CVARR(dest), flags, nonzero_rows);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs forward or inverse Discrete Cosine Transform(DCT) of 1D or 2D floating-point array.
+ *
+ * @overload dct(flags = CV_DXT_FORWARD)
+ *   @param flags [Integer] transformation flags, representing a combination of the following values:
+ *     * <tt>CV_DXT_FORWARD</tt> - Performs a 1D or 2D transform.
+ *     * <tt>CV_DXT_INVERSE</tt> - Performs an inverse 1D or 2D transform instead of the default forward transform.
+ *     * <tt>CV_DXT_ROWS</tt> - Performs a forward or inverse transform of every individual row of the input matrix.
+ *       This flag enables you to transform multiple vectors simultaneously and can be used to decrease
+ *       the overhead (which is sometimes several times larger than the processing itself) to perform 3D
+ *       and higher-dimensional transforms and so forth.
+ * @return [CvMat] Output array
+ * @opencv_func cvDCT
+ */
+VALUE
+rb_dct(int argc, VALUE *argv, VALUE self)
+{
+  VALUE flag_value;
+  rb_scan_args(argc, argv, "01", &flag_value);
+
+  int flags = NIL_P(flag_value) ? CV_DXT_FORWARD : NUM2INT(flag_value);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvDCT(self_ptr, CVARR(dest), flags);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Returns an image that is drawn a line segment connecting two points.
+ *
+ * @overload line(p1, p2, options = nil)
+ *   @param p1 [CvPoint] First point of the line segment.
+ *   @param p2 [CvPoint] Second point of the line segment.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvLine
+ */
+VALUE
+rb_line(int argc, VALUE *argv, VALUE self)
+{
+  return rb_line_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a line segment connecting two points.
+ *
+ * @overload line!(p1, p2, options = nil)
+ *   @param p1 [CvPoint] First point of the line segment.
+ *   @param p2 [CvPoint] Second point of the line segment.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func (see #line)
+ */
+VALUE
+rb_line_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, drawing_option;
+  rb_scan_args(argc, argv, "21", &p1, &p2, &drawing_option);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  try {
+    cvLine(CVARR(self), VALUE_TO_CVPOINT(p1), VALUE_TO_CVPOINT(p2),
+	   DO_COLOR(drawing_option),
+	   DO_THICKNESS(drawing_option),
+	   DO_LINE_TYPE(drawing_option),
+	   DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is drawn a simple, thick, or filled up-right rectangle.
+ *
+ * @overload rectangle(p1, p2, options = nil)
+ *   @param p1 [CvPoint] Vertex of the rectangle.
+ *   @param p2 [CvPoint] Vertex of the rectangle opposite to <tt>p1</tt>.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvRectangle
+ */
+VALUE
+rb_rectangle(int argc, VALUE *argv, VALUE self)
+{
+  return rb_rectangle_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a simple, thick, or filled up-right rectangle.
+ *
+ * @overload rectangle!(p1, p2, options = nil)
+ *   @param p1 [CvPoint] Vertex of the rectangle.
+ *   @param p2 [CvPoint] Vertex of the rectangle opposite to <tt>p1</tt>.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvRectangle
+ */
+VALUE
+rb_rectangle_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, drawing_option;
+  rb_scan_args(argc, argv, "21", &p1, &p2, &drawing_option);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  try {
+    cvRectangle(CVARR(self), VALUE_TO_CVPOINT(p1), VALUE_TO_CVPOINT(p2),
+		DO_COLOR(drawing_option),
+		DO_THICKNESS(drawing_option),
+		DO_LINE_TYPE(drawing_option),
+		DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is drawn a circle
+ *
+ * @overload circle(center, radius, options = nil)
+ *   @param center [CvPoint] Center of the circle.
+ *   @param radius [Integer] Radius of the circle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvCircle
+ */
+VALUE
+rb_circle(int argc, VALUE *argv, VALUE self)
+{
+  return rb_circle_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a circle
+ *
+ * @overload circle!(center, radius, options = nil)
+ *   @param center [CvPoint] Center of the circle.
+ *   @param radius [Integer] Radius of the circle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvCircle
+ */
+VALUE
+rb_circle_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE center, radius, drawing_option;
+  rb_scan_args(argc, argv, "21", &center, &radius, &drawing_option);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  try {
+    cvCircle(CVARR(self), VALUE_TO_CVPOINT(center), NUM2INT(radius),
+	     DO_COLOR(drawing_option),
+	     DO_THICKNESS(drawing_option),
+	     DO_LINE_TYPE(drawing_option),
+	     DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is drawn a simple or thick elliptic arc or fills an ellipse sector.
+ *
+ * @overload ellipse(center, axes, angle, start_angle, end_angle, options = nil)
+ *   @param center [CvPoint] Center of the ellipse.
+ *   @param axes [CvSize] Length of the ellipse axes.
+ *   @param angle [Number] Ellipse rotation angle in degrees.
+ *   @param start_angle [Number] Starting angle of the elliptic arc in degrees.
+ *   @param end_angle [Number] Ending angle of the elliptic arc in degrees.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvEllipse
+ */
+VALUE
+rb_ellipse(int argc, VALUE *argv, VALUE self)
+{
+  return rb_ellipse_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a simple or thick elliptic arc or fills an ellipse sector.
+ *
+ * @overload ellipse!(center, axes, angle, start_angle, end_angle, options = nil)
+ *   @param center [CvPoint] Center of the ellipse.
+ *   @param axes [CvSize] Length of the ellipse axes.
+ *   @param angle [Number] Ellipse rotation angle in degrees.
+ *   @param start_angle [Number] Starting angle of the elliptic arc in degrees.
+ *   @param end_angle [Number] Ending angle of the elliptic arc in degrees.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvEllipse
+ */
+VALUE
+rb_ellipse_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE center, axis, angle, start_angle, end_angle, drawing_option;
+  rb_scan_args(argc, argv, "51", &center, &axis, &angle, &start_angle, &end_angle, &drawing_option);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  try {
+    cvEllipse(CVARR(self), VALUE_TO_CVPOINT(center),
+	      VALUE_TO_CVSIZE(axis),
+	      NUM2DBL(angle), NUM2DBL(start_angle), NUM2DBL(end_angle),
+	      DO_COLOR(drawing_option),
+	      DO_THICKNESS(drawing_option),
+	      DO_LINE_TYPE(drawing_option),
+	      DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is drawn a simple or thick elliptic arc or fills an ellipse sector.
+ *
+ * @overload ellipse_box(box, options = nil)
+ *   @param box [CvBox2D] Alternative ellipse representation via <tt>CvBox2D</tt>. This means that
+ *     the function draws an ellipse inscribed in the rotated rectangle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvEllipseBox
+ */
+VALUE
+rb_ellipse_box(int argc, VALUE *argv, VALUE self)
+{
+  return rb_ellipse_box_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a simple or thick elliptic arc or fills an ellipse sector.
+ *
+ * @overload ellipse_box!(box, options = nil)
+ *   @param box [CvBox2D] Alternative ellipse representation via <tt>CvBox2D</tt>. This means that
+ *     the function draws an ellipse inscribed in the rotated rectangle.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvEllipseBox
+ */
+VALUE
+rb_ellipse_box_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE box, drawing_option;
+  rb_scan_args(argc, argv, "11", &box, &drawing_option);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  try {
+    cvEllipseBox(CVARR(self), VALUE_TO_CVBOX2D(box),
+		 DO_COLOR(drawing_option),
+		 DO_THICKNESS(drawing_option),
+		 DO_LINE_TYPE(drawing_option),
+		 DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is filled the area bounded by one or more polygons.
+ *
+ * @overload fill_poly(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygons where each polygon is represented as an array of points.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvFillPoly
+ */
+VALUE
+rb_fill_poly(int argc, VALUE *argv, VALUE self)
+{
+  return rb_fill_poly_bang(argc, argv, self);
+}
+
+/*
+ * Fills the area bounded by one or more polygons.
+ *
+ * @overload fill_poly!(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygons where each polygon is represented as an array of points.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvFillPoly
+ */
+VALUE
+rb_fill_poly_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE polygons, drawing_option;
+  VALUE points;
+  int i, j;
+  int num_polygons;
+  int *num_points;
+  CvPoint **p;
+
+  rb_scan_args(argc, argv, "11", &polygons, &drawing_option);
+  Check_Type(polygons, T_ARRAY);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  num_polygons = RARRAY_LEN(polygons);
+  num_points = ALLOCA_N(int, num_polygons);
+
+  p = ALLOCA_N(CvPoint*, num_polygons);
+  for (j = 0; j < num_polygons; ++j) {
+    points = rb_ary_entry(polygons, j);
+    Check_Type(points, T_ARRAY);
+    num_points[j] = RARRAY_LEN(points);
+    p[j] = ALLOCA_N(CvPoint, num_points[j]);
+    for (i = 0; i < num_points[j]; ++i) {
+      p[j][i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
+    }
+  }
+  try {
+    cvFillPoly(CVARR(self), p, num_points, num_polygons,
+	       DO_COLOR(drawing_option),
+	       DO_LINE_TYPE(drawing_option),
+	       DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is filled a convex polygon.
+ *
+ * @overload fill_convex_poly(points, options = nil)
+ *   @param points [Array<CvPoint>] Polygon vertices.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvFillConvexPoly
+ */
+VALUE
+rb_fill_convex_poly(int argc, VALUE *argv, VALUE self)
+{
+  return rb_fill_convex_poly_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Fills a convex polygon.
+ *
+ * @overload fill_convex_poly!(points, options = nil)
+ *   @param points [Array<CvPoint>] Polygon vertices.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvFillConvexPoly
+ */
+VALUE
+rb_fill_convex_poly_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE points, drawing_option;
+  int i, num_points;
+  CvPoint *p;
+
+  rb_scan_args(argc, argv, "11", &points, &drawing_option);
+  Check_Type(points, T_ARRAY);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  num_points = RARRAY_LEN(points);
+  p = ALLOCA_N(CvPoint, num_points);
+  for (i = 0; i < num_points; ++i)
+    p[i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
+
+  try {
+    cvFillConvexPoly(CVARR(self), p, num_points,
+		     DO_COLOR(drawing_option),
+		     DO_LINE_TYPE(drawing_option),
+		     DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Returns an image that is drawn several polygonal curves.
+ *
+ * @overload poly_line(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygonal curves.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Boolean] :is_closed
+ *     Indicates whether the polylines must be drawn closed.
+ *     If closed, the method draws the line from the last vertex
+ *     of every contour to the first vertex.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] Output image
+ * @opencv_func cvPolyLine
+ */
+VALUE
+rb_poly_line(int argc, VALUE *argv, VALUE self)
+{
+  return rb_poly_line_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws several polygonal curves.
+ *
+ * @overload poly_line!(points, options = nil)
+ *   @param points [Array<CvPoint>] Array of polygonal curves.
+ *   @param options [Hash] Drawing options
+ *   @option options [CvScalar] :color Line color.
+ *   @option options [Integer] :thickness Line thickness.
+ *   @option options [Integer] :line_type Type of the line.
+ *     * 8 - 8-connected line.
+ *     * 4 - 4-connected line.
+ *     * <tt>CV_AA</tt> - Antialiased line.
+ *   @option options [Boolean] :is_closed
+ *     Indicates whether the polylines must be drawn closed.
+ *     If closed, the method draws the line from the last vertex
+ *     of every contour to the first vertex.
+ *   @option options [Integer] :shift Number of fractional bits in the point coordinates.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvPolyLine
+ */
+VALUE
+rb_poly_line_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE polygons, drawing_option;
+  VALUE points;
+  int i, j;
+  int num_polygons;
+  int *num_points;
+  CvPoint **p;
+
+  rb_scan_args(argc, argv, "11", &polygons, &drawing_option);
+  Check_Type(polygons, T_ARRAY);
+  drawing_option = DRAWING_OPTION(drawing_option);
+  num_polygons = RARRAY_LEN(polygons);
+  num_points = ALLOCA_N(int, num_polygons);
+  p = ALLOCA_N(CvPoint*, num_polygons);
+
+  for (j = 0; j < num_polygons; ++j) {
+    points = rb_ary_entry(polygons, j);
+    Check_Type(points, T_ARRAY);
+    num_points[j] = RARRAY_LEN(points);
+    p[j] = ALLOCA_N(CvPoint, num_points[j]);
+    for (i = 0; i < num_points[j]; ++i) {
+      p[j][i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
+    }
+  }
+
+  try {
+    cvPolyLine(CVARR(self), p, num_points, num_polygons,
+	       DO_IS_CLOSED(drawing_option),
+	       DO_COLOR(drawing_option),
+	       DO_THICKNESS(drawing_option),
+	       DO_LINE_TYPE(drawing_option),
+	       DO_SHIFT(drawing_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return self;
+}
+
+
+/*
+ * Returns an image which is drawn a text string.
+ *
+ * @overload put_text(text, org, font, color = CvColor::Black)
+ * @param text [String] Text string to be drawn.
+ * @param org [CvPoint] Bottom-left corner of the text string in the image.
+ * @param font [CvFont] <tt>CvFont</tt> object.
+ * @param color [CvScalar] Text color.
+ * @return [CvMat] Output image
+ * @opencv_func cvPutText
+ */
+VALUE
+rb_put_text(int argc, VALUE* argv, VALUE self)
+{
+  return rb_put_text_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * Draws a text string.
+ *
+ * @overload put_text!(text, org, font, color = CvColor::Black)
+ * @param text [String] Text string to be drawn.
+ * @param org [CvPoint] Bottom-left corner of the text string in the image.
+ * @param font [CvFont] <tt>CvFont</tt> object.
+ * @param color [CvScalar] Text color.
+ * @return [CvMat] <tt>self</tt>
+ * @opencv_func cvPutText
+ */
+VALUE
+rb_put_text_bang(int argc, VALUE* argv, VALUE self)
+{
+  VALUE _text, _point, _font, _color;
+  rb_scan_args(argc, argv, "31", &_text, &_point, &_font, &_color);
+  CvScalar color = NIL_P(_color) ? CV_RGB(0, 0, 0) : VALUE_TO_CVSCALAR(_color);
+  try {
+    cvPutText(CVARR(self), StringValueCStr(_text), VALUE_TO_CVPOINT(_point),
+	      CVFONT_WITH_CHECK(_font), color);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
+ *
+ * @overload sobel(xorder, yorder, aperture_size = 3)
+ * @param xorder [Integer] Order of the derivative x.
+ * @param yorder [Integer] Order of the derivative y.
+ * @param aperture_size [Integer] Size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
+ * @return [CvMat] Output image.
+ * @opencv_func cvSovel
+ */
+VALUE
+rb_sobel(int argc, VALUE *argv, VALUE self)
+{
+  VALUE xorder, yorder, aperture_size, dest;
+  if (rb_scan_args(argc, argv, "21", &xorder, &yorder, &aperture_size) < 3)
+    aperture_size = INT2FIX(3);
+  CvMat* self_ptr = CVMAT(self);
+  switch(CV_MAT_DEPTH(self_ptr->type)) {
+  case CV_8U:
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_16S, 1);
+    break;
+  case CV_32F:
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_32F, 1);
+    break;
+  default:
+    rb_raise(rb_eArgError, "source depth should be CV_8U or CV_32F.");
+    break;
+  }
+
+  try {
+    cvSobel(self_ptr, CVARR(dest), NUM2INT(xorder), NUM2INT(yorder), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the Laplacian of an image.
+ *
+ * @overload laplace(aperture_size = 3)
+ * @param aperture_size [Integer] Aperture size used to compute the second-derivative filters.
+ *     The size must be positive and odd.
+ * @return Output image.
+ * @opencv_func cvLaplace
+ */
+VALUE
+rb_laplace(int argc, VALUE *argv, VALUE self)
+{
+  VALUE aperture_size, dest;
+  if (rb_scan_args(argc, argv, "01", &aperture_size) < 1)
+    aperture_size = INT2FIX(3);
+  CvMat* self_ptr = CVMAT(self);
+  switch(CV_MAT_DEPTH(self_ptr->type)) {
+  case CV_8U:
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_16S, 1);
+    break;
+  case CV_32F:
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_32F, 1);
+    break;
+  default:
+    rb_raise(rb_eArgError, "source depth should be CV_8U or CV_32F.");
+  }
+
+  try {
+    cvLaplace(self_ptr, CVARR(dest), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Finds edges in an image using the [Canny86] algorithm.
+ *
+ * Canny86: J. Canny. A Computational Approach to Edge Detection, IEEE Trans. on Pattern Analysis
+ * and Machine Intelligence, 8(6), pp. 679-698 (1986).
+ *
+ * @overload canny(thresh1, thresh2, aperture_size = 3)
+ * @param thresh1 [Number] First threshold for the hysteresis procedure.
+ * @param thresh2 [Number] Second threshold for the hysteresis procedure.
+ * @param aperture_size [Integer] Aperture size for the sobel operator.
+ * @return [CvMat] Output edge map
+ * @opencv_func cvCanny
+ */
+VALUE
+rb_canny(int argc, VALUE *argv, VALUE self)
+{
+  VALUE thresh1, thresh2, aperture_size;
+  if (rb_scan_args(argc, argv, "21", &thresh1, &thresh2, &aperture_size) < 3)
+    aperture_size = INT2FIX(3);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  
+  try {
+    cvCanny(self_ptr, CVARR(dest), NUM2INT(thresh1), NUM2INT(thresh2), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates a feature map for corner detection.
+ *
+ * @overload pre_corner_detect(aperture_size = 3)
+ * @param aperture_size [Integer] Aperture size for the sobel operator.
+ * @return [CvMat] Output image
+ * @opencv_func cvPreCornerDetect
+ */
+VALUE
+rb_pre_corner_detect(int argc, VALUE *argv, VALUE self)
+{
+  VALUE aperture_size, dest = Qnil;
+  if (rb_scan_args(argc, argv, "01", &aperture_size) < 1)
+    aperture_size = INT2FIX(3);
+
+  CvArr *self_ptr = CVARR(self);
+  try {
+    dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
+    cvPreCornerDetect(self_ptr, CVARR(dest), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates eigenvalues and eigenvectors of image blocks for corner detection.
+ *
+ * @overload corner_eigenvv(block_size, aperture_size = 3)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @return [CvMat] Result array.
+ * @opencv_func cvCornerEigenValsAndVecs
+ */
+VALUE
+rb_corner_eigenvv(int argc, VALUE *argv, VALUE self)
+{
+  VALUE block_size, aperture_size, dest;
+  if (rb_scan_args(argc, argv, "11", &block_size, &aperture_size) < 2)
+    aperture_size = INT2FIX(3);
+  CvMat* self_ptr = CVMAT(self);
+  dest = new_object(cvSize(self_ptr->cols * 6, self_ptr->rows), CV_MAKETYPE(CV_32F, 1));
+  try {
+    cvCornerEigenValsAndVecs(self_ptr, CVARR(dest), NUM2INT(block_size), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Calculates the minimal eigenvalue of gradient matrices for corner detection.
+ *
+ * @overload corner_min_eigen_val(block_size, aperture_size = 3)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @return [CvMat] Result array.
+ * @opencv_func cvCornerMinEigenVal
+ */
+VALUE
+rb_corner_min_eigen_val(int argc, VALUE *argv, VALUE self)
+{
+  VALUE block_size, aperture_size, dest;
+  if (rb_scan_args(argc, argv, "11", &block_size, &aperture_size) < 2)
+    aperture_size = INT2FIX(3);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
+  try {
+    cvCornerMinEigenVal(self_ptr, CVARR(dest), NUM2INT(block_size), NUM2INT(aperture_size));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Harris edge detector.
+ *
+ * @overload corner_harris(block_size, aperture_size = 3, k = 0.04)
+ * @param block_size [Integer] Neighborhood size.
+ * @param aperture_size [Integer] Aperture parameter for the sobel operator.
+ * @param k [Number] Harris detector free parameter.
+ * @return [CvMat] The Harris detector responses.
+ * @opencv_func cvCornerHarris
+ */
+VALUE
+rb_corner_harris(int argc, VALUE *argv, VALUE self)
+{
+  VALUE block_size, aperture_size, k, dest;
+  rb_scan_args(argc, argv, "12", &block_size, &aperture_size, &k);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
+  try {
+    cvCornerHarris(self_ptr, CVARR(dest), NUM2INT(block_size), IF_INT(aperture_size, 3), IF_DBL(k, 0.04));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Finds the positions of internal corners of the chessboard.
+ *
+ * @overload find_chessboard_corners(pattern_size, flag = CV_CALIB_CB_ADAPTIVE_THRESH)
+ * @param pattern_size [CvSize] Number of inner corners per a chessboard row and column.
+ * @param flags [Integer] Various operation flags that can be zero or a combination of the following values.
+ *   * CV_CALIB_CB_ADAPTIVE_THRESH
+ *     * Use adaptive thresholding to convert the image to black and white, rather than
+ *       a fixed threshold level (computed from the average image brightness).
+ *   * CV_CALIB_CB_NORMALIZE_IMAGE
+ *     * Normalize the image gamma with CvMat#equalize_hist() before applying fixed or adaptive thresholding.
+ *   * CV_CALIB_CB_FILTER_QUADS
+ *     * Use additional criteria (like contour area, perimeter, square-like shape) to
+ *       filter out false quads extracted at the contour retrieval stage.
+ *   * CALIB_CB_FAST_CHECK
+ *     * Run a fast check on the image that looks for chessboard corners, and shortcut the call
+ *       if none is found. This can drastically speed up the call in the degenerate condition
+ *       when no chessboard is observed.
+ * @return [Array<Array<CvPoint2D32f>, Boolean>] An array which includes the positions of internal corners
+ *     of the chessboard, and a parameter indicating whether the complete board was found or not.
+ * @opencv_func cvFindChessboardCorners
+ * @example
+ *   mat = CvMat.load('chessboard.jpg', 1)
+ *   gray = mat.BGR2GRAY
+ *   pattern_size = CvSize.new(4, 4)
+ *   corners, found = gray.find_chessboard_corners(pattern_size, CV_CALIB_CB_ADAPTIVE_THRESH)
+ *
+ *   if found
+ *     corners = gray.find_corner_sub_pix(corners, CvSize.new(3, 3), CvSize.new(-1, -1), CvTermCriteria.new(20, 0.03))
+ *   end
+ *
+ *   result = mat.draw_chessboard_corners(pattern_size, corners, found)
+ *   w = GUI::Window.new('Result')
+ *   w.show result
+ *   GUI::wait_key
+ */
+VALUE
+rb_find_chessboard_corners(int argc, VALUE *argv, VALUE self)
+{
+  VALUE pattern_size_val, flag_val;
+  rb_scan_args(argc, argv, "11", &pattern_size_val, &flag_val);
+
+  int flag = NIL_P(flag_val) ? CV_CALIB_CB_ADAPTIVE_THRESH : NUM2INT(flag_val);
+  CvSize pattern_size = VALUE_TO_CVSIZE(pattern_size_val);
+  CvPoint2D32f* corners = ALLOCA_N(CvPoint2D32f, pattern_size.width * pattern_size.height);
+  int num_found_corners = 0;
+  int pattern_was_found = 0;
+  try {
+    pattern_was_found = cvFindChessboardCorners(CVARR(self), pattern_size, corners, &num_found_corners, flag);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  VALUE found_corners = rb_ary_new2(num_found_corners);
+  for (int i = 0; i < num_found_corners; i++) {
+    rb_ary_store(found_corners, i, cCvPoint2D32f::new_object(corners[i]));
+  }
+
+  VALUE found = (pattern_was_found > 0) ? Qtrue : Qfalse;
+  return rb_assoc_new(found_corners, found);
+}
+
+/*
+ * Refines the corner locations.
+ * 
+ * @overload find_corner_sub_pix(corners, win_size, zero_zone, criteria)
+ * @param corners [Array<CvPoint>] Initial coordinates of the input corners.
+ * @param win_size [CvSize] Half of the side length of the search window.
+ * @param zero_zone [CvSize] Half of the size of the dead region in the middle of the search zone over
+ *   which the summation in the formula below is not done.
+ * @param criteria [CvTermCriteria] Criteria for termination of the iterative process of corner refinement.
+ * @return [Array<CvPoint2D32f>] Refined corner coordinates.
+ * @opencv_func cvFindCornerSubPix
+ */
+VALUE
+rb_find_corner_sub_pix(VALUE self, VALUE corners, VALUE win_size, VALUE zero_zone, VALUE criteria)
+{
+  Check_Type(corners, T_ARRAY);
+  int count = RARRAY_LEN(corners);
+  CvPoint2D32f* corners_buff = ALLOCA_N(CvPoint2D32f, count);
+  VALUE* corners_ptr = RARRAY_PTR(corners);
+
+  for (int i = 0; i < count; i++) {
+    corners_buff[i] = *(CVPOINT2D32F(corners_ptr[i]));
+  }
+
+  try {
+    cvFindCornerSubPix(CVARR(self), corners_buff, count, VALUE_TO_CVSIZE(win_size),
+		       VALUE_TO_CVSIZE(zero_zone), VALUE_TO_CVTERMCRITERIA(criteria));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  VALUE refined_corners = rb_ary_new2(count);
+  for (int i = 0; i < count; i++) {
+    rb_ary_store(refined_corners, i, cCvPoint2D32f::new_object(corners_buff[i]));
+  }
+
+  return refined_corners;
+}
+
+/*
+ * Determines strong corners on an image.
+ *
+ * @overload good_features_to_track(quality_level, min_distance, good_features_to_track_option = {})
+ *   @param quality_level [Number] Parameter characterizing the minimal accepted quality of image corners.
+ *     The parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
+ *     or the Harris function response.
+ *   @param min_distance [Number] Minimum possible Euclidean distance between the returned corners.
+ *   @param good_features_to_track_option [Hash] Options.
+ *   @option good_features_to_track_option [CvMat] :mask (nil) Optional region of interest.
+ *     If the image is not empty (it needs to have the type CV_8UC1 and the same size as image),
+ *     it specifies the region in which the corners are detected.
+ *   @option good_features_to_track_option [Integer] :block_size (3) Size of an average block for computing
+ *     a derivative covariation matrix over each pixel neighborhood.
+ *   @option good_features_to_track_option [Boolean] :use_harris (false) Parameter indicating whether
+ *     to use a Harris detector.
+ *   @option good_features_to_track_option [Number] :k (0.04) Free parameter of the Harris detector.
+ * @return [Array<CvPoint2D32f>] Output vector of detected corners.
+ * @opencv_func cvGoodFeaturesToTrack
+ */
+VALUE
+rb_good_features_to_track(int argc, VALUE *argv, VALUE self)
+{
+  VALUE quality_level, min_distance, good_features_to_track_option;
+  rb_scan_args(argc, argv, "21", &quality_level, &min_distance, &good_features_to_track_option);
+  good_features_to_track_option = GOOD_FEATURES_TO_TRACK_OPTION(good_features_to_track_option);
+  int np = GF_MAX(good_features_to_track_option);
+  if (np <= 0)
+    rb_raise(rb_eArgError, "option :max should be positive value.");
+
+  CvMat *self_ptr = CVMAT(self);
+  CvPoint2D32f *p32 = (CvPoint2D32f*)rb_cvAlloc(sizeof(CvPoint2D32f) * np);
+  int type = CV_MAKETYPE(CV_32F, 1);
+  CvMat* eigen = rb_cvCreateMat(self_ptr->rows, self_ptr->cols, type);
+  CvMat* tmp = rb_cvCreateMat(self_ptr->rows, self_ptr->cols, type);
+  try {
+    cvGoodFeaturesToTrack(self_ptr, &eigen, &tmp, p32, &np, NUM2DBL(quality_level), NUM2DBL(min_distance),
+			  GF_MASK(good_features_to_track_option),
+			  GF_BLOCK_SIZE(good_features_to_track_option),
+			  GF_USE_HARRIS(good_features_to_track_option),
+			  GF_K(good_features_to_track_option));
+  }
+  catch (cv::Exception& e) {
+    if (eigen != NULL)
+      cvReleaseMat(&eigen);
+    if (tmp != NULL)
+      cvReleaseMat(&tmp);
+    if (p32 != NULL)
+      cvFree(&p32);
+    raise_cverror(e);
+  }
+  VALUE corners = rb_ary_new2(np);
+  for (int i = 0; i < np; ++i)
+    rb_ary_store(corners, i, cCvPoint2D32f::new_object(p32[i]));
+  cvFree(&p32);
+  cvReleaseMat(&eigen);
+  cvReleaseMat(&tmp);
+  return corners;
+}
+
+/*
+ * Retrieves a pixel rectangle from an image with sub-pixel accuracy.
+ *
+ * @overload rect_sub_pix(center, size = self.size)
+ * @param center [CvPoint2D32f] Floating point coordinates of the center of the extracted rectangle within
+ *     the source image. The center must be inside the image.
+ * @param size [CvSize] Size of the extracted patch.
+ * @return [CvMat] Extracted patch that has the size <tt>size</tt> and the same number of channels as <tt>self</tt>.
+ * @opencv_func cvGetRectSubPix
+ */
+VALUE
+rb_rect_sub_pix(int argc, VALUE *argv, VALUE self)
+{
+  VALUE center, size;
+  VALUE dest = Qnil;
+  CvSize _size;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    if (rb_scan_args(argc, argv, "11", &center, &size) < 2)
+      _size = cvGetSize(self_ptr);
+    else
+      _size = VALUE_TO_CVSIZE(size);
+    dest = new_mat_kind_object(_size, self);
+    cvGetRectSubPix(self_ptr, CVARR(dest), VALUE_TO_CVPOINT2D32F(center));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Applies an affine transformation to an image.
+ * 
+ * @overload quadrangle_sub_pix(map_matrix, size = self.size)
+ * @param map_matrix [CvMat] 2x3 transformation matrix.
+ * @param size [CvSize] Size of the output image.
+ * @return [CvMat] Output image that has the size <tt>size</tt> and the same type as <tt>self</tt>.
+ * @opencv_func cvGetQuadrangleSubPix
+ * @note <tt>CvMat#quadrangle_sub_pix</tt> is similar to <tt>CvMat#warp_affine</tt>, but the outliers are
+ *     extrapolated using replication border mode.
+ */
+VALUE
+rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self)
+{
+  VALUE map_matrix, size;
+  VALUE dest = Qnil;
+  CvSize _size;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    if (rb_scan_args(argc, argv, "11", &map_matrix, &size) < 2)
+      _size = cvGetSize(self_ptr);
+    else
+      _size = VALUE_TO_CVSIZE(size);
+    dest = new_mat_kind_object(_size, self);
+    cvGetQuadrangleSubPix(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Resizes an image.
+ *
+ * @overload resize(size, interpolation = :linear)
+ * @param size [CvSize] Output image size.
+ * @param interpolation [Symbol] Interpolation method:
+ *     * <tt>CV_INTER_NN</tt> - A nearest-neighbor interpolation
+ *     * <tt>CV_INTER_LINEAR</tt> - A bilinear interpolation (used by default)
+ *     * <tt>CV_INTER_AREA</tt> - Resampling using pixel area relation. It may be a preferred method for
+ *       image decimation, as it gives moire'-free results. But when the image is zoomed,
+ *       it is similar to the <tt>:nn</tt> method.
+ *     * <tt>CV_INTER_CUBIC</tt> - A bicubic interpolation over 4x4 pixel neighborhood
+ *     * <tt>CV_INTER_LANCZOS4</tt> - A Lanczos interpolation over 8x8 pixel neighborhood
+ * @return [CvMat] Output image.
+ * @opencv_func cvResize
+ */
+VALUE
+rb_resize(int argc, VALUE *argv, VALUE self)
+{
+  VALUE size, interpolation;
+  rb_scan_args(argc, argv, "11", &size, &interpolation);
+  VALUE dest = new_mat_kind_object(VALUE_TO_CVSIZE(size), self);
+  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
+
+  try {
+    cvResize(CVARR(self), CVARR(dest), method);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Applies an affine transformation to an image.
+ *
+ * @overload warp_affine(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ * @param map_matrix [CvMat] 2x3 transformation matrix.
+ * @param flags [Integer] Combination of interpolation methods (#see resize) and the optional
+ *     flag <tt>WARP_INVERSE_MAP</tt> that means that <tt>map_matrix</tt> is the inverse transformation.
+ * @return [CvMat] Output image that has the size <tt>size</tt> and the same type as <tt>self</tt>.
+ * @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @opencv_func cvWarpAffine
+ */
+VALUE
+rb_warp_affine(int argc, VALUE *argv, VALUE self)
+{
+  VALUE map_matrix, flags_val, fill_value;
+  VALUE dest = Qnil;
+  if (rb_scan_args(argc, argv, "12", &map_matrix, &flags_val, &fill_value) < 3)
+    fill_value = INT2FIX(0);
+  CvArr* self_ptr = CVARR(self);
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvWarpAffine(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
+		 flags, VALUE_TO_CVSCALAR(fill_value));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Finds a perspective transformation between two planes.
+ *
+ * @overload find_homography(src_points, dst_points, method = :all, ransac_reproj_threshold = 3, get_mask = false)
+ *   @param src_points [CvMat] Coordinates of the points in the original plane.
+ *   @param dst_points [CvMat] Coordinates of the points in the target plane.
+ *   @param method [Symbol] Method used to computed a homography matrix. The following methods are possible:
+ *     * <tt>:all</tt> - a regular method using all the points
+ *     * <tt>:ransac</tt> - RANSAC-based robust method
+ *     * <tt>:lmeds</tt> - Least-Median robust method
+ *   @param ransac_reproj_threshold [Number] Maximum allowed reprojection error to treat a point pair as
+ *     an inlier (used in the RANSAC method only).
+ *   @param get_mask [Boolean] If <tt>true</tt>, the optional output mask set by
+ *     a robust method (<tt>:ransac</tt> or <tt>:lmeds</tt>) is returned additionally.
+ * @return [CvMat, Array<CvMat>] The perspective transformation <tt>H</tt> between the source and the destination
+ *   planes in <tt>CvMat</tt>.
+ *   If <tt>method</tt> is <tt>:ransac</tt> or <tt>:lmeds</tt> and <tt>get_mask</tt> is <tt>true</tt>, the output mask
+ *   is also returned in the form of an array <tt>[H, output_mask]</tt>.
+ * @scope class
+ * @opencv_func cvFindHomography
+ */
+VALUE
+rb_find_homography(int argc, VALUE *argv, VALUE self)
+{
+  VALUE src_points, dst_points, method, ransac_reproj_threshold, get_status;
+  rb_scan_args(argc, argv, "23", &src_points, &dst_points, &method, &ransac_reproj_threshold, &get_status);
+
+  VALUE homography = new_object(cvSize(3, 3), CV_32FC1);
+  int _method = CVMETHOD("HOMOGRAPHY_CALC_METHOD", method, 0);
+  double _ransac_reproj_threshold = NIL_P(ransac_reproj_threshold) ? 0.0 : NUM2DBL(ransac_reproj_threshold);
+
+  if ((_method != 0) && (!NIL_P(get_status)) && IF_BOOL(get_status, 1, 0, 0)) {
+    CvMat *src = CVMAT_WITH_CHECK(src_points);
+    int num_points = MAX(src->rows, src->cols);
+    VALUE status = new_object(cvSize(num_points, 1), CV_8UC1);
+    try {
+      cvFindHomography(src, CVMAT_WITH_CHECK(dst_points), CVMAT(homography),
+		       _method, _ransac_reproj_threshold, CVMAT(status));
+    }
+    catch (cv::Exception& e) {
+      raise_cverror(e);
+    }
+    return rb_assoc_new(homography, status);
+  }
+  else {
+    try {
+      cvFindHomography(CVMAT(src_points), CVMAT(dst_points), CVMAT(homography),
+		       _method, _ransac_reproj_threshold, NULL);
+    }
+    catch (cv::Exception& e) {
+      raise_cverror(e);
+    }
+    return homography;
+  }
+}
+
+/*
+ * Calculates an affine matrix of 2D rotation.
+ *
+ * @overload rotation_matrix2D(center, angle, scale)
+ * @param center [CvPoint2D32f] Center of the rotation in the source image.
+ * @param angle [Number] Rotation angle in degrees. Positive values mean counter-clockwise rotation
+ *   (the coordinate origin is assumed to be the top-left corner).
+ * @param scale [Number] Isotropic scale factor.
+ * @return [CvMat] The output affine transformation, 2x3 floating-point matrix.
+ * @scope class
+ * @opencv_func cv2DRotationMatrix
+ */
+VALUE
+rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
+{
+  VALUE map_matrix = new_object(cvSize(3, 2), CV_MAKETYPE(CV_32F, 1));
+  try {
+    cv2DRotationMatrix(VALUE_TO_CVPOINT2D32F(center), NUM2DBL(angle), NUM2DBL(scale), CVMAT(map_matrix));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return map_matrix;
+}
+
+/*
+ * Calculates a perspective transform from four pairs of the corresponding points.
+ *
+ * @overload get_perspective_transform(src, dst)
+ *   @param src [Array<CvPoint>] Coordinates of quadrangle vertices in the source image.
+ *   @param dst [Array<CvPoint>] Coordinates of the corresponding quadrangle vertices in the destination image.
+ * @return [CvMat] Map matrix
+ * @scope class
+ * @opencv_func cvGetPerspectiveTransform
+ */
+VALUE
+rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
+{
+  Check_Type(source, T_ARRAY);
+  Check_Type(dest, T_ARRAY);
+
+  int count = RARRAY_LEN(source);
+
+  CvPoint2D32f* source_buff = ALLOCA_N(CvPoint2D32f, count);
+  CvPoint2D32f* dest_buff = ALLOCA_N(CvPoint2D32f, count);
+
+  for (int i = 0; i < count; i++) {
+    source_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(source)[i]));
+    dest_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(dest)[i]));
+  }
+
+  VALUE map_matrix = new_object(cvSize(3, 3), CV_MAKETYPE(CV_32F, 1));
+
+  try {
+    cvGetPerspectiveTransform(source_buff, dest_buff, CVMAT(map_matrix));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return map_matrix;
+}
+
+/*
+ * Applies a perspective transformation to an image.
+ *
+ * @overload warp_perspective(map_matrix, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ *   @param map_matrix [CvMat] 3x3 transformation matrix.
+ *   @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *     and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ *   @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @return [CvMat] Output image.
+ * @opencv_func cvWarpPerspective
+ */
+VALUE
+rb_warp_perspective(int argc, VALUE *argv, VALUE self)
+{
+  VALUE map_matrix, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fillval) < 4)
+    fillval = INT2FIX(0);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvWarpPerspective(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
+		      flags, VALUE_TO_CVSCALAR(fillval));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Applies a generic geometrical transformation to an image.
+ *
+ * @overload remap(mapx, mapy, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, fillval = 0)
+ *   @param mapx [CvMat] The first map of either <tt>(x,y)</tt> points or just x values having the type
+ *     <tt>CV_16SC2</tt>, <tt>CV_32FC1</tt>, or <tt>CV_32FC2</tt>.
+ *   @param mapy [CvMat] The second map of y values having the type <tt>CV_16UC1</tt>, <tt>CV_32FC1</tt>, or none
+ *     (empty map if <tt>mapx</tt> is <tt>(x,y)</tt> points), respectively.
+ *   @param flags [Integer] Combination of interpolation methods (<tt>CV_INTER_LINEAR</tt> or <tt>CV_INTER_NEAREST</tt>)
+ *     and the optional flag <tt>CV_WARP_INVERSE_MAP</tt>, that sets <tt>map_matrix</tt> as the inverse transformation.
+ *   @param fillval [Number, CvScalar] Value used in case of a constant border.
+ * @return [CvMat] Output image.
+ * @opencv_func cvRemap
+ */
+VALUE
+rb_remap(int argc, VALUE *argv, VALUE self)
+{
+  VALUE mapx, mapy, flags_val, option, fillval;
+  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &flags_val, &option, &fillval) < 5)
+    fillval = INT2FIX(0);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvRemap(self_ptr, CVARR(dest), CVARR_WITH_CHECK(mapx), CVARR_WITH_CHECK(mapy),
+	    flags, VALUE_TO_CVSCALAR(fillval));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Remaps an image to log-polar space.
+ *
+ * @overload log_polar(size, center, magnitude, flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS)
+ *   @param size [CvSize] Size of the destination image.
+ *   @param center [CvPoint2D32f] The transformation center; where the output precision is maximal.
+ *   @param magnitude [Number] Magnitude scale parameter.
+ *   @param flags [Integer] A combination of interpolation methods and the following optional flags:
+ *     * <tt>CV_WARP_FILL_OUTLIERS</tt> - fills all of the destination image pixels. If some of them
+ *       correspond to outliers in the source image, they are set to zero.
+ *     * <tt>CV_WARP_INVERSE_MAP</tt> - performs inverse transformation.
+ * @return [CvMat] Destination image.
+ * @opencv_func cvLogPolar
+ */
+VALUE
+rb_log_polar(int argc, VALUE *argv, VALUE self)
+{
+  VALUE dst_size, center, m, flags;
+  rb_scan_args(argc, argv, "31", &dst_size, &center, &m, &flags);
+  int _flags = NIL_P(flags) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags);
+  VALUE dest = new_mat_kind_object(VALUE_TO_CVSIZE(dst_size), self);
+  try {
+    cvLogPolar(CVARR(self), CVARR(dest), VALUE_TO_CVPOINT2D32F(center), NUM2DBL(m), _flags);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   erode([element = nil, iteration = 1]) -> cvmat
+ *
+ * Create erodes image by using arbitrary structuring element.
+ * <i>element</i> is structuring element used for erosion.
+ * <i>element</i> should be IplConvKernel. If it is nil, a 3x3 rectangular structuring element is used.
+ * <i>iterations</i> is number of times erosion is applied.
+ */
+VALUE
+rb_erode(int argc, VALUE *argv, VALUE self)
+{
+  return rb_erode_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * call-seq:
+ *   erode!([element = nil][,iteration = 1]) -> self
+ *
+ * Erodes image by using arbitrary structuring element.
+ * see also #erode.
+ */
+VALUE
+rb_erode_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE element, iteration;
+  rb_scan_args(argc, argv, "02", &element, &iteration);
+  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
+  try {
+    cvErode(CVARR(self), CVARR(self), kernel, IF_INT(iteration, 1));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * call-seq:
+ *   dilate([element = nil][,iteration = 1]) -> cvmat
+ *
+ * Create dilates image by using arbitrary structuring element.
+ * <i>element</i> is structuring element used for erosion.
+ * <i>element</i> should be IplConvKernel. If it is nil, a 3x3 rectangular structuring element is used.
+ * <i>iterations</i> is number of times erosion is applied.
+ */
+VALUE
+rb_dilate(int argc, VALUE *argv, VALUE self)
+{
+  return rb_dilate_bang(argc, argv, rb_clone(self));
+}
+
+/*
+ * call-seq:
+ *   dilate!([element = nil][,iteration = 1]) -> self
+ *
+ * Dilate image by using arbitrary structuring element.
+ * see also #dilate.
+ */
+VALUE
+rb_dilate_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE element, iteration;
+  rb_scan_args(argc, argv, "02", &element, &iteration);
+  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
+  try {
+    cvDilate(CVARR(self), CVARR(self), kernel, IF_INT(iteration, 1));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * call-seq:
+ *   morpholohy(operation[,element = nil][,iteration = 1]) -> cvmat
+ *
+ * Performs advanced morphological transformations.
+ * <i>operation</i>
+ * Type of morphological operation, one of:
+ *   CV_MOP_OPEN - opening
+ *   CV_MOP_CLOSE - closing
+ *   CV_MOP_GRADIENT - morphological gradient
+ *   CV_MOP_TOPHAT - top hat
+ *   CV_MOP_BLACKHAT - black hat
+ */
+VALUE
+rb_morphology(int argc, VALUE *argv, VALUE self)
+{
+  VALUE element, iteration, operation_val;
+  rb_scan_args(argc, argv, "12", &operation_val, &element, &iteration);
+
+  int operation = CVMETHOD("MORPHOLOGICAL_OPERATION", operation_val, -1);
+  CvArr* self_ptr = CVARR(self);
+  CvSize size = cvGetSize(self_ptr);
+  VALUE dest = new_mat_kind_object(size, self);
+  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
+  try {
+    if (operation == CV_MOP_GRADIENT) {
+      CvMat* temp = rb_cvCreateMat(size.height, size.width, cvGetElemType(self_ptr));
+      cvMorphologyEx(self_ptr, CVARR(dest), temp, kernel, CV_MOP_GRADIENT, IF_INT(iteration, 1));
+      cvReleaseMat(&temp);
+    }
+    else {
+      cvMorphologyEx(self_ptr, CVARR(dest), 0, kernel, operation, IF_INT(iteration, 1));
+    }
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   smooth_blur_no_scale([p1 = 3, p2 = 3]) -> cvmat
+ *
+ * Smooths the image by simple blur with no scaling.
+ * * 8bit unsigned -> return 16bit unsigned
+ * * 32bit floating point -> return 32bit floating point
+ * <b>support single-channel image only.</b>
+ */
+VALUE
+rb_smooth_blur_no_scale(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, dest;
+  rb_scan_args(argc, argv, "02", &p1, &p2);
+  CvArr* self_ptr = CVARR(self);
+  int type = cvGetElemType(self_ptr), dest_type;
+  switch (CV_MAT_DEPTH(type)) {
+  case CV_8U:
+    dest_type = CV_16U;
+    break;
+  case CV_32F:
+    dest_type = CV_32F;
+    break;
+  default:
+    rb_raise(rb_eNotImpError, "unsupport format. (support 8bit unsigned/signed or 32bit floating point only)");
+  }
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self, dest_type, CV_MAT_CN(type));
+  cvSmooth(self_ptr, CVARR(dest), CV_BLUR_NO_SCALE, IF_INT(p1, 3), IF_INT(p2, 3));
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   smooth_blur([p1 = 3, p2 = 3]) -> cvmat
+ *
+ * Smooths the image by simple blur.
+ * Summation over a pixel <i>p1</i> x <i>p2</i> neighborhood with subsequent scaling by 1 / (p1*p2).
+ */
+VALUE
+rb_smooth_blur(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, dest;
+  rb_scan_args(argc, argv, "02", &p1, &p2);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  cvSmooth(self_ptr, CVARR(dest), CV_BLUR, IF_INT(p1, 3), IF_INT(p2, 3));
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   smooth_gaussian([p1 = 3, p2 = 3, p3 = 0.0, p4 = 0.0]) -> cvmat
+ *
+ * Smooths the image by gaussian blur.
+ * Convolving image with <i>p1</i> x <i>p2</i> Gaussian kernel.
+ *
+ * <i>p3</i> may specify Gaussian sigma (standard deviation).
+ * If it is zero, it is calculated from the kernel size:
+ *    sigma = (n/2 - 1)*0.3 + 0.8, where n = p1 for horizontal kernel,
+ *                                       n = p2 for vertical kernel.
+ *
+ * <i>p4</i> is in case of non-square Gaussian kernel the parameter.
+ * It may be used to specify a different (from p3) sigma in the vertical direction.
+ */
+VALUE
+rb_smooth_gaussian(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, p3, p4, dest;
+  rb_scan_args(argc, argv, "04", &p1, &p2, &p3, &p4);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  cvSmooth(self_ptr, CVARR(dest), CV_GAUSSIAN, IF_INT(p1, 3), IF_INT(p2, 3), IF_DBL(p3, 0.0), IF_DBL(p4, 0.0));
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   smooth_median([p1 = 3]) -> cvmat
+ *
+ * Smooths the image by median blur.
+ * Finding median of <i>p1</i> x <i>p1</i> neighborhood (i.e. the neighborhood is square).
+ */
+VALUE
+rb_smooth_median(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, dest;
+  rb_scan_args(argc, argv, "01", &p1);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  cvSmooth(self_ptr, CVARR(dest), CV_MEDIAN, IF_INT(p1, 3));
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   smooth_bilateral([p1 = 3][p2 = 3]) -> cvmat
+ *
+ * Smooths the image by bilateral filter.
+ * Applying bilateral 3x3 filtering with color sigma=<i>p1</i> and space sigma=<i>p2</i>.
+ */
+VALUE
+rb_smooth_bilateral(int argc, VALUE *argv, VALUE self)
+{
+  VALUE p1, p2, dest;
+  rb_scan_args(argc, argv, "02", &p1, &p2);
+  CvArr* self_ptr = CVARR(self);
+  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+  cvSmooth(self_ptr, CVARR(dest), CV_BILATERAL, IF_INT(p1, 3), IF_INT(p2, 3));
+  return dest;
+}
+
+/**
+ * Smooths the image in one of several ways.
+ *
+ * @overload smooth(smoothtype, size1 = 3, size2 = 0, sigma1 = 0, sigma2 = 0)
+ *   @param smoothtype [Integer] Type of the smoothing.
+ *     * CV_BLUR_NO_SCALE - linear convolution with <tt>size1 x size2</tt> box kernel (all 1's).
+ *       If you want to smooth different pixels with different-size box kernels,
+ *       you can use the integral image that is computed using <tt>CvMat#integral</tt>.
+ *     * CV_BLUR - linear convolution with <tt>size1 x size2</tt> box kernel (all 1's)
+ *       with subsequent scaling by <tt>1 / (size1 x size1)</tt>.
+ *     * CV_GAUSSIAN - linear convolution with a <tt>size1 x size2</tt> Gaussian kernel.
+ *     * CV_MEDIAN - median filter with a <tt>size1 x size1</tt> square aperture
+ *     * CV_BILATERAL - bilateral filter with a <tt>size1 x size1</tt> square aperture,
+ *       color sigma = <tt>sigma1</tt> and spatial sigma = <tt>sigma2</tt>.
+ *       If <tt>size1</tt> = 0, the aperture square side is set to <tt>CvMat#round(sigma2 * 1.5) * 2 + 1</tt>.
+ *   @param size1 [Integer] The first parameter of the smoothing operation, the aperture width.
+ *     Must be a positive odd number (1, 3, 5, ...)
+ *   @param size2 [Integer] The second parameter of the smoothing operation, the aperture height.
+ *     Ignored by <tt>CV_MEDIAN</tt> and <tt>CV_BILATERAL</tt> methods. In the case of simple
+ *     scaled/non-scaled and Gaussian blur if <tt>size2</tt> is zero, it is set to <tt>size1</tt>.
+ *     Otherwise it must be a positive odd number.
+ *   @param sigma1 [Integer] In the case of a Gaussian parameter this parameter may specify
+ *     Gaussian sigma (standard deviation). If it is zero, it is calculated from the kernel size.
+ * @return [CvMat] The destination image.
+ * @opencv_func cvSmooth
+ */
+VALUE
+rb_smooth(int argc, VALUE *argv, VALUE self)
+{
+  VALUE smoothtype, p1, p2, p3, p4;
+  rb_scan_args(argc, argv, "14", &smoothtype, &p1, &p2, &p3, &p4);
+  int _smoothtype = CVMETHOD("SMOOTHING_TYPE", smoothtype, -1);
+  
+  VALUE (*smooth_func)(int c, VALUE* v, VALUE s);
+  argc--;
+  switch (_smoothtype) {
+  case CV_BLUR_NO_SCALE:
+    smooth_func = rb_smooth_blur_no_scale;
+    argc = (argc > 2) ? 2 : argc;
+    break;
+  case CV_BLUR:
+    smooth_func = rb_smooth_blur;
+    argc = (argc > 2) ? 2 : argc;
+    break;
+  case CV_GAUSSIAN:
+    smooth_func = rb_smooth_gaussian;
+    break;
+  case CV_MEDIAN:
+    smooth_func = rb_smooth_median;
+    argc = (argc > 1) ? 1 : argc;
+    break;
+  case CV_BILATERAL:
+    smooth_func = rb_smooth_bilateral;
+    argc = (argc > 2) ? 2 : argc;
+    break;
+  default:
+    smooth_func = rb_smooth_gaussian;
+    break;
+  }
+  VALUE result = Qnil;
+  try {
+    result = (*smooth_func)(argc, argv + 1, self);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return result;
+}
+
+/*
+ * call-seq:
+ *   filter2d(kernel[,anchor]) -> cvmat
+ *
+ * Convolves image with the kernel.
+ * Convolution kernel, single-channel floating point matrix (or same depth of self's).
+ * If you want to apply different kernels to different channels,
+ * split the image using CvMat#split into separate color planes and process them individually.
+ */
+VALUE
+rb_filter2d(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _kernel, _anchor;
+  rb_scan_args(argc, argv, "11", &_kernel, &_anchor);
+  CvMat* kernel = CVMAT_WITH_CHECK(_kernel);
+  CvArr* self_ptr = CVARR(self);
+  VALUE _dest = Qnil;
+  try {
+    _dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvFilter2D(self_ptr, CVARR(_dest), kernel, NIL_P(_anchor) ? cvPoint(-1,-1) : VALUE_TO_CVPOINT(_anchor));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return _dest;
+}
+
+/*
+ * call-seq:
+ *   copy_make_border(border_type, size, offset[,value = CvScalar.new(0)])
+ *
+ * Copies image and makes border around it.
+ * <i>border_type</i>:
+ * - IPL_BORDER_CONSTANT, :constant
+ *     border is filled with the fixed value, passed as last parameter of the function.
+ * - IPL_BORDER_REPLICATE, :replicate
+ *     the pixels from the top and bottom rows, the left-most and right-most columns are replicated to fill the border
+ * <i>size</i>: The destination image size
+ * <i>offset</i>: Coordinates of the top-left corner (or bottom-left in the case of images with bottom-left origin) of the destination image rectangle.
+ * <i>value</i>: Value of the border pixels if bordertype is IPL_BORDER_CONSTANT or :constant.
+ */
+VALUE
+rb_copy_make_border(int argc, VALUE *argv, VALUE self)
+{
+  VALUE border_type, size, offset, value, dest;
+  rb_scan_args(argc, argv, "31", &border_type, &size, &offset, &value);
+  dest = new_mat_kind_object(VALUE_TO_CVSIZE(size), self);
+
+  int type = 0;
+  if (SYMBOL_P(border_type)) {
+    ID type_id = rb_to_id(border_type);
+    if (type_id == rb_intern("constant"))
+      type = IPL_BORDER_CONSTANT;
+    else if (type_id == rb_intern("replicate"))
+      type = IPL_BORDER_REPLICATE;
+    else
+      rb_raise(rb_eArgError, "Invalid border_type (should be :constant or :replicate)");
+  }
+  else
+    type = NUM2INT(border_type);
+
+  try {
+    cvCopyMakeBorder(CVARR(self), CVARR(dest), VALUE_TO_CVPOINT(offset), type,
+		     NIL_P(value) ? cvScalar(0) : VALUE_TO_CVSCALAR(value));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   integral(need_sqsum = false, need_tilted_sum = false) -> [cvmat, cvmat or nil, cvmat or nil]
+ *
+ * Calculates integral images.
+ * If <i>need_sqsum</i> = true, calculate the integral image for squared pixel values.
+ * If <i>need_tilted_sum</i> = true, calculate the integral for the image rotated by 45 degrees.
+ *
+ *   sum(X,Y)=sumx<X,y<Yimage(x,y)
+ *   sqsum(X,Y)=sumx<X,y<Yimage(x,y)2
+ *   tilted_sum(X,Y)=sumy<Y,abs(x-X)<yimage(x,y)
+ *
+ * Using these integral images, one may calculate sum, mean, standard deviation over arbitrary up-right or rotated rectangular region of the image in a constant time.
+ */
+VALUE
+rb_integral(int argc, VALUE *argv, VALUE self)
+{
+  VALUE need_sqsum = Qfalse, need_tiled_sum = Qfalse;
+  rb_scan_args(argc, argv, "02", &need_sqsum, &need_tiled_sum);
+
+  VALUE sum = Qnil;
+  VALUE sqsum = Qnil;
+  VALUE tiled_sum = Qnil;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    CvSize self_size = cvGetSize(self_ptr);
+    CvSize size = cvSize(self_size.width + 1, self_size.height + 1);
+    int type_cv64fcn = CV_MAKETYPE(CV_64F, CV_MAT_CN(cvGetElemType(self_ptr)));
+    sum = cCvMat::new_object(size, type_cv64fcn);
+    sqsum = (need_sqsum == Qtrue ? cCvMat::new_object(size, type_cv64fcn) : Qnil);
+    tiled_sum = (need_tiled_sum == Qtrue ? cCvMat::new_object(size, type_cv64fcn) : Qnil);
+    cvIntegral(self_ptr, CVARR(sum), (need_sqsum == Qtrue) ? CVARR(sqsum) : NULL,
+	       (need_tiled_sum == Qtrue) ? CVARR(tiled_sum) : NULL);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  
+  if ((need_sqsum != Qtrue) && (need_tiled_sum != Qtrue))
+    return sum;
+  else {
+    VALUE dest = rb_ary_new3(1, sum);
+    if (need_sqsum == Qtrue)
+      rb_ary_push(dest, sqsum);
+    if (need_tiled_sum == Qtrue)
+      rb_ary_push(dest, tiled_sum);
+    return dest;
+  }
+}
+
+inline VALUE
+rb_threshold_internal(int threshold_type, VALUE threshold, VALUE max_value, VALUE use_otsu, VALUE self)
+{
+  CvArr* self_ptr = CVARR(self);
+  int otsu = (use_otsu == Qtrue) && ((threshold_type & CV_THRESH_OTSU) == 0);
+  int type = threshold_type | (otsu ? CV_THRESH_OTSU : 0);
+  VALUE dest = Qnil;
+  double otsu_threshold = 0;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    otsu_threshold = cvThreshold(self_ptr, CVARR(dest), NUM2DBL(threshold), NUM2DBL(max_value), type);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  if ((use_otsu == Qtrue) || (threshold_type & CV_THRESH_OTSU))
+    return rb_assoc_new(dest, DBL2NUM(otsu_threshold));
+  else
+    return dest;
+}
+
+/*
+ * Applies a fixed-level threshold to each array element.
+ *
+ * @overload threshold(threshold, max_value, threshold_type)
+ *   @param threshold [Number] Threshold value.
+ *   @param max_value [Number] Maximum value to use with the <tt>CV_THRESH_BINARY</tt>
+ *     and <tt>CV_THRESH_BINARY_INV</tt> thresholding types.
+ *   @param threshold_type [Integer] Thresholding type
+ *     * CV_THRESH_BINARY
+ *     * CV_THRESH_BINARY_INV
+ *     * CV_THRESH_TRUNC
+ *     * CV_THRESH_TOZERO
+ *     * CV_THRESH_TOZERO_INV
+ *   @return [CvMat] Output array of the same size and type as <tt>self</tt>.
+ * @overload threshold(threshold, max_value, threshold_type, use_otsu)
+ *   @param threshold [Number] Threshold value.
+ *   @param max_value [Number] Maximum value to use with the <tt>CV_THRESH_BINARY</tt>
+ *     and <tt>CV_THRESH_BINARY_INV</tt> thresholding types.
+ *   @param threshold_type [Integer] Thresholding type
+ *     * CV_THRESH_BINARY
+ *     * CV_THRESH_BINARY_INV
+ *     * CV_THRESH_TRUNC
+ *     * CV_THRESH_TOZERO
+ *     * CV_THRESH_TOZERO_INV
+ *   @param use_otsu [Boolean] Determines the optimal threshold value using the Otsu's algorithm
+ *   @return [Array<CvMat, Number>] Output array and Otsu's threshold.
+ * @opencv_func cvThreshold
+ * @example
+ *   mat = CvMat.new(3, 3, CV_8U, 1)
+ *   mat.set_data([1, 2, 3, 4, 5, 6, 7, 8, 9])
+ *   mat #=> [1, 2, 3,
+ *            4, 5, 6,
+ *            7, 8, 9]
+ *   result = mat.threshold(4, 7, CV_THRESH_BINARY)
+ *   result #=> [0, 0, 0,
+ *               0, 7, 7,
+ *               7, 7, 7]
+ */
+VALUE
+rb_threshold(int argc, VALUE *argv, VALUE self)
+{
+  VALUE threshold, max_value, threshold_type, use_otsu;
+  rb_scan_args(argc, argv, "31", &threshold, &max_value, &threshold_type, &use_otsu);
+  const int INVALID_TYPE = -1;
+  int type = CVMETHOD("THRESHOLD_TYPE", threshold_type, INVALID_TYPE);
+  if (type == INVALID_TYPE)
+    rb_raise(rb_eArgError, "Invalid threshold type.");
+  
+  return rb_threshold_internal(type, threshold, max_value, use_otsu, self);
+}
+
+/*
+ * Applies an adaptive threshold to an array.
+ *
+ * @overload adaptive_threshold(max_value, options)
+ *   @param max_value [Number] Non-zero value assigned to the pixels for which the condition is satisfied.
+ *   @param options [Hash] Threshold option
+ *   @option options [Integer, Symbol] :threshold_type (CV_THRESH_BINARY) Thresholding type;
+ *     must be one of <tt>CV_THRESH_BINARY</tt> or <tt>:binary</tt>, <tt>CV_THRESH_BINARY_INV</tt> or <tt>:binary_inv</tt>.
+ *   @option options [Integer, Symbol] :adaptive_method (CV_ADAPTIVE_THRESH_MEAN_C) Adaptive thresholding algorithm to use:
+ *     <tt>CV_ADAPTIVE_THRESH_MEAN_C</tt> or <tt>:mean_c</tt>, <tt>CV_ADAPTIVE_THRESH_GAUSSIAN_C</tt> or <tt>:gaussian_c</tt>.
+ *   @option options [Integer] :block_size (3) The size of a pixel neighborhood that is used to calculate a threshold value
+ *     for the pixel: 3, 5, 7, and so on.
+ *   @option options :param1 [Number] (5) The method-dependent parameter. For the methods <tt>CV_ADAPTIVE_THRESH_MEAN_C</tt>
+ *     and <tt>CV_ADAPTIVE_THRESH_GAUSSIAN_C</tt> it is a constant subtracted from the mean or weighted mean, though it may be negative
+ *   @return [CvMat] Destination image of the same size and the same type as <tt>self</tt>.
+ * @opencv_func cvAdaptiveThreshold
+ * @example
+ *   mat = CvMat.new(3, 3, CV_8U, 1)
+ *   mat.set_data([1, 2, 3, 4, 5, 6, 7, 8, 9])
+ *   mat #=> [1, 2, 3,
+ *            4, 5, 6,
+ *            7, 8, 9]
+ *   result = mat.adaptive_threshold(7, threshold_type: CV_THRESH_BINARY,
+ *                                   adaptive_method: CV_ADAPTIVE_THRESH_MEAN_C,
+ *                                   block_size: 3, param1: 1)
+ *   result #=> [0, 0, 0,
+ *               7, 7, 7,
+ *               7, 7, 7]
+ */
+VALUE
+rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
+{
+  VALUE max_value, options;
+  rb_scan_args(argc, argv, "11", &max_value, &options);
+
+  int threshold_type = CV_THRESH_BINARY;
+  int adaptive_method = CV_ADAPTIVE_THRESH_MEAN_C;
+  int block_size = 3;
+  double param1 = 5;
+  if (!NIL_P(options)) {
+    Check_Type(options, T_HASH);
+    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_HASH(options, "threshold_type"),
+			      CV_THRESH_BINARY);
+    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_HASH(options, "adaptive_method"),
+			       CV_ADAPTIVE_THRESH_MEAN_C);
+    VALUE _block_size = LOOKUP_HASH(options, "block_size");
+    if (!NIL_P(_block_size)) {
+      block_size = NUM2INT(_block_size);
+    }
+    VALUE _param1 = LOOKUP_HASH(options, "param1");
+    if (!NIL_P(_param1)) {
+      param1 = NUM2INT(_param1);
+    }
+  }
+  CvArr* self_ptr = CVARR(self);
+  VALUE dst = new_mat_kind_object(cvGetSize(self_ptr), self);
+  try {
+    cvAdaptiveThreshold(self_ptr, CVARR(dst), NUM2DBL(max_value), adaptive_method, threshold_type,
+			block_size, param1);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  
+  return dst;
+}
+
+/*
+ * call-seq:
+ *   pyr_down([filter = :gaussian_5x5]) -> cvmat
+ *
+ * Return downsamples image.
+ *
+ * This operation performs downsampling step of Gaussian pyramid decomposition.
+ * First it convolves source image with the specified filter and then downsamples the image
+ * by rejecting even rows and columns.
+ *
+ * note: filter - only :gaussian_5x5 is currently supported.
+ */
+VALUE
+rb_pyr_down(int argc, VALUE *argv, VALUE self)
+{
+  int filter = CV_GAUSSIAN_5x5;
+  if (argc > 0) {
+    VALUE filter_type = argv[0];
+    switch (TYPE(filter_type)) {
+    case T_SYMBOL:
+      // currently suport CV_GAUSSIAN_5x5 only.
+      break;
+    default:
+      raise_typeerror(filter_type, rb_cSymbol);
+    }
+  }
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    CvSize original_size = cvGetSize(self_ptr);
+    CvSize size = { original_size.width >> 1, original_size.height >> 1 };
+    dest = new_mat_kind_object(size, self);
+    cvPyrDown(self_ptr, CVARR(dest), filter);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   pyr_up([filter = :gaussian_5x5]) -> cvmat
+ *
+ * Return upsamples image.
+ *
+ * This operation performs up-sampling step of Gaussian pyramid decomposition.
+ * First it upsamples the source image by injecting even zero rows and columns and
+ * then convolves result with the specified filter multiplied by 4 for interpolation.
+ * So the destination image is four times larger than the source image.
+ *
+ * note: filter - only :gaussian_5x5 is currently supported.
+ */
+VALUE
+rb_pyr_up(int argc, VALUE *argv, VALUE self)
+{
+  VALUE filter_type;
+  rb_scan_args(argc, argv, "01", &filter_type);
+  int filter = CV_GAUSSIAN_5x5;
+  if (argc > 0) {
+    switch (TYPE(filter_type)) {
+    case T_SYMBOL:
+      // currently suport CV_GAUSSIAN_5x5 only.
+      break;
+    default:
+      raise_typeerror(filter_type, rb_cSymbol);
+    }
+  }
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    CvSize original_size = cvGetSize(self_ptr);
+    CvSize size = { original_size.width << 1, original_size.height << 1 };
+    dest = new_mat_kind_object(size, self);
+    cvPyrUp(self_ptr, CVARR(dest), filter);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Fills a connected component with the given color.
+ *
+ * @overload flood_fill(seed_point, new_val, lo_diff = CvScalar.new(0), up_diff = CvScalar.new(0), flood_fill_option = nil)
+ *   @param seed_point [CvPoint] Starting point.
+ *   @param new_val [CvScalar] New value of the repainted domain pixels.
+ *   @param lo_diff [CvScalar] Maximal lower brightness/color difference between the currently observed pixel
+ *     and one of its neighbor belong to the component or seed pixel to add the pixel to component.
+ *     In case of 8-bit color images it is packed value.
+ *   @param up_diff [CvScalar] Maximal upper brightness/color difference between the currently observed pixel and
+ *     one of its neighbor belong to the component or seed pixel to add the pixel to component.
+ *     In case of 8-bit color images it is packed value.
+ *   @param flood_fill_option [Hash] 
+ *   @option flood_fill_option [Integer] :connectivity (4)
+ *     Connectivity determines which neighbors of a pixel are considered (4 or 8).
+ *   @option flood_fill_option [Boolean] :fixed_range (false)
+ *     If set the difference between the current pixel and seed pixel is considered, otherwise difference between
+ *     neighbor pixels is considered (the range is floating).
+ *   @option flood_fill_option [Boolean] :mask_only (false)
+ *     If set, the function does not fill the image(new_val is ignored), but the fills mask.
+ * @return [Array<CvMat, CvConnectedComp>] Array of output image, connected component and mask.
+ * @opencv_func cvFloodFill
+ */
+VALUE
+rb_flood_fill(int argc, VALUE *argv, VALUE self)
+{
+  return rb_flood_fill_bang(argc, argv, copy(self));
+}
+
+/*
+ * Fills a connected component with the given color.
+ *
+ * @overload flood_fill!(seed_point, new_val, lo_diff = CvScalar.new(0), up_diff = CvScalar.new(0), flood_fill_option = nil)
+ *   @param (see #flood_fill)
+ *   @return (see #flood_fill)
+ * @opencv_func (see #flood_fill)
+ */
+VALUE
+rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE seed_point, new_val, lo_diff, up_diff, flood_fill_option;
+  rb_scan_args(argc, argv, "23", &seed_point, &new_val, &lo_diff, &up_diff, &flood_fill_option);
+  flood_fill_option = FLOOD_FILL_OPTION(flood_fill_option);
+  int flags = FF_CONNECTIVITY(flood_fill_option);
+  if (FF_FIXED_RANGE(flood_fill_option)) {
+    flags |= CV_FLOODFILL_FIXED_RANGE;
+  }
+  if (FF_MASK_ONLY(flood_fill_option)) {
+    flags |= CV_FLOODFILL_MASK_ONLY;
+  }
+  CvArr* self_ptr = CVARR(self);
+  VALUE comp = cCvConnectedComp::new_object();
+  VALUE mask = Qnil;
+  try {
+    CvSize size = cvGetSize(self_ptr);
+    // TODO: Change argument format to set mask
+    mask = new_object(size.height + 2, size.width + 2, CV_MAKETYPE(CV_8U, 1));
+    CvMat* mask_ptr = CVMAT(mask);
+    cvSetZero(mask_ptr);
+    cvFloodFill(self_ptr,
+		VALUE_TO_CVPOINT(seed_point),
+		VALUE_TO_CVSCALAR(new_val),
+		NIL_P(lo_diff) ? cvScalar(0) : VALUE_TO_CVSCALAR(lo_diff),
+		NIL_P(up_diff) ? cvScalar(0) : VALUE_TO_CVSCALAR(up_diff),
+		CVCONNECTEDCOMP(comp),
+		flags,
+		mask_ptr);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(3, self, comp, mask);
+}
+
+/*
+ * Finds contours in binary image.
+ *
+ * @overload find_contours(find_contours_options)
+ *   @param find_contours_options [Hash] Options
+ *   @option find_contours_options [Symbol] :mode (:list) Retrieval mode.
+ *      * :external - retrive only the extreme outer contours
+ *      * :list - retrieve all the contours and puts them in the list.
+ *      * :ccomp - retrieve all the contours and organizes them into two-level hierarchy:
+ *        top level are external boundaries of the components, second level are bounda boundaries of the holes
+ *      * :tree - retrieve all the contours and reconstructs the full hierarchy of nested contours
+ *        Connectivity determines which neighbors of a pixel are considered.
+ *   @option find_contours_options [Symbol] :method (:approx_simple) Approximation method.
+ *      * :code - output contours in the Freeman chain code. All other methods output polygons (sequences of vertices).
+ *      * :approx_none - translate all the points from the chain code into points;
+ *      * :approx_simple - compress horizontal, vertical, and diagonal segments, that is, the function leaves only their ending points;
+ *      * :approx_tc89_l1, :approx_tc89_kcos - apply one of the flavors of Teh-Chin chain approximation algorithm.
+ *   @option find_contours_options [CvPoint] :offset (CvPoint.new(0, 0)) Offset, by which every contour point is shifted.
+ * @return [CvContour, CvChain] Detected contours. If <tt>:method</tt> is <tt>:code</tt>,
+ *   returns as <tt>CvChain</tt>, otherwise <tt>CvContour</tt>.
+ * @opencv_func cvFindContours
+ */
+VALUE
+rb_find_contours(int argc, VALUE *argv, VALUE self)
+{
+  return rb_find_contours_bang(argc, argv, copy(self));
+}
+
+/*
+ * Finds contours in binary image.
+ *
+ * @overload find_contours!(find_contours_options)
+ *   @param (see #find_contours)
+ * @return (see #find_contours)
+ * @opencv_func (see #find_contours)
+ */
+VALUE
+rb_find_contours_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE find_contours_option, klass, element_klass, storage;
+  rb_scan_args(argc, argv, "01", &find_contours_option);
+  CvSeq *contour = NULL;
+  find_contours_option = FIND_CONTOURS_OPTION(find_contours_option);
+  int mode = FC_MODE(find_contours_option);
+  int method = FC_METHOD(find_contours_option);
+  int header_size;
+  if (method == CV_CHAIN_CODE) {
+    klass = cCvChain::rb_class();
+    element_klass = T_FIXNUM;
+    header_size = sizeof(CvChain);
+  }
+  else {
+    klass = cCvContour::rb_class();
+    element_klass = cCvPoint::rb_class();
+    header_size = sizeof(CvContour);
+  }
+  storage = cCvMemStorage::new_object();
+
+  int count = 0;
+  try {
+    count = cvFindContours(CVARR(self), CVMEMSTORAGE(storage), &contour, header_size,
+			   mode, method, FC_OFFSET(find_contours_option));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  if (count == 0)
+    return Qnil;
+  else
+    return cCvSeq::new_sequence(klass, contour, element_klass, storage);
+}
+
+/*
+ * call-seq:
+ *   draw_contours(contour, external_color, hole_color, max_level, options) -> cvmat
+ *
+ * Draws contour outlines or interiors in an image.
+ *
+ * * <i>contour</i> (CvContour) - Pointer to the first contour
+ * * <i>external_color</i> (CvScalar) -  Color of the external contours
+ * * <i>hole_color</i> (CvScalar) - Color of internal contours (holes)
+ * * <i>max_level</i> (Integer) - Maximal level for drawn contours. If 0, only contour is drawn. If 1, the contour and all contours following it on the same level are drawn. If 2, all contours following and all contours one level below the contours are drawn, and so forth. If the value is negative, the function does not draw the contours following after contour but draws the child contours of contour up to the |max_level| - 1 level.
+ * * <i>options</i> (Hash) - Drawing options.
+ *   * :thickness (Integer) - Thickness of lines the contours are drawn with. If it is negative, the contour interiors are drawn (default: 1).
+ *   * :line_type (Integer or Symbol) - Type of the contour segments, see CvMat#line description (default: 8).
+ */
+VALUE
+rb_draw_contours(int argc, VALUE *argv, VALUE self)
+{
+  return rb_draw_contours_bang(argc, argv, copy(self));
+}
+
+/*
+ * call-seq:
+ *   draw_contours!(contour, external_color, hole_color, max_level, options) -> cvmat
+ *
+ * Draws contour outlines or interiors in an image.
+ *
+ * see CvMat#draw_contours
+ */
+VALUE
+rb_draw_contours_bang(int argc, VALUE *argv, VALUE self)
+{
+  VALUE contour, external_color, hole_color, max_level, options;
+  rb_scan_args(argc, argv, "41", &contour, &external_color, &hole_color, &max_level, &options);
+  options = DRAWING_OPTION(options);
+  try {
+    cvDrawContours(CVARR(self), CVSEQ_WITH_CHECK(contour), VALUE_TO_CVSCALAR(external_color),
+		   VALUE_TO_CVSCALAR(hole_color), NUM2INT(max_level),
+		   DO_THICKNESS(options), DO_LINE_TYPE(options));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return self;
+}
+
+/*
+ * call-seq:
+ *   draw_chessboard_corners(pattern_size, corners, pattern_was_found) -> nil
+ *
+ * Returns an image which is rendered the detected chessboard corners.
+ *
+ * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
+ * corners (Array<CvPoint2D32f>) - Array of detected corners, the output of CvMat#find_chessboard_corners.
+ * pattern_was_found (Boolean)- Parameter indicating whether the complete board was found or not.
+ */
+VALUE
+rb_draw_chessboard_corners(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found)
+{
+  return rb_draw_chessboard_corners_bang(copy(self), pattern_size, corners, pattern_was_found);
+}
+
+/*
+ * call-seq:
+ *   draw_chessboard_corners!(pattern_size, corners, pattern_was_found) -> self
+ *
+ * Renders the detected chessboard corners.
+ *
+ * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
+ * corners (Array<CvPoint2D32f>) - Array of detected corners, the output of CvMat#find_chessboard_corners.
+ * pattern_was_found (Boolean)- Parameter indicating whether the complete board was found or not.
+ */
+VALUE
+rb_draw_chessboard_corners_bang(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found)
+{
+  Check_Type(corners, T_ARRAY);
+  int count = RARRAY_LEN(corners);
+  CvPoint2D32f* corners_buff = ALLOCA_N(CvPoint2D32f, count);
+  VALUE* corners_ptr = RARRAY_PTR(corners);
+  for (int i = 0; i < count; i++) {
+    corners_buff[i] = *(CVPOINT2D32F(corners_ptr[i]));
+  }
+
+  try {
+    int found = (pattern_was_found == Qtrue);
+    cvDrawChessboardCorners(CVARR(self), VALUE_TO_CVSIZE(pattern_size), corners_buff, count, found);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return self;
+}
+
+/*
+ * call-seq:
+ *   pyr_mean_shift_filtering(sp, sr[,max_level = 1][termcrit = CvTermCriteria.new(5,1)]) -> cvmat
+ *
+ * Does meanshift image segmentation.
+ *
+ *   sp - The spatial window radius.
+ *   sr - The color window radius.
+ *   max_level - Maximum level of the pyramid for the segmentation.
+ *   termcrit - Termination criteria: when to stop meanshift iterations.
+ *
+ * This method is implements the filtering stage of meanshift segmentation,
+ * that is, the output of the function is the filtered "posterized" image with color gradients and fine-grain texture flattened.
+ * At every pixel (X,Y) of the input image (or down-sized input image, see below)
+ * the function executes meanshift iterations, that is, the pixel (X,Y) neighborhood in the joint space-color hyperspace is considered:
+ *   {(x,y): X-sp≤x≤X+sp && Y-sp≤y≤Y+sp && ||(R,G,B)-(r,g,b)|| ≤ sr},
+ * where (R,G,B) and (r,g,b) are the vectors of color components at (X,Y) and (x,y),
+ * respectively (though, the algorithm does not depend on the color space used,
+ * so any 3-component color space can be used instead).
+ * Over the neighborhood the average spatial value (X',Y')
+ * and average color vector (R',G',B') are found and they act as the neighborhood center on the next iteration:
+ *   (X,Y)~(X',Y'), (R,G,B)~(R',G',B').
+ * After the iterations over, the color components of the initial pixel (that is, the pixel from where the iterations started)
+ * are set to the final value (average color at the last iteration):
+ *   I(X,Y) <- (R*,G*,B*).
+ * Then max_level > 0, the gaussian pyramid of max_level+1 levels is built,
+ * and the above procedure is run on the smallest layer.
+ * After that, the results are propagated to the larger layer and the iterations are run again
+ * only on those pixels where the layer colors differ much (>sr) from the lower-resolution layer,
+ * that is, the boundaries of the color regions are clarified.
+ *
+ * Note, that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when max_level==0).
+ */
+VALUE
+rb_pyr_mean_shift_filtering(int argc, VALUE *argv, VALUE self)
+{
+  VALUE spatial_window_radius, color_window_radius, max_level, termcrit;
+  rb_scan_args(argc, argv, "22", &spatial_window_radius, &color_window_radius, &max_level, &termcrit);
+  CvArr* self_ptr = CVARR(self);
+  VALUE dest = Qnil;
+  try {
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvPyrMeanShiftFiltering(self_ptr, CVARR(dest),
+			    NUM2DBL(spatial_window_radius),
+			    NUM2DBL(color_window_radius),
+			    IF_INT(max_level, 1),
+			    NIL_P(termcrit) ? cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 5, 1)
+			    : VALUE_TO_CVTERMCRITERIA(termcrit));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * Performs a marker-based image segmentation using the watershed algorithm.
+ *
+ * @overload watershed(markers)
+ *   @param markers [CvMat] Input 32-bit single-channel image of markers. It should have the same size as <tt>self</tt>
+ * @return [CvMat] Output image
+ * @opencv_func cvWatershed
+ */
+VALUE
+rb_watershed(VALUE self, VALUE markers)
+{
+  try {
+    cvWatershed(CVARR(self), CVARR_WITH_CHECK(markers));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return markers;
+}
+
+/*
+ * call-seq:
+ *   moments -> cvmoments
+ *
+ * Calculates moments.
+ */
+VALUE
+rb_moments(int argc, VALUE *argv, VALUE self)
+{
+  VALUE is_binary;
+  rb_scan_args(argc, argv, "01", &is_binary);
+  CvArr *self_ptr = CVARR(self);
+  VALUE moments = Qnil;
+  try {
+    moments = cCvMoments::new_object(self_ptr, TRUE_OR_FALSE(is_binary, 0));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return moments;
+}
+
+/*
+ * Finds lines in binary image using a Hough transform.
+ *
+ * @overload hough_lines(method, rho, theta, threshold, param1, param2)
+ *   @param method [Integer] The Hough transform variant, one of the following:
+ *     * CV_HOUGH_STANDARD - classical or standard Hough transform.
+ *     * CV_HOUGH_PROBABILISTIC - probabilistic Hough transform (more efficient in case if picture contains a few long linear segments).
+ *     * CV_HOUGH_MULTI_SCALE - multi-scale variant of the classical Hough transform. The lines are encoded the same way as CV_HOUGH_STANDARD.
+ *   @param rho [Number] Distance resolution in pixel-related units.
+ *   @param theta [Number] Angle resolution measured in radians.
+ *   @param threshold [Number] Threshold parameter. A line is returned by the function if the corresponding
+ *     accumulator value is greater than threshold.
+ *   @param param1 [Number] The first method-dependent parameter:
+ *     * For the classical Hough transform it is not used (0).
+ *     * For the probabilistic Hough transform it is the minimum line length.
+ *     * For the multi-scale Hough transform it is the divisor for the distance resolution.
+ *       (The coarse distance resolution will be rho and the accurate resolution will be (rho / param1)).
+ *   @param param2 [Number] The second method-dependent parameter:
+ *     * For the classical Hough transform it is not used (0).
+ *     * For the probabilistic Hough transform it is the maximum gap between line segments lying
+ *       on the same line to treat them as a single line segment (i.e. to join them).
+ *     * For the multi-scale Hough transform it is the divisor for the angle resolution.
+ *       (The coarse angle resolution will be theta and the accurate resolution will be (theta / param2).)
+ * @return [CvSeq<CvLine, CvTwoPoints>] Output lines. If <tt>method</tt> is <tt>CV_HOUGH_STANDARD</tt> or <tt>CV_HOUGH_MULTI_SCALE</tt>,
+ *   the class of elements is <tt>CvLine</tt>, otherwise <tt>CvTwoPoints</tt>.
+ * @opencv_func cvHoughLines2
+ */
+VALUE
+rb_hough_lines(int argc, VALUE *argv, VALUE self)
+{
+  const int INVALID_TYPE = -1;
+  VALUE method, rho, theta, threshold, p1, p2;
+  rb_scan_args(argc, argv, "42", &method, &rho, &theta, &threshold, &p1, &p2);
+  int method_flag = CVMETHOD("HOUGH_TRANSFORM_METHOD", method, INVALID_TYPE);
+  if (method_flag == INVALID_TYPE)
+    rb_raise(rb_eArgError, "Invalid method: %d", method_flag);
+  VALUE storage = cCvMemStorage::new_object();
+  CvSeq *seq = NULL;
+  try {
+    seq = cvHoughLines2(CVARR(copy(self)), CVMEMSTORAGE(storage),
+			method_flag, NUM2DBL(rho), NUM2DBL(theta), NUM2INT(threshold),
+			IF_DBL(p1, 0), IF_DBL(p2, 0));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  switch (method_flag) {
+  case CV_HOUGH_STANDARD:
+  case CV_HOUGH_MULTI_SCALE:
+    return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvLine::rb_class(), storage);
+    break;
+  case CV_HOUGH_PROBABILISTIC:
+    return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvTwoPoints::rb_class(), storage);
+    break;
+  default:
+    break;
+  }
+
+  return Qnil;
+}
+
+/*
+ * Finds circles in a grayscale image using the Hough transform.
+ *
+ * @overload hough_circles(method, dp, min_dist, param1, param2, min_radius = 0, max_radius = 0)
+ *   @param method [Integer] Detection method to use. Currently, the only implemented method is <tt>CV_HOUGH_GRADIENT</tt>.
+ *   @param dp [Number] Inverse ratio of the accumulator resolution to the image resolution.
+ *     For example, if dp=1, the accumulator has the same resolution as the input image.
+ *     If dp=2, the accumulator has half as big width and height.
+ *   @param min_dist [Number] Minimum distance between the centers of the detected circles.
+ *     If the parameter is too small, multiple neighbor circles may be falsely detected
+ *     in addition to a true one. If it is too large, some circles may be missed.
+ *   @param param1 [Number] First method-specific parameter. In case of <tt>CV_HOUGH_GRADIENT</tt>,
+ *     it is the higher threshold of the two passed to the #canny detector (the lower one is twice smaller). 
+ *   @param param2 [Number] Second method-specific parameter. In case of <tt>CV_HOUGH_GRADIENT</tt>,
+ *     it is the accumulator threshold for the circle centers at the detection stage. The smaller it is,
+ *     the more false circles may be detected. Circles, corresponding to the larger accumulator values,
+ *     will be returned first.
+ * @return [CvSeq<CvCircle32f>] Output circles.
+ * @opencv_func cvHoughCircles
+ */
+VALUE
+rb_hough_circles(int argc, VALUE *argv, VALUE self)
+{
+  const int INVALID_TYPE = -1;
+  VALUE method, dp, min_dist, param1, param2, min_radius, max_radius, storage;
+  rb_scan_args(argc, argv, "52", &method, &dp, &min_dist, &param1, &param2, 
+	       &min_radius, &max_radius);
+  storage = cCvMemStorage::new_object();
+  int method_flag = CVMETHOD("HOUGH_TRANSFORM_METHOD", method, INVALID_TYPE);
+  if (method_flag == INVALID_TYPE)
+    rb_raise(rb_eArgError, "Invalid method: %d", method_flag);
+  CvSeq *seq = NULL;
+  try {
+    seq = cvHoughCircles(CVARR(self), CVMEMSTORAGE(storage),
+			 method_flag, NUM2DBL(dp), NUM2DBL(min_dist),
+			 NUM2DBL(param1), NUM2DBL(param2),
+			 IF_INT(min_radius, 0), IF_INT(max_radius, 0));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvCircle32f::rb_class(), storage);
+}
+
+/*
+ * call-seq:
+ *   inpaint(inpaint_method, mask, radius) -> cvmat
+ *
+ * Inpaints the selected region in the image
+ * The radius of circlular neighborhood of each point inpainted that is considered by the algorithm.
+ */
+VALUE
+rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius)
+{
+  const int INVALID_TYPE = -1;
+  VALUE dest = Qnil;
+  int method = CVMETHOD("INPAINT_METHOD", inpaint_method, INVALID_TYPE);
+  if (method == INVALID_TYPE)
+    rb_raise(rb_eArgError, "Invalid method");
+  try {
+    CvArr* self_ptr = CVARR(self);
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvInpaint(self_ptr, MASK(mask), CVARR(dest), NUM2DBL(radius), method);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   equalize_hist - cvmat
+ *
+ * Equalize histgram of grayscale of image.
+ *
+ * equalizes histogram of the input image using the following algorithm:
+ * 1. calculate histogram H for src.
+ * 2. normalize histogram, so that the sum of histogram bins is 255.
+ * 3. compute integral of the histogram:
+ *    H’(i) = sum0≤j≤iH(j)
+ * 4. transform the image using H’ as a look-up table: dst(x,y)=H’(src(x,y))
+ * The algorithm normalizes brightness and increases contrast of the image.
+ *
+ * <b>support single-channel 8bit image (grayscale) only.</b>
+ */
+VALUE
+rb_equalize_hist(VALUE self)
+{
+  VALUE dest = Qnil;
+  try {
+    CvArr* self_ptr = CVARR(self);
+    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
+    cvEqualizeHist(self_ptr, CVARR(dest));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return dest;
+}
+
+/*
+ * call-seq:
+ *   apply_color_map(colormap) -> cvmat
+ *
+ * Applies a GNU Octave/MATLAB equivalent colormap on a given image.
+ *
+ * Parameters:
+ *   colormap - The colormap to apply.
+ */
+VALUE
+rb_apply_color_map(VALUE self, VALUE colormap)
+{
+  VALUE dst;
+  try {
+    cv::Mat dst_mat;
+    cv::Mat self_mat(CVMAT(self));
+
+    cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
+    CvMat tmp = dst_mat;
+    dst = new_object(tmp.rows, tmp.cols, tmp.type);
+    cvCopy(&tmp, CVMAT(dst));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return dst;
+}
+
+/*
+ * Compares template against overlapped image regions.
+ *
+ * @overload match_template(template, method = CV_TM_SQDIFF)
+ *   @param template [CvMat] Searched template. It must be not greater than the source image and have the same data type.
+ *   @param method [Integer] Parameter specifying the comparison method.
+ *     * CV_TM_SQDIFF
+ *     * CV_TM_SQDIFF_NORMED
+ *     * CV_TM_CCORR
+ *     * CV_TM_CCORR_NORMED
+ *     * CV_TM_CCOEFF
+ *     * CV_TM_CCOEFF_NORMED
+ * @opencv_func cvMatchTemplate
+ *
+ * After the match_template finishes comparison, the best matches can be found as global
+ * minimums (<tt>CV_TM_SQDIFF</tt>) or maximums(<tt>CV_TM_CCORR</tt> or <tt>CV_TM_CCOEFF</tt>) using CvMat#min_max_loc.
+ * In case of color image and template summation in both numerator and each sum in denominator
+ * is done over all the channels (and separate mean values are used for each channel).
+ */
+VALUE
+rb_match_template(int argc, VALUE *argv, VALUE self)
+{
+  VALUE templ, method;
+  int method_flag;
+  if (rb_scan_args(argc, argv, "11", &templ, &method) == 1)
+    method_flag = CV_TM_SQDIFF;
+  else
+    method_flag = CVMETHOD("MATCH_TEMPLATE_METHOD", method);
+
+  CvArr* self_ptr = CVARR(self);
+  CvArr* templ_ptr = CVARR_WITH_CHECK(templ);
+  VALUE result = Qnil;
+  try {
+    CvSize src_size = cvGetSize(self_ptr);
+    CvSize template_size = cvGetSize(templ_ptr);
+    result = cCvMat::new_object(src_size.height - template_size.height + 1,
+				src_size.width - template_size.width + 1,
+				CV_32FC1);
+    cvMatchTemplate(self_ptr, templ_ptr, CVARR(result), method_flag);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return result;
+}
+
+/*
+ * call-seq:
+ *   match_shapes(object, method) -> float
+ *
+ * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
+ *
+ * A - object1, B - object2:
+ * * method=CV_CONTOURS_MATCH_I1
+ *     I1(A,B)=sumi=1..7abs(1/mAi - 1/mBi)
+ * * method=CV_CONTOURS_MATCH_I2
+ *     I2(A,B)=sumi=1..7abs(mAi - mBi)
+ * * method=CV_CONTOURS_MATCH_I3
+ *     I3(A,B)=sumi=1..7abs(mAi - mBi)/abs(mAi)
+ */
+VALUE
+rb_match_shapes(int argc, VALUE *argv, VALUE self)
+{
+  VALUE object, method, param;
+  rb_scan_args(argc, argv, "21", &object, &method, &param);
+  int method_flag = CVMETHOD("COMPARISON_METHOD", method);
+  if (!(rb_obj_is_kind_of(object, cCvMat::rb_class()) || rb_obj_is_kind_of(object, cCvContour::rb_class())))
+    rb_raise(rb_eTypeError, "argument 1 (shape) should be %s or %s",
+	     rb_class2name(cCvMat::rb_class()), rb_class2name(cCvContour::rb_class()));
+  double result = 0;
+  try {
+    result = cvMatchShapes(CVARR(self), CVARR(object), method_flag);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_float_new(result);
+}
+
+/*
+ * call-seq:
+ *   mean_shift(window, criteria) -> comp
+ *
+ * Implements CAMSHIFT object tracking algrorithm.
+ * First, it finds an object center using mean_shift and, after that,
+ * calculates the object size and orientation.
+ */
+VALUE
+rb_mean_shift(VALUE self, VALUE window, VALUE criteria)
+{
+  VALUE comp = cCvConnectedComp::new_object();
+  try {
+    cvMeanShift(CVARR(self), VALUE_TO_CVRECT(window), VALUE_TO_CVTERMCRITERIA(criteria), CVCONNECTEDCOMP(comp));    
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return comp;
+}
+
+/*
+ * call-seq:
+ *   cam_shift(window, criteria) -> [comp, box]
+ *
+ * Implements CAMSHIFT object tracking algrorithm. First, it finds an object center using cvMeanShift and,
+ * after that, calculates the object size and orientation. The function returns number of iterations made
+ * within cvMeanShift.
+ */
+VALUE
+rb_cam_shift(VALUE self, VALUE window, VALUE criteria)
+{
+  VALUE comp = cCvConnectedComp::new_object();
+  VALUE box = cCvBox2D::new_object();
+  try {
+    cvCamShift(CVARR(self), VALUE_TO_CVRECT(window), VALUE_TO_CVTERMCRITERIA(criteria),
+	       CVCONNECTEDCOMP(comp), CVBOX2D(box));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, comp, box);
+}
+
+/*
+ * call-seq:
+ *   snake_image(points, alpha, beta, gamma, window, criteria[, calc_gradient = true]) -> array(pointset)
+ *
+ * Updates snake in order to minimize its total energy that is a sum of internal energy
+ * that depends on contour shape (the smoother contour is, the smaller internal energy is)
+ * and external energy that depends on the energy field and reaches minimum at the local energy
+ * extremums that correspond to the image edges in case of image gradient.
+
+ * The parameter criteria.epsilon is used to define the minimal number of points that must be moved
+ * during any iteration to keep the iteration process running.
+ *
+ * If at some iteration the number of moved points is less than criteria.epsilon or
+ * the function performed criteria.max_iter iterations, the function terminates.
+ *
+ * points
+ *   Contour points (snake).
+ * alpha
+ *   Weight[s] of continuity energy, single float or array of length floats, one per each contour point.
+ * beta
+ *   Weight[s] of curvature energy, similar to alpha.
+ * gamma
+ *   Weight[s] of image energy, similar to alpha.
+ * window
+ *   Size of neighborhood of every point used to search the minimum, both win.width and win.height must be odd.
+ * criteria
+ *  Termination criteria.
+ * calc_gradient
+ *  Gradient flag. If not 0, the function calculates gradient magnitude for every image pixel and consideres
+ *  it as the energy field, otherwise the input image itself is considered.
+ */
+VALUE
+rb_snake_image(int argc, VALUE *argv, VALUE self)
+{
+  VALUE points, alpha, beta, gamma, window, criteria, calc_gradient;
+  rb_scan_args(argc, argv, "61", &points, &alpha, &beta, &gamma, &window, &criteria, &calc_gradient);
+  CvPoint *pointset = 0;
+  int length = CVPOINTS_FROM_POINT_SET(points, &pointset);
+  int coeff = (TYPE(alpha) == T_ARRAY && TYPE(beta) == T_ARRAY && TYPE(gamma) == T_ARRAY) ? CV_ARRAY : CV_VALUE;
+  float *a = 0, *b = 0, *c = 0;
+  IplImage stub;
+  int i;
+  if (coeff == CV_VALUE) {
+    float buff_a, buff_b, buff_c;
+    buff_a = (float)NUM2DBL(alpha);
+    buff_b = (float)NUM2DBL(beta);
+    buff_c = (float)NUM2DBL(gamma);
+    a = &buff_a;
+    b = &buff_b;
+    c = &buff_c;
+  }
+  else { // CV_ARRAY
+    if ((RARRAY_LEN(alpha) != length) ||
+	(RARRAY_LEN(beta) != length) ||
+	(RARRAY_LEN(gamma) != length))
+      rb_raise(rb_eArgError, "alpha, beta, gamma should be same size of points");
+    a = ALLOCA_N(float, length);
+    b = ALLOCA_N(float, length);
+    c = ALLOCA_N(float, length);
+    for (i = 0; i < length; ++i) {
+      a[i] = (float)NUM2DBL(RARRAY_PTR(alpha)[i]);
+      b[i] = (float)NUM2DBL(RARRAY_PTR(beta)[i]);
+      c[i] = (float)NUM2DBL(RARRAY_PTR(gamma)[i]);
+    }
+  }
+  CvSize win = VALUE_TO_CVSIZE(window);
+  CvTermCriteria tc = VALUE_TO_CVTERMCRITERIA(criteria);
+  try {
+    cvSnakeImage(cvGetImage(CVARR(self), &stub), pointset, length,
+		 a, b, c, coeff, win, tc, IF_BOOL(calc_gradient, 1, 0, 1));
+  }
+  catch (cv::Exception& e) {
+    if (pointset != NULL)
+      cvFree(&pointset);
+    raise_cverror(e);
+  }
+  VALUE result = rb_ary_new2(length);
+  for (i = 0; i < length; ++i)
+    rb_ary_push(result, cCvPoint::new_object(pointset[i]));
+  cvFree(&pointset);
+  
+  return result;
+}
+
+/*
+ * call-seq:
+ *   optical_flow_hs(prev[,velx = nil][,vely = nil][,options]) -> [cvmat, cvmat]
+ *
+ * Calculates optical flow for two images (previous -> self) using Horn & Schunck algorithm.
+ * Return horizontal component of the optical flow and vertical component of the optical flow.
+ * <i>prev</i> is previous image
+ * <i>velx</i> is previous velocity field of x-axis, and <i>vely</i> is previous velocity field of y-axis.
+ *
+ * options
+ * * :lambda -> should be Float (default is 0.0005)
+ *     Lagrangian multiplier.
+ * * :criteria -> should be CvTermCriteria object (default is CvTermCriteria(1, 0.001))
+ *     Criteria of termination of velocity computing.
+ * note: <i>option</i>'s default value is CvMat::OPTICAL_FLOW_HS_OPTION.
+ *
+ * sample code
+ *   velx, vely = nil, nil
+ *   while true
+ *     current = capture.query
+ *     velx, vely = current.optical_flow_hs(prev, velx, vely) if prev
+ *     prev = current
+ *   end
+ */
+VALUE
+rb_optical_flow_hs(int argc, VALUE *argv, VALUE self)
+{
+  VALUE prev, velx, vely, options;
+  int use_previous = 0;
+  rb_scan_args(argc, argv, "13", &prev, &velx, &vely, &options);
+  options = OPTICAL_FLOW_HS_OPTION(options);
+  CvMat *velx_ptr, *vely_ptr;
+  CvArr* self_ptr = CVARR(self);
+  try {
+    if (NIL_P(velx) && NIL_P(vely)) {
+      CvSize size = cvGetSize(self_ptr);
+      int type = CV_MAKETYPE(CV_32F, 1);
+      velx = cCvMat::new_object(size, type);
+      vely = cCvMat::new_object(size, type);
+      velx_ptr = CVMAT(velx);
+      vely_ptr = CVMAT(vely);
+    }
+    else {
+      use_previous = 1;
+      velx_ptr = CVMAT_WITH_CHECK(velx);
+      vely_ptr = CVMAT_WITH_CHECK(vely);
+    }
+    cvCalcOpticalFlowHS(CVMAT_WITH_CHECK(prev), self_ptr, use_previous, velx_ptr, vely_ptr,
+			HS_LAMBDA(options), HS_CRITERIA(options));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, velx, vely);
+}
+
+/*
+ * call-seq:
+ *   optical_flow_lk(prev, win_size) -> [cvmat, cvmat]
+ *
+ * Calculates optical flow for two images (previous -> self) using Lucas & Kanade algorithm
+ * Return horizontal component of the optical flow and vertical component of the optical flow.
+ *
+ * <i>win_size</i> is size of the averaging window used for grouping pixels.
+ */
+VALUE
+rb_optical_flow_lk(VALUE self, VALUE prev, VALUE win_size)
+{
+  VALUE velx = Qnil;
+  VALUE vely = Qnil;
+  try {
+    CvArr* self_ptr = CVARR(self);
+    CvSize size = cvGetSize(self_ptr);
+    int type = CV_MAKETYPE(CV_32F, 1);
+    velx = cCvMat::new_object(size, type);
+    vely = cCvMat::new_object(size, type);
+    cvCalcOpticalFlowLK(CVMAT_WITH_CHECK(prev), self_ptr, VALUE_TO_CVSIZE(win_size),
+			CVARR(velx), CVARR(vely));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, velx, vely);
+}
+
+/*
+ * call-seq:
+ *   optical_flow_bm(prev[,velx = nil][,vely = nil][,option]) -> [cvmat, cvmat]
+ *
+ * Calculates optical flow for two images (previous -> self) using block matching method.
+ * Return horizontal component of the optical flow and vertical component of the optical flow.
+ * <i>prev</i> is previous image.
+ * <i>velx</i> is previous velocity field of x-axis, and <i>vely</i> is previous velocity field of y-axis.
+ *
+ * options
+ * * :block_size -> should be CvSize (default is CvSize(4,4))
+ *     Size of basic blocks that are compared.
+ * * :shift_size -> should be CvSize (default is CvSize(1,1))
+ *     Block coordinate increments.
+ * * :max_range -> should be CvSize (default is CVSize(4,4))
+ *     Size of the scanned neighborhood in pixels around block.
+ * note: <i>option</i>'s default value is CvMat::OPTICAL_FLOW_BM_OPTION.
+ *
+ * Velocity is computed for every block, but not for every pixel,
+ * so velocity image pixels correspond to input image blocks.
+ * input/output velocity field's size should be (self.width / block_size.width)x(self.height / block_size.height).
+ * e.g. image.size is 320x240 and block_size is 4x4, velocity field's size is 80x60.
+ *
+ */
+VALUE
+rb_optical_flow_bm(int argc, VALUE *argv, VALUE self)
+{
+  VALUE prev, velx, vely, options;
+  rb_scan_args(argc, argv, "13", &prev, &velx, &vely, &options);
+  options = OPTICAL_FLOW_BM_OPTION(options);
+  CvArr* self_ptr = CVARR(self);
+  CvSize block_size = BM_BLOCK_SIZE(options);
+  CvSize shift_size = BM_SHIFT_SIZE(options);
+  CvSize max_range  = BM_MAX_RANGE(options);
+
+  int use_previous = 0;
+  try {
+    CvSize image_size = cvGetSize(self_ptr);
+    CvSize velocity_size = cvSize((image_size.width - block_size.width + shift_size.width) / shift_size.width,
+				  (image_size.height - block_size.height + shift_size.height) / shift_size.height);
+    CvMat *velx_ptr, *vely_ptr;
+    if (NIL_P(velx) && NIL_P(vely)) {
+      int type = CV_MAKETYPE(CV_32F, 1);
+      velx = cCvMat::new_object(velocity_size, type);
+      vely = cCvMat::new_object(velocity_size, type);
+      velx_ptr = CVMAT(velx);
+      vely_ptr = CVMAT(vely);
+    }
+    else {
+      use_previous = 1;
+      velx_ptr = CVMAT_WITH_CHECK(velx);
+      vely_ptr = CVMAT_WITH_CHECK(vely);
+    }
+    cvCalcOpticalFlowBM(CVMAT_WITH_CHECK(prev), self_ptr,
+			block_size, shift_size, max_range, use_previous,
+			velx_ptr, vely_ptr);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return rb_ary_new3(2, velx, vely);
+}
+
+/*
+ * call-seq:
+ *   CvMat.find_fundamental_mat(points1, points2[,options = {}]) -> fundamental_matrix(cvmat) or nil
+ *
+ * Calculates fundamental matrix from corresponding points.
+ * Size of the output fundamental matrix is 3x3 or 9x3 (7-point method may return up to 3 matrices)
+ *
+ * <i>points1</i> and <i>points2</i> should be 2xN, Nx2, 3xN or Nx3 1-channel, or 1xN or Nx1 multi-channel matrix.
+ * <i>method<i> is method for computing the fundamental matrix
+ *    - CV_FM_7POINT for a 7-point algorithm. (N = 7)
+ *    - CV_FM_8POINT for an 8-point algorithm. (N >= 8)
+ *    - CV_FM_RANSAC for the RANSAC algorithm. (N >= 8)
+ *    - CV_FM_LMEDS for the LMedS algorithm. (N >= 8)
+ * <i>option</i> should be Hash include these keys.
+ *   :with_status (true or false)
+ *      If set true, return fundamental_matrix and status. [fundamental_matrix, status]
+ *      Otherwise return fundamental matrix only(default).
+ *   :maximum_distance
+ *      The parameter is used for RANSAC.  It is the maximum distance from point to epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution and the image noise.
+ *   :desirable_level
+ *      The optional output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in RANSAC and LMedS methods. For other methods it is set to all 1's.
+ *
+ * note: <i>option</i>'s default value is CvMat::FIND_FUNDAMENTAL_MAT_OPTION.
+ */
+VALUE
+rb_find_fundamental_mat(int argc, VALUE *argv, VALUE klass)
+{
+  VALUE points1, points2, method, option, fundamental_matrix, status;
+  int num = 0;
+  rb_scan_args(argc, argv, "31", &points1, &points2, &method, &option);
+  option = FIND_FUNDAMENTAL_MAT_OPTION(option);
+  int fm_method = FIX2INT(method);
+  CvMat *points1_ptr = CVMAT_WITH_CHECK(points1);
+  if (fm_method == CV_FM_7POINT)
+    fundamental_matrix = cCvMat::new_object(9, 3, CV_MAT_DEPTH(points1_ptr->type));
+  else
+    fundamental_matrix = cCvMat::new_object(3, 3, CV_MAT_DEPTH(points1_ptr->type));
+
+  if (FFM_WITH_STATUS(option)) {
+    int status_len = (points1_ptr->rows > points1_ptr->cols) ? points1_ptr->rows : points1_ptr->cols;
+    status = cCvMat::new_object(1, status_len, CV_8UC1);
+    try {
+      num = cvFindFundamentalMat(points1_ptr, CVMAT_WITH_CHECK(points2), CVMAT(fundamental_matrix), fm_method,
+				 FFM_MAXIMUM_DISTANCE(option), FFM_DESIRABLE_LEVEL(option), CVMAT(status));
+    }
+    catch (cv::Exception& e) {
+      raise_cverror(e);
+    }
+    return num == 0 ? Qnil : rb_ary_new3(2, fundamental_matrix, status);
+  }
+  else {
+    try {
+      num = cvFindFundamentalMat(points1_ptr, CVMAT_WITH_CHECK(points2), CVMAT(fundamental_matrix), fm_method,
+				 FFM_MAXIMUM_DISTANCE(option), FFM_DESIRABLE_LEVEL(option), NULL);
+    }
+    catch (cv::Exception& e) {
+      raise_cverror(e);
+    }
+    return num == 0 ? Qnil : fundamental_matrix;
+  }
+}
+
+
+/*
+ * call-seq:
+ *   CvMat.compute_correspond_epilines(points, which_image, fundamental_matrix) -> correspondent_lines(cvmat)
+ *
+ * For points in one image of stereo pair computes the corresponding epilines in the other image.
+ * Finds equation of a line that contains the corresponding point (i.e. projection of the same 3D point)
+ * in the other image. Each line is encoded by a vector of 3 elements l=[a,b,c]T, so that:
+ *   lT*[x, y, 1]T=0,
+ * or
+ *   a*x + b*y + c = 0
+ * From the fundamental matrix definition (see cvFindFundamentalMatrix discussion), line l2 for a point p1
+ * in the first image (which_image=1) can be computed as:
+ *   l2=F*p1
+ * and the line l1 for a point p2 in the second image (which_image=1) can be computed as:
+ *   l1=FT*p2
+ * Line coefficients are defined up to a scale. They are normalized (a2+b2=1) are stored into correspondent_lines.
+ */
+VALUE
+rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_image, VALUE fundamental_matrix)
+{
+  VALUE correspondent_lines;
+  CvMat* points_ptr = CVMAT_WITH_CHECK(points);
+  int n;
+  if (points_ptr->cols <= 3 && points_ptr->rows >= 7)
+    n = points_ptr->rows;
+  else if (points_ptr->rows <= 3 && points_ptr->cols >= 7)
+    n = points_ptr->cols;
+  else
+    rb_raise(rb_eArgError, "input points should 2xN, Nx2 or 3xN, Nx3 matrix(N >= 7).");
+  
+  correspondent_lines = cCvMat::new_object(n, 3, CV_MAT_DEPTH(points_ptr->type));
+  try {
+    cvComputeCorrespondEpilines(points_ptr, NUM2INT(which_image), CVMAT_WITH_CHECK(fundamental_matrix),
+				CVMAT(correspondent_lines));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  return correspondent_lines;
+}
+
+/*
+ * Extracts Speeded Up Robust Features from an image
+ *
+ * @overload extract_surf(params, mask = nil) -> [cvseq(cvsurfpoint), array(float)]
+ *   @param params [CvSURFParams] Various algorithm parameters put to the structure CvSURFParams.
+ *   @param mask [CvMat] The optional input 8-bit mask. The features are only found
+ *     in the areas that contain more than 50% of non-zero mask pixels.
+ * @return [Array<CvSeq<CvSURFPoint>, Array<float>>] Output vector of keypoints and descriptors.
+ * @opencv_func cvExtractSURF
+ */
+VALUE
+rb_extract_surf(int argc, VALUE *argv, VALUE self)
+{
+  VALUE _params, _mask;
+  rb_scan_args(argc, argv, "11", &_params, &_mask);
+
+  // Prepare arguments
+  CvSURFParams params = *CVSURFPARAMS_WITH_CHECK(_params);
+  CvMat* mask = MASK(_mask);
+  VALUE storage = cCvMemStorage::new_object();
+  CvSeq* keypoints = NULL;
+  CvSeq* descriptors = NULL;
+
+  // Compute SURF keypoints and descriptors
+  try {
+    cvExtractSURF(CVARR(self), mask, &keypoints, &descriptors, CVMEMSTORAGE(storage),
+		  params, 0);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+  VALUE _keypoints = cCvSeq::new_sequence(cCvSeq::rb_class(), keypoints, cCvSURFPoint::rb_class(), storage);
+  
+  // Create descriptor array
+  const int DIM_SIZE = (params.extended) ? 128 : 64;
+  const int NUM_KEYPOINTS = keypoints->total;
+  VALUE _descriptors = rb_ary_new2(NUM_KEYPOINTS);
+  for (int m = 0; m < NUM_KEYPOINTS; ++m) {
+    VALUE elem = rb_ary_new2(DIM_SIZE);
+    float *descriptor = (float*)cvGetSeqElem(descriptors, m);
+    for (int n = 0; n < DIM_SIZE; ++n) {
+      rb_ary_store(elem, n, rb_float_new(descriptor[n]));
+    }
+    rb_ary_store(_descriptors, m, elem);
+  }
+  
+  return rb_assoc_new(_keypoints, _descriptors);
+}
+
+
+/*
+ * call-seq:
+ *   subspace_project(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_project(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE projection;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat pmat = cv::subspaceProject(w_mat, mean_mat, self_mat);
+    projection = new_object(pmat.rows, pmat.cols, pmat.type());
+    CvMat tmp = pmat;
+    cvCopy(&tmp, CVMAT(projection));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return projection;
+}
+
+/*
+ * call-seq:
+ *   subspace_reconstruct(w, mean) -> cvmat
+ */
+VALUE
+rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean)
+{
+  VALUE result;
+  try {
+    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
+    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
+    cv::Mat self_mat(CVMAT(self));
+    cv::Mat rmat = cv::subspaceReconstruct(w_mat, mean_mat, self_mat);
+    result = new_object(rmat.rows, rmat.cols, rmat.type());
+    CvMat tmp = rmat;
+    cvCopy(&tmp, CVMAT(result));
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return result;
+}
+
+VALUE
+new_object(int rows, int cols, int type)
+{
+  return OPENCV_OBJECT(rb_klass, rb_cvCreateMat(rows, cols, type));
+}
+
+VALUE
+new_object(CvSize size, int type)
+{
+  return OPENCV_OBJECT(rb_klass, rb_cvCreateMat(size.height, size.width, type));
+}
+
+VALUE
+new_mat_kind_object(CvSize size, VALUE ref_obj)
+{
+  VALUE return_type = CLASS_OF(ref_obj);
+  if (rb_obj_is_kind_of(ref_obj, cIplImage::rb_class())) {
+    IplImage* img = IPLIMAGE(ref_obj);
+    return OPENCV_OBJECT(return_type, rb_cvCreateImage(size, img->depth, img->nChannels));
+  }
+  else if (rb_obj_is_kind_of(ref_obj, rb_klass)) // CvMat
+    return OPENCV_OBJECT(return_type, rb_cvCreateMat(size.height, size.width, cvGetElemType(CVMAT(ref_obj))));
+  else
+    rb_raise(rb_eNotImpError, "Only CvMat or IplImage are supported");
+
+  return Qnil;
+}
+
+VALUE
+new_mat_kind_object(CvSize size, VALUE ref_obj, int cvmat_depth, int channel)
+{
+  VALUE return_type = CLASS_OF(ref_obj);
+  if (rb_obj_is_kind_of(ref_obj, cIplImage::rb_class())) {
+    return OPENCV_OBJECT(return_type, rb_cvCreateImage(size, CV2IPL_DEPTH(cvmat_depth), channel));
+  }
+  else if (rb_obj_is_kind_of(ref_obj, rb_klass)) // CvMat
+    return OPENCV_OBJECT(return_type, rb_cvCreateMat(size.height, size.width,
+						     CV_MAKETYPE(cvmat_depth, channel)));
+  else
+    rb_raise(rb_eNotImpError, "Only CvMat or IplImage are supported");
+
+  return Qnil;
+}
+
+void
+init_ruby_class()
+{
+#if 0
+  // For documentation using YARD
+  VALUE opencv = rb_define_module("OpenCV");
+#endif
+
   if (rb_klass)
     return;
-  /*
-   * opencv = rb_define_module("OpenCV");
-   *
-   * note: this comment is used by rdoc.
-   */
   VALUE opencv = rb_module_opencv();
 
   rb_klass = rb_define_class_under(opencv, "CvMat", rb_cObject);
@@ -354,7 +5967,7 @@ void define_ruby_class()
   rb_define_singleton_method(rb_klass, "rotation_matrix2D", RUBY_METHOD_FUNC(rb_rotation_matrix2D), 3);
   rb_define_singleton_method(rb_klass, "get_perspective_transform", RUBY_METHOD_FUNC(rb_get_perspective_transform), 2);
   rb_define_method(rb_klass, "warp_perspective", RUBY_METHOD_FUNC(rb_warp_perspective), -1);
-  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homograpy), -1);
+  rb_define_singleton_method(rb_klass, "find_homography", RUBY_METHOD_FUNC(rb_find_homography), -1);
   rb_define_method(rb_klass, "remap", RUBY_METHOD_FUNC(rb_remap), -1);
   rb_define_method(rb_klass, "log_polar", RUBY_METHOD_FUNC(rb_log_polar), -1);
 
@@ -396,7 +6009,6 @@ void define_ruby_class()
   rb_define_method(rb_klass, "apply_color_map", RUBY_METHOD_FUNC(rb_apply_color_map), 1);
   rb_define_method(rb_klass, "match_template", RUBY_METHOD_FUNC(rb_match_template), -1);
   rb_define_method(rb_klass, "match_shapes", RUBY_METHOD_FUNC(rb_match_shapes), -1);
-  rb_define_method(rb_klass, "match_descriptors", RUBY_METHOD_FUNC(rb_match_descriptors), -1);
 
   rb_define_method(rb_klass, "mean_shift", RUBY_METHOD_FUNC(rb_mean_shift), 2);
   rb_define_method(rb_klass, "cam_shift", RUBY_METHOD_FUNC(rb_cam_shift), 2);
@@ -425,5553 +6037,6 @@ void define_ruby_class()
   rb_define_alias(rb_singleton_class(rb_klass), "decode", "decode_image");
 }
 
-
-VALUE
-rb_allocate(VALUE klass)
-{
-  return OPENCV_OBJECT(klass, 0);
-}
-
-/*
- * call-seq:
- *   CvMat.new(<i>row, col[, depth = CV_8U][, channel = 3]</i>) -> cvmat
- *
- * Create col * row matrix. Each element set 0.
- *
- * Each element possigle range is set by <i>depth</i>. Default is unsigned 8bit.
- *
- * Number of channel is set by <i>channel</i>. <i>channel</i> should be 1..4.
- *
- */
-VALUE
-rb_initialize(int argc, VALUE *argv, VALUE self)
-{
-  VALUE row, column, depth, channel;
-  rb_scan_args(argc, argv, "22", &row, &column, &depth, &channel);
-
-  int ch = (argc < 4) ? 3 : NUM2INT(channel);
-  CvMat *ptr = rb_cvCreateMat(NUM2INT(row), NUM2INT(column),
-			      CV_MAKETYPE(CVMETHOD("DEPTH", depth, CV_8U), ch));
-  free(DATA_PTR(self));
-  DATA_PTR(self) = ptr;
-
-  return self;
-}
-
-/*
- * call-seq:
- *   CvMat::load(<i>filename[,iscolor = CV_LOAD_IMAGE_COLOR]</i>)
- *
- * Load an image from file.
- *  iscolor = CV_LOAD_IMAGE_COLOR, the loaded image is forced to be a 3-channel color image
- *  iscolor = CV_LOAD_IMAGE_GRAYSCALE, the loaded image is forced to be grayscale
- *  iscolor = CV_LOAD_IMAGE_UNCHANGED, the loaded image will be loaded as is.
- * Currently the following file format are supported.
- * * Windows bitmaps - BMP,DIB
- * * JPEG files - JPEG,JPG,JPE
- * * Portable Network Graphics - PNG
- * * Portable image format - PBM,PGM,PPM
- * * Sun rasters - SR,RAS
- * * TIFF files - TIFF,TIF
- */
-VALUE
-rb_load_imageM(int argc, VALUE *argv, VALUE self)
-{
-  VALUE filename, iscolor;
-  rb_scan_args(argc, argv, "11", &filename, &iscolor);
-  Check_Type(filename, T_STRING);
-
-  int _iscolor;
-  if (NIL_P(iscolor)) {
-    _iscolor = CV_LOAD_IMAGE_COLOR;
-  }
-  else {
-    Check_Type(iscolor, T_FIXNUM);
-    _iscolor = FIX2INT(iscolor);
-  }
-
-  CvMat *mat = NULL;
-  try {
-    mat = cvLoadImageM(StringValueCStr(filename), _iscolor);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  if (mat == NULL) {
-    rb_raise(rb_eStandardError, "file does not exist or invalid format image.");
-  }
-  return OPENCV_OBJECT(rb_klass, mat);
-}
-
-/*
- * call-seq:
- *   encode_image(ext [,params]) -> Array<Integer>
- *
- * Encodes an image into a memory buffer.
- *
- * Parameters:
- *   ext <String> - File extension that defines the output format ('.jpg', '.png', ...)
- *   params <Hash> - Format-specific parameters.
- */
-VALUE
-rb_encode_imageM(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _ext, _params;
-  rb_scan_args(argc, argv, "11", &_ext, &_params);
-  Check_Type(_ext, T_STRING);
-  const char* ext = RSTRING_PTR(_ext);
-  CvMat* buff = NULL;
-  int* params = NULL;
-
-  if (!NIL_P(_params)) {
-    params = hash_to_format_specific_param(_params);
-  }
-
-  try {
-    buff = cvEncodeImage(ext, CVARR(self), params);
-  }
-  catch (cv::Exception& e) {
-    if (params != NULL) {
-      free(params);
-      params = NULL;
-    }
-    raise_cverror(e);
-  }
-  if (params != NULL) {
-    free(params);
-    params = NULL;
-  }
-
-  const int size = buff->rows * buff->cols;
-  VALUE array = rb_ary_new2(size);
-  for (int i = 0; i < size; i++) {
-    rb_ary_store(array, i, CHR2FIX(CV_MAT_ELEM(*buff, char, 0, i)));
-  }
-
-  try {
-    cvReleaseMat(&buff);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return array;
-}
-
-CvMat*
-prepare_decoding(int argc, VALUE *argv, int* iscolor, int* need_release)
-{
-  VALUE _buff, _iscolor;
-  rb_scan_args(argc, argv, "11", &_buff, &_iscolor);
-  *iscolor = NIL_P(_iscolor) ? CV_LOAD_IMAGE_COLOR : NUM2INT(_iscolor);
-
-  CvMat* buff = NULL;
-  *need_release = 0;
-  switch (TYPE(_buff)) {
-  case T_STRING:
-    _buff = rb_funcall(_buff, rb_intern("unpack"), 1, rb_str_new("c*", 2));
-  case T_ARRAY: {
-    int cols = RARRAY_LEN(_buff);
-    *need_release = 1;
-    try {
-      buff = rb_cvCreateMat(1, cols, CV_8UC1);
-      VALUE *ary_ptr = RARRAY_PTR(_buff);
-      for (int i = 0; i < cols; i++) {
-	CV_MAT_ELEM(*buff, char, 0, i) = NUM2CHR(ary_ptr[i]);
-      }
-    }
-    catch (cv::Exception& e) {
-      raise_cverror(e);
-    }
-    break;
-  }
-  case T_DATA:
-    if (rb_obj_is_kind_of(_buff, cCvMat::rb_class()) == Qtrue) {
-      buff = CVMAT(_buff);
-      break;
-    }
-  default:
-    raise_typeerror(_buff, "CvMat, Array or String");
-  }
-
-  return buff;
-}
-
-/*
- * call-seq:
- *   decode_image(buf[, iscolor=CV_LOAD_IMAGE_COLOR]) -> CvMat
- *
- * Reads an image from a buffer in memory.
- *
- * Parameters:
- *   buf <CvMat, Array, String> - Input array
- *   iscolor <Integer> - Flags specifying the color type of a decoded image (the same flags as CvMat#load)
- */
-VALUE
-rb_decode_imageM(int argc, VALUE *argv, VALUE self)
-{
-  int iscolor, need_release;
-  CvMat* buff = prepare_decoding(argc, argv, &iscolor, &need_release);
-  CvMat* mat_ptr = NULL;
-  try {
-    mat_ptr = cvDecodeImageM(buff, iscolor);
-    if (need_release) {
-      cvReleaseMat(&buff);
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return OPENCV_OBJECT(rb_klass, mat_ptr);
-}
-
-/*
- * nodoc
- */
-VALUE
-rb_method_missing(int argc, VALUE *argv, VALUE self)
-{
-  VALUE name, args, method;
-  rb_scan_args(argc, argv, "1*", &name, &args);
-  method = rb_funcall(name, rb_intern("to_s"), 0);
-  if (RARRAY_LEN(args) != 0 || !rb_respond_to(rb_module_opencv(), rb_intern(StringValuePtr(method))))
-    return rb_call_super(argc, argv);
-  return rb_funcall(rb_module_opencv(), rb_intern(StringValuePtr(method)), 1, self);
-}
-
-/*
- * call-seq:
- *   to_s -> string
- *
- * Return following string.
- *   m = CvMat.new(100, 100, :cv8u, 3)
- *   m.to_s # => <CvMat:100x100,depth=cv8u,channel=3>
- */
-VALUE
-rb_to_s(VALUE self)
-{
-  const int i = 6;
-  VALUE str[i];
-  str[0] = rb_str_new2("<%s:%dx%d,depth=%s,channel=%d>");
-  str[1] = rb_str_new2(rb_class2name(CLASS_OF(self)));
-  str[2] = rb_width(self);
-  str[3] = rb_height(self);
-  str[4] = rb_depth(self);
-  str[5] = rb_channel(self);
-  return rb_f_sprintf(i, str);
-}
-
-/*
- * call-seq:
- *   inside?(obj) -> true or false
- *
- *
- */
-VALUE
-rb_inside_q(VALUE self, VALUE object)
-{
-  if (cCvPoint::rb_compatible_q(cCvPoint::rb_class(), object)) {
-    CvMat *mat = CVMAT(self);
-    int x = NUM2INT(rb_funcall(object, rb_intern("x"), 0));
-    int y = NUM2INT(rb_funcall(object, rb_intern("y"), 0));
-    if (cCvRect::rb_compatible_q(cCvRect::rb_class(), object)) {
-      int width = NUM2INT(rb_funcall(object, rb_intern("width"), 0));
-      int height = NUM2INT(rb_funcall(object, rb_intern("height"), 0));
-      return (x >= 0) && (y >= 0) && (x < mat->width) && ((x + width) < mat->width)
-	&& (y < mat->height) && ((y + height) < mat->height) ? Qtrue : Qfalse;
-    }
-    else {
-      return (x >= 0) && (y >= 0) && (x < mat->width) && (y < mat->height) ? Qtrue : Qfalse;
-    }
-  }
-  rb_raise(rb_eArgError, "argument 1 should have method \"x\", \"y\"");
-  return Qnil;
-}
-
-/*
- * call-seq:
- *    to_IplConvKernel -> iplconvkernel
- *
- * Create IplConvKernel from this matrix.
- */
-VALUE
-rb_to_IplConvKernel(VALUE self, VALUE anchor)
-{
-  CvMat *src = CVMAT(self);
-  CvPoint p = VALUE_TO_CVPOINT(anchor);
-  IplConvKernel *kernel = rb_cvCreateStructuringElementEx(src->cols, src->rows, p.x, p.y,
-							  CV_SHAPE_CUSTOM, src->data.i);
-  return DEPEND_OBJECT(cIplConvKernel::rb_class(), kernel, self);
-}
-
-/*
- * call-seq:
- *   create_mask -> cvmat(single-channel 8bit unsinged image)
- *
- * Create single-channel 8bit unsinged image that filled 0.
- */
-VALUE
-rb_create_mask(VALUE self)
-{
-  VALUE mask = cCvMat::new_object(cvGetSize(CVARR(self)), CV_8UC1);
-  try {
-    cvZero(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return mask;
-}
-
-/*
- * call-seq:
- *   width -> int
- *
- * Return number of columns.
- */
-VALUE
-rb_width(VALUE self)
-{
-  return INT2NUM(CVMAT(self)->width);
-}
-
-/*
- * call-seq:
- *   height -> int
- *
- * Return number of rows.
- */
-VALUE
-rb_height(VALUE self)
-{
-  return INT2NUM(CVMAT(self)->height);
-}
-
-/*
- * call-seq:
- *   depth -> symbol
- *
- * Return depth symbol. (see OpenCV::DEPTH)
- */
-VALUE
-rb_depth(VALUE self)
-{
-  return rb_hash_lookup(rb_funcall(rb_const_get(rb_module_opencv(), rb_intern("DEPTH")), rb_intern("invert"), 0),
-			INT2FIX(CV_MAT_DEPTH(CVMAT(self)->type)));
-}
-
-/*
- * call-seq:
- *   channel -> int (1 < channel < 4)
- *
- * Return number of channel.
- */
-VALUE
-rb_channel(VALUE self)
-{
-  return INT2FIX(CV_MAT_CN(CVMAT(self)->type));
-}
-
-/*
- * call-seq:
- *   data -> binary (by String class)
- *
- * Return raw data of matrix.
- */
-VALUE
-rb_data(VALUE self)
-{
-  IplImage *image = IPLIMAGE(self);
-  return rb_str_new((char *)image->imageData, image->imageSize);
-}
-
-/*
- * call-seq:
- *   clone -> cvmat
- *
- * Clone matrix.
- * Instance-specific method is succeeded.
- *
- *   module M
- *     def example
- *       true
- *     end
- *   end
- *
- *   mat.extend M
- *   mat.example   #=> true
- *   clone = mat.clone
- *   clone.example #=> true
- *   copy = mat.copy
- *   copy.example  #=> raise NoMethodError
- */
-VALUE
-rb_clone(VALUE self)
-{
-  VALUE clone = rb_obj_clone(self);
-  try {
-    DATA_PTR(clone) = cvClone(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return clone;
-}
-
-/*
- * call-seq:
- *   copy(dst = nil, mask = nil) -> cvmat
- *
- * Copies one array to another.
- *
- * <i>dst</i>  - The destination array.
- * <i>mask</i> - Operation mask, 8-bit single channel array; specifies elements of the destination array to be changed.
- *
- * The function copies selected elements from an input array to an output array:
- *     dst(I) = self(I) if mask(I) != 0
- */
-VALUE
-rb_copy(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _dst, _mask;
-  rb_scan_args(argc, argv, "02", &_dst, &_mask);
-
-  CvMat* mask = MASK(_mask);
-  CvArr *src = CVARR(self);
-  if (NIL_P(_dst)) {
-    CvSize size = cvGetSize(src);
-    _dst = new_mat_kind_object(size, self);
-  }
-
-  try {
-    cvCopy(src, CVARR_WITH_CHECK(_dst), mask);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return _dst;
-}
-
-VALUE
-copy(VALUE mat)
-{
-  return rb_clone(mat);
-}
-
-inline VALUE
-rb_to_X_internal(VALUE self, int depth)
-{
-  CvMat *src = CVMAT(self);
-  VALUE dest = new_object(src->rows, src->cols, CV_MAKETYPE(depth, CV_MAT_CN(src->type)));
-  try {
-    cvConvert(src, CVMAT(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   to_8u -> cvmat(depth = CV_8U)
- *
- * Return the new matrix that elements is converted to unsigned 8bit.
- */
-VALUE
-rb_to_8u(VALUE self)
-{
-  return rb_to_X_internal(self, CV_8U);
-}
-
-/*
- * call-seq:
- *   to_8s -> cvmat(depth = CV_8S)
- *
- * Return the new matrix that elements is converted to signed 8bit.
- */
-VALUE
-rb_to_8s(VALUE self)
-{
-  return rb_to_X_internal(self, CV_8S);
-}
-
-/*
- * call-seq:
- *   to_16u -> cvmat(depth = CV_16U)
- *
- * Return the new matrix that elements is converted to unsigned 16bit.
- */
-VALUE rb_to_16u(VALUE self)
-{
-  return rb_to_X_internal(self, CV_16U);
-}
-
-/*
- * call-seq:
- *   to_16s -> cvmat(depth = CV_16s)
- *
- * Return the new matrix that elements is converted to signed 16bit.
- */
-VALUE
-rb_to_16s(VALUE self)
-{
-  return rb_to_X_internal(self, CV_16S);
-}
-
-/*
- * call-seq:
- *   to_32s -> cvmat(depth = CV_32S)
- *
- * Return the new matrix that elements is converted to signed 32bit.
- */
-VALUE
-rb_to_32s(VALUE self)
-{
-  return rb_to_X_internal(self, CV_32S);
-}
-
-/*
- * call-seq:
- *   to_32f -> cvmat(depth = CV_32F)
- *
- * Return the new matrix that elements is converted to 32bit floating-point.
- */
-VALUE
-rb_to_32f(VALUE self)
-{
-  return rb_to_X_internal(self, CV_32F);
-}
-
-/*
- * call-seq:
- *   to_64F -> cvmat(depth = CV_64F)
- *
- * Return the new matrix that elements is converted to 64bit floating-point.
- */
-VALUE
-rb_to_64f(VALUE self)
-{
-  return rb_to_X_internal(self, CV_64F);
-}
-
-/*
- * call-seq:
- *   vector? -> true or false
- *
- * If #width or #height is 1, return true. Otherwise return false.
- */
-VALUE
-rb_vector_q(VALUE self)
-{
-  CvMat *mat = CVMAT(self);
-  return (mat->width == 1|| mat->height == 1) ? Qtrue : Qfalse;
-}
-
-/*
- * call-seq:
- *   square? -> true or false
- *
- * If #width == #height return true. Otherwise return false.
- */
-VALUE
-rb_square_q(VALUE self)
-{
-  CvMat *mat = CVMAT(self);
-  return mat->width == mat->height ? Qtrue : Qfalse;
-}
-
-/************************************************************
-       cxcore function
-************************************************************/
-/*
- * Return CvMat object with reference to caller-object.
- *
- *   src = CvMat.new(10, 10)
- *   mat = src.to_CvMat
- *
- * In C, src->data and mat->data are common. Therefore, they cause changes with each other.
- */
-VALUE
-rb_to_CvMat(VALUE self)
-{
-  // CvMat#to_CvMat aborts when self's class is CvMat.
-  if (CLASS_OF(self) == rb_klass)
-    return self;
-
-  CvMat *mat = NULL;
-  try {
-    mat = cvGetMat(CVARR(self), RB_CVALLOC(CvMat));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return DEPEND_OBJECT(rb_klass, mat, self);
-}
-
-/*
- * call-seq:
- *   sub_rect(<i>rect</i>) -> cvmat
- *   sub_rect(<i>topleft</i>, <i>size</i>) -> cvmat
- *   sub_rect(<i>x, y, width, height</i>) -> cvmat
- *
- * Return parts of self as CvMat.
- *
- * <i>p</i> or <i>x</i>,<i>y</i> mean top-left coordinate.
- * <i>size</i> or <i>width</i>,<i>height</i> is size.
- *
- * link:../images/CvMat_sub_rect.png
- */
-VALUE
-rb_sub_rect(VALUE self, VALUE args)
-{
-  CvRect area;
-  CvPoint topleft;
-  CvSize size;
-  switch(RARRAY_LEN(args)) {
-  case 1:
-    area = VALUE_TO_CVRECT(RARRAY_PTR(args)[0]);
-    break;
-  case 2:
-    topleft = VALUE_TO_CVPOINT(RARRAY_PTR(args)[0]);
-    size = VALUE_TO_CVSIZE(RARRAY_PTR(args)[1]);
-    area.x = topleft.x;
-    area.y = topleft.y;
-    area.width = size.width;
-    area.height = size.height;
-    break;
-  case 4:
-    area.x = NUM2INT(RARRAY_PTR(args)[0]);
-    area.y = NUM2INT(RARRAY_PTR(args)[1]);
-    area.width = NUM2INT(RARRAY_PTR(args)[2]);
-    area.height = NUM2INT(RARRAY_PTR(args)[3]);
-    break;
-  default:
-    rb_raise(rb_eArgError, "wrong number of arguments (%ld of 1 or 2 or 4)", RARRAY_LEN(args));
-  }
-
-  CvMat* mat = NULL;
-  try {
-    mat = cvGetSubRect(CVARR(self), RB_CVALLOC(CvMat), area);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return DEPEND_OBJECT(rb_klass, mat, self);
-}
-
-void
-rb_get_range_index(VALUE index, int* start, int *end) {
-  if (rb_obj_is_kind_of(index, rb_cRange)) {
-    *start = NUM2INT(rb_funcall3(index, rb_intern("begin"), 0, NULL));
-    *end = NUM2INT(rb_funcall3(index, rb_intern("end"), 0, NULL));
-    if (rb_funcall3(index, rb_intern("exclude_end?"), 0, NULL) == Qfalse) {
-      (*end)++;
-    }
-  }
-  else {
-    *start = NUM2INT(index);
-    *end = *start + 1;
-  }
-}
-
-/*
- * call-seq:
- *   get_rows(row, delta_row = 1) -> cvmat
- *
- * Return row(or rows) of matrix.
- * argument <tt>row</tt> should be Fixnum or Range object.
- */
-VALUE
-rb_get_rows(int argc, VALUE* argv, VALUE self)
-{
-  VALUE row_val, delta_val;
-  rb_scan_args(argc, argv, "11", &row_val, &delta_val);
-
-  int start, end;
-  rb_get_range_index(row_val, &start, &end);
-  int delta = NIL_P(delta_val) ? 1 : NUM2INT(delta_val);
-  CvMat* submat = RB_CVALLOC(CvMat);
-  try {
-    cvGetRows(CVARR(self), submat, start, end, delta);
-  }
-  catch (cv::Exception& e) {
-    cvFree(&submat);
-    raise_cverror(e);
-  }
-
-  return DEPEND_OBJECT(rb_klass, submat, self);
-}
-
-/*
- * call-seq:
- *   get_cols(col) -> cvmat
- *
- * Return column(or columns) of matrix.
- * argument <tt>col</tt> should be Fixnum or Range object.
- */
-VALUE
-rb_get_cols(VALUE self, VALUE col)
-{
-  int start, end;
-  rb_get_range_index(col, &start, &end);
-  CvMat* submat = RB_CVALLOC(CvMat);
-  try {
-    cvGetCols(CVARR(self), submat, start, end);
-  }
-  catch (cv::Exception& e) {
-    cvFree(&submat);
-    raise_cverror(e);
-  }
-
-  return DEPEND_OBJECT(rb_klass, submat, self);
-}
-
-/*
- * call-seq:
- *   each_row {|row| ... } -> self
- *
- * Calls block once for each row in self, passing that element as a parameter.
- *
- * see also CvMat#each_col
- */
-VALUE
-rb_each_row(VALUE self)
-{
-  int rows = CVMAT(self)->rows;
-  CvMat* row = NULL;
-  for (int i = 0; i < rows; ++i) {
-    try {
-      row = cvGetRow(CVARR(self), RB_CVALLOC(CvMat), i);
-    }
-    catch (cv::Exception& e) {
-      if (row != NULL)
-	cvReleaseMat(&row);
-      raise_cverror(e);
-    }
-    rb_yield(DEPEND_OBJECT(rb_klass, row, self));
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   each_col {|col| ... } -> self
- *
- * Calls block once for each column in self, passing that element as a parameter.
- *
- * see also CvMat#each_row
- */
-VALUE
-rb_each_col(VALUE self)
-{
-  int cols = CVMAT(self)->cols;
-  CvMat *col = NULL;
-  for (int i = 0; i < cols; ++i) {
-    try {
-      col = cvGetCol(CVARR(self), RB_CVALLOC(CvMat), i);
-    }
-    catch (cv::Exception& e) {
-      if (col != NULL)
-	cvReleaseMat(&col);
-      raise_cverror(e);
-    }
-    rb_yield(DEPEND_OBJECT(rb_klass, col, self));
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   diag(<i>[val = 0]</i>) -> cvmat
- *
- * Return one of array diagonals.
- * <i>val</i> is zero corresponds to the main diagonal, -1 corresponds to the diagonal above the main etc, 1 corresponds to the diagonal below the main etc.
- *
- */
-VALUE
-rb_diag(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val;
-  if (rb_scan_args(argc, argv, "01", &val) < 1)
-    val = INT2FIX(0);
-  CvMat* diag = NULL;
-  try {
-    diag = cvGetDiag(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(val));
-  }
-  catch (cv::Exception& e) {
-    cvReleaseMat(&diag);
-    raise_cverror(e);
-  }
-  return DEPEND_OBJECT(rb_klass, diag, self);
-}
-
-/*
- * call-seq:
- *   size -> cvsize
- *
- * Return size by CvSize
- */
-VALUE
-rb_size(VALUE self)
-{
-  CvSize size;
-  try {
-    size = cvGetSize(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvSize::new_object(size);
-}
-
-/*
- * call-seq:
- *   dims -> array(int, int, ...)
- *
- * Return number of array dimensions and their sizes or the size of particular dimension.
- * In case of CvMat it always returns 2 regardless of number of matrix rows.
- */
-VALUE
-rb_dims(VALUE self)
-{
-  int size[CV_MAX_DIM];
-  int dims = 0;
-  try {
-    dims = cvGetDims(CVARR(self), size);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  VALUE ary = rb_ary_new2(dims);
-  for (int i = 0; i < dims; ++i) {
-    rb_ary_store(ary, i, INT2NUM(size[i]));
-  }
-  return ary;
-}
-
-/*
- * call-seq:
- *   dim_size(<i>index</i>) -> int
- *
- * Return number of dimension.
- * almost same as CvMat#dims[<i>index</i>].
- * If the dimension specified with index doesn't exist, CvStatusOutOfRange raise.
- */
-VALUE
-rb_dim_size(VALUE self, VALUE index)
-{
-  int dimsize = 0;
-  try {
-    dimsize = cvGetDimSize(CVARR(self), NUM2INT(index));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return INT2NUM(dimsize);
-}
-
-/*
- * call-seq:
- *   [<i>idx1[,idx2]...</i>]
- *
- * Return value of the particular array element as CvScalar.
- */
-VALUE
-rb_aref(VALUE self, VALUE args)
-{
-  int index[CV_MAX_DIM];
-  for (int i = 0; i < RARRAY_LEN(args); ++i)
-    index[i] = NUM2INT(rb_ary_entry(args, i));
-  
-  CvScalar scalar = cvScalarAll(0);
-  try {
-    switch (RARRAY_LEN(args)) {
-    case 1:
-      scalar = cvGet1D(CVARR(self), index[0]);
-      break;
-    case 2:
-      scalar = cvGet2D(CVARR(self), index[0], index[1]);
-      break;
-    default:
-      scalar = cvGetND(CVARR(self), index);
-      break;      
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvScalar::new_object(scalar);
-}
-
-/*
- * call-seq:
- *   [<i>idx1[,idx2]...</i>] = <i>value</i>
- *
- * Set value of the particular array element to <i>value</i>.
- * <i>value</i> should be CvScalar.
- */
-VALUE
-rb_aset(VALUE self, VALUE args)
-{
-  CvScalar scalar = VALUE_TO_CVSCALAR(rb_ary_pop(args));
-  int index[CV_MAX_DIM];
-  for (int i = 0; i < RARRAY_LEN(args); ++i)
-    index[i] = NUM2INT(rb_ary_entry(args, i));
-
-  try {
-    switch (RARRAY_LEN(args)) {
-    case 1:
-      cvSet1D(CVARR(self), index[0], scalar);
-      break;
-    case 2:
-      cvSet2D(CVARR(self), index[0], index[1], scalar);
-      break;
-    default:
-      cvSetND(CVARR(self), index, scalar);
-      break;
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   set_data(<i>data</i>)
- *
- * Assigns user data to the array header.
- * <i>data</i> should be Array which contains numbers.
- */
-VALUE
-rb_set_data(VALUE self, VALUE data)
-{
-  data = rb_funcall(data, rb_intern("flatten"), 0);
-  const int DATA_LEN = RARRAY_LEN(data);
-  CvMat *self_ptr = CVMAT(self);
-  int depth = CV_MAT_DEPTH(self_ptr->type);
-  void* array = NULL;
-
-  switch (depth) {
-  case CV_8U:
-    array = rb_cvAlloc(sizeof(uchar) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((uchar*)array)[i] = (uchar)(NUM2INT(rb_ary_entry(data, i)));
-    break;
-  case CV_8S:
-    array = rb_cvAlloc(sizeof(char) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((char*)array)[i] = (char)(NUM2INT(rb_ary_entry(data, i)));
-    break;
-  case CV_16U:
-    array = rb_cvAlloc(sizeof(ushort) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((ushort*)array)[i] = (ushort)(NUM2INT(rb_ary_entry(data, i)));
-    break;
-  case CV_16S:
-    array = rb_cvAlloc(sizeof(short) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((short*)array)[i] = (short)(NUM2INT(rb_ary_entry(data, i)));
-    break;
-  case CV_32S:
-    array = rb_cvAlloc(sizeof(int) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((int*)array)[i] = NUM2INT(rb_ary_entry(data, i));
-    break;
-  case CV_32F:
-    array = rb_cvAlloc(sizeof(float) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((float*)array)[i] = (float)NUM2DBL(rb_ary_entry(data, i));
-    break;
-  case CV_64F:
-    array = rb_cvAlloc(sizeof(double) * DATA_LEN);
-    for (int i = 0; i < DATA_LEN; ++i)
-      ((double*)array)[i] = NUM2DBL(rb_ary_entry(data, i));
-    break;
-  default:
-    rb_raise(rb_eArgError, "Invalid CvMat depth");
-    break;
-  }
-
-  try {
-    cvSetData(self_ptr, array, self_ptr->step);    
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return self;
-}
-
-/*
- * call-seq:
- *   set(<i>value[, mask]</i>) -> cvmat
- *
- * Return CvMat copied value to every selected element. value should be CvScalar or compatible object.
- *   self[I] = value if mask(I)!=0
- *
- * note: This method support ROI on IplImage class. but COI not support. COI should not be set.
- *   image = IplImage.new(10, 20)         #=> create 3 channel image.
- *   image.coi = 1                        #=> set COI
- *   image.set(CvScalar.new(10, 20, 30)) #=> raise CvBadCOI error.
- */
-VALUE
-rb_set(int argc, VALUE *argv, VALUE self)
-{
-  return rb_set_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   set!(<i>value[, mask]</i>) -> self
- *
- * Copie value to every selected element.
- *  self[I] = value if mask(I)!=0
- *
- * see also #set.
- */
-VALUE
-rb_set_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE value, mask;
-  rb_scan_args(argc, argv, "11", &value, &mask);
-  try {
-    cvSet(CVARR(self), VALUE_TO_CVSCALAR(value), MASK(mask));    
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   save_image(<i>filename, params = nil</i>) -> self
- *
- * Saves an image to file. The image format is chosen depending on the filename extension.
- * Only 8bit single-channel or 3-channel(with 'BGR' channel order) image can be saved.
- *
- * e.g.
- *   image = OpenCV::CvMat.new(10, 10, CV_8U, 3)
- *   image.save_image("image.jpg") #=> save as JPEG format
- *   image.save_image("image.png") #=> save as PNG format
- */
-VALUE
-rb_save_image(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _filename, _params;
-  rb_scan_args(argc, argv, "11", &_filename, &_params);
-  Check_Type(_filename, T_STRING);
-  int *params = NULL;
-  if (!NIL_P(_params)) {
-    params = hash_to_format_specific_param(_params);
-  }
-
-  try {
-    cvSaveImage(StringValueCStr(_filename), CVARR(self), params);
-  }
-  catch (cv::Exception& e) {
-    if (params != NULL) {
-      free(params);
-      params = NULL;
-    }
-    raise_cverror(e);
-  }
-  if (params != NULL) {
-    free(params);
-    params = NULL;
-  }
-
-  return self;
-}
-
-/*
- * call-seq:
- *   set_zero -> cvmat
- *
- * Return new matrix all element-value cleared.
- */
-VALUE
-rb_set_zero(VALUE self)
-{
-  return rb_set_zero_bang(copy(self));
-}
-
-/*
- * call-seq:
- *  set_zero! -> self
- *
- * Clear all element-value. Return self.
- */
-VALUE
-rb_set_zero_bang(VALUE self)
-{
-  try {
-    cvSetZero(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   identity(<i>[val = [1]]</i>) -> cvmat
- *
- * Return initializes scaled identity matrix.
- * <i>val</i> should be CvScalar.
- *
- *  arr(i, j) = val if i = j, 0 otherwise
- */
-VALUE
-rb_set_identity(int argc, VALUE *argv, VALUE self)
-{
-  return rb_set_identity_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   identity!(<i>[val = [1]]</i>) -> self
- *
- * Initialize scaled identity matrix.
- * <i>val</i> should be CvScalar.
- *
- *  arr(i, j) = val if i = j, 0 otherwise
- */
-VALUE
-rb_set_identity_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val;
-  CvScalar value;
-  if (rb_scan_args(argc, argv, "01",  &val) < 1)
-    value = cvRealScalar(1);
-  else
-    value = VALUE_TO_CVSCALAR(val);
-
-  try {
-    cvSetIdentity(CVARR(self), value);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   range(start, end) -> cvmat
- *
- * Create and return filled matrix with given range of numbers.
- *
- * see range!
- */
-VALUE
-rb_range(VALUE self, VALUE start, VALUE end)
-{
-  return rb_range_bang(copy(self), start, end);
-}
-
-/*
- * call-seq:
- *   range!(start, end) -> self
- *
- * Fills matrix with given range of numbers.
- *
- * initializes the matrix as following:
- *   arr(i,j)=(end-start)*(i*cols(arr)+j)/(cols(arr)*rows(arr))
- * For example, the following code will initilize 1D vector with subsequent integer numbers.
- *   m = CvMat.new(1, 10, :cv32s)
- *   m.range!(0, m.cols);            // m will be initialized as [0,1,2,3,4,5,6,7,8,9]
- */
-VALUE
-rb_range_bang(VALUE self, VALUE start, VALUE end)
-{
-  try {
-    cvRange(CVARR(self), NUM2DBL(start), NUM2DBL(end));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-
-/*
- * call-seq:
- *   reshape(cn, rows=0) -> cvmat(refer self)
- *
- * Change shape of matrix/image without copying data.
- *
- * Parameter:
- *   * cn - New number of channels. If the parameter is 0, the number of channels remains the same.
- *   * rows - New number of rows. If the parameter is 0, the number of rows remains the same.
- */
-VALUE
-rb_reshape(int argc, VALUE *argv, VALUE self)
-{
-  VALUE cn, rows;
-  CvMat *mat = NULL;
-  rb_scan_args(argc, argv, "11", &cn, &rows);
-  try {
-    mat = cvReshape(CVARR(self), RB_CVALLOC(CvMat), NUM2INT(cn), IF_INT(rows, 0));
-  }
-  catch (cv::Exception& e) {
-    if (mat != NULL)
-      cvReleaseMat(&mat);
-    raise_cverror(e);
-  }
-  return DEPEND_OBJECT(rb_klass, mat, self);
-}
-
-/*
- * call-seq:
- *   repeat(<i>mat</i>) -> cvmat
- *
- * Tiled <i>mat</i> by self.
- */
-VALUE
-rb_repeat(VALUE self, VALUE object)
-{
-  try {
-    cvRepeat(CVARR(self), CVARR_WITH_CHECK(object));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return object;
-}
-
-/*
- * call-seq:
- *   flip(:x)  -> cvmat
- *   flip(:y)  -> cvmat
- *   flip(:xy) -> cvmat
- *   flip      -> cvmat
- *
- * Return new flipped 2D array.
- * * flip(:x)  - flip around horizontal
- * * flip(:y)  - flip around vertical
- * * flip(:xy) - flip around both axises
- * * flip      - flip around vertical
- */
-VALUE
-rb_flip(int argc, VALUE *argv, VALUE self)
-{
-  return rb_flip_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   flip!(:x)  -> self
- *   flip!(:y)  -> self
- *   flip!(:xy) -> self
- *   flip!      -> self
- *
- * Flip 2D array. Return self.
- *
- * see also CvMat#flip
- */
-VALUE
-rb_flip_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE format;
-  int mode = 1;
-  if (rb_scan_args(argc, argv, "01", &format) > 0) {
-    Check_Type(format, T_SYMBOL);
-    ID flip_mode = rb_to_id(format);
-    if (flip_mode == rb_intern("x")) {
-      mode = 1;
-    }
-    else if (flip_mode == rb_intern("y")) {
-      mode = 0;
-    }
-    else if (flip_mode == rb_intern("xy")) {
-      mode = -1;
-    }
-  }
-  try {
-    cvFlip(CVARR(self), NULL, mode);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   split -> array(include cvmat)
- *
- * Divides multi-channel array into several single-chanel arrays.
- *
- * e.g.
- *  image = CvMat.new 640, 480, CV_8U, 3 #=> 3-channel image
- *  image.split                          #=> [image1, image2, image3] : each image have single-channel
- *
- * e.g. switch red <-> blue channel.
- *  image = IplImage.load "sample.bmp"
- *  i = image.split
- *  new_image = CvMat.merge i[2], i[1], i[0]
- */
-VALUE
-rb_split(VALUE self)
-{
-  CvArr* self_ptr = CVARR(self);
-  int type = cvGetElemType(self_ptr);
-  int depth = CV_MAT_DEPTH(type), channel = CV_MAT_CN(type);
-  VALUE dest = rb_ary_new2(channel);
-  try {
-    CvArr *dest_ptr[] = { NULL, NULL, NULL, NULL };
-    CvSize size = cvGetSize(self_ptr);
-    for (int i = 0; i < channel; ++i) {
-      VALUE tmp = new_mat_kind_object(size, self, depth, 1);
-      rb_ary_store(dest, i, tmp);
-      dest_ptr[i] = CVARR(tmp);
-    }
-    cvSplit(self_ptr, dest_ptr[0], dest_ptr[1], dest_ptr[2], dest_ptr[3]);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return dest;
-}
-
-/*
- * call-seq:
- *   CvMat.merge(<i>mat1[,mat2][,mat3][,mat4]</i>) -> cvmat
- *
- * Composes multi-channel array from several single-channel arrays.
- * Each argument should be single-channel image(CvMat or subclass).
- * All image should be same size and same depth.
- *
- * see also CvMat#split
- */
-VALUE
-rb_merge(VALUE klass, VALUE args)
-{
-  int len = RARRAY_LEN(args);
-  if (len <= 0 || len > 4) {
-    rb_raise(rb_eArgError, "wrong number of argument (%d for 1..4)", len);
-  }
-  CvMat *src[] = { NULL, NULL, NULL, NULL }, *prev_src = NULL;
-  for (int i = 0; i < len; ++i) {
-    VALUE object = rb_ary_entry(args, i);
-    if (NIL_P(object))
-      src[i] = NULL;
-    else {
-      src[i] = CVMAT_WITH_CHECK(object);
-      if (CV_MAT_CN(src[i]->type) != 1)
-        rb_raise(rb_eArgError, "image should be single-channel CvMat.");
-      if (prev_src == NULL)
-        prev_src = src[i];
-      else {
-        if (!CV_ARE_SIZES_EQ(prev_src, src[i]))
-          rb_raise(rb_eArgError, "image size should be same.");
-        if (!CV_ARE_DEPTHS_EQ(prev_src, src[i]))
-          rb_raise(rb_eArgError, "image depth should be same.");
-      }
-    }
-  }
-  // TODO: adapt IplImage
-  VALUE dest = Qnil;
-  try {
-    dest = new_object(cvGetSize(src[0]), CV_MAKETYPE(CV_MAT_DEPTH(src[0]->type), len));
-    cvMerge(src[0], src[1], src[2], src[3], CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   rand_shuffle([seed = nil][,iter_factor = 1]) -> cvmat
- *
- * Return shuffled matrix
- *
- * see rand_shuffle!
- */
-VALUE
-rb_rand_shuffle(int argc, VALUE *argv, VALUE self)
-{
-  return rb_rand_shuffle_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   rand_shuffle!([seed = nil][,iter_factor = 1]) -> cvmat
- *
- * Shuffles the matrix by swapping randomly chosen pairs of the matrix elements on each iteration
- * (where each element may contain several components in case of multi-channel arrays). The number of
- * iterations (i.e. pairs swapped) is (iter_factor*mat.rows*mat.cols).round, so iter_factor=0 means
- * that no shuffling is done, iter_factor=1 means that the function swaps rows(mat)*cols(mat) random
- * pairs etc.
- */
-VALUE
-rb_rand_shuffle_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE seed, iter;
-  rb_scan_args(argc, argv, "02", &seed, &iter);
-  try {
-    if (NIL_P(seed))
-      cvRandShuffle(CVARR(self), NULL, IF_INT(iter, 1));
-    else {
-      CvRNG rng = cvRNG(rb_num2ll(seed));
-      cvRandShuffle(CVARR(self), &rng, IF_INT(iter, 1));
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   lut(<i>lookup_table</i>) -> cvmat
- *
- * Return new matrix performed lookup-table transform.
- *
- * <i>lookup_table</i> should be CvMat that have 256 element (e.g. 1x256 matrix).
- * Otherwise, raise CvStatusBadArgument error.
- *
- * And <i>lookup_table</i> should either have a single-channel, or the same number of channels.
- * When single-channel lookup-table given, same table is used for all channels.
- */
-VALUE
-rb_lut(VALUE self, VALUE lut)
-{
-  VALUE dest = copy(self);
-  try {
-    cvLUT(CVARR(self), CVARR(dest), CVARR_WITH_CHECK(lut));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   convert_scale(<i>:depth => nil, :scale => 1.0, :shift => 0.0</i>)
- *
- * Return new array with optional linear transformation.
- *   mat(I) = src(I) * scale + (shift, shift, ...)
- */
-VALUE
-rb_convert_scale(VALUE self, VALUE hash)
-{
-  Check_Type(hash, T_HASH);
-  CvMat* self_ptr = CVMAT(self);
-  VALUE depth = LOOKUP_HASH(hash, "depth");
-  VALUE scale = LOOKUP_HASH(hash, "scale");
-  VALUE shift = LOOKUP_HASH(hash, "shift");
-
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self,
-			       CVMETHOD("DEPTH", depth, CV_MAT_DEPTH(self_ptr->type)),
-			       CV_MAT_CN(self_ptr->type));
-    cvConvertScale(self_ptr, CVARR(dest), IF_DBL(scale, 1.0), IF_DBL(shift, 0.0));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   convert_scale_abs(<i>:scale => 1.0, :shift => 0.0</i>)
- *
- * Return new array with optional linear transformation.
- * It is similar to CvMat#convert_scale, but it stores absolute values of the conversion result
- *   mat(I) = (src(I) * scale + (shift, shift, ...)).abs
- */
-VALUE
-rb_convert_scale_abs(VALUE self, VALUE hash)
-{
-  Check_Type(hash, T_HASH);
-  CvMat* self_ptr = CVMAT(self);
-  VALUE scale = LOOKUP_HASH(hash, "scale");
-  VALUE shift = LOOKUP_HASH(hash, "shift");
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, CV_MAT_CN(CVMAT(self)->type));
-    cvConvertScaleAbs(self_ptr, CVARR(dest), IF_DBL(scale, 1.0), IF_DBL(shift, 0.0));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   add(<i>val[,mask]</i>) -> cvmat
- *
- * Return new matrix computed per-element sum.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * <i>mask</i> should be CvMat(8bit single-channel).
- * For each element (I)
- *  dst(I) = src1(I) + src2(I) if mask(I) != 0
- */
-VALUE
-rb_add(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, mask, dest;
-  rb_scan_args(argc, argv, "11", &val, &mask);
-  dest = copy(self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvAdd(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
-    else
-      cvAddS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   sub(<i>val[,mask]</i>) -> cvmat
- *
- * Return new matrix computed per-element difference.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * <i>mask</i> should be CvMat(8bit single-channel).
- * For each element (I)
- *  dst(I) = src1(I) - src2(I) if mask(I) != 0
- */
-VALUE
-rb_sub(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, mask, dest;
-  rb_scan_args(argc, argv, "11", &val, &mask);
-  dest = copy(self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvSub(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
-    else
-      cvSubS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   mul(<i>val[,scale = 1.0]</i>) -> cvmat
- *
- * Return new matrix computed per-element product.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * For each element (I)
- *  dst(I) = scale * src1(I) * src2(I)
- */
-VALUE
-rb_mul(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, scale, dest;
-  if (rb_scan_args(argc, argv, "11", &val, &scale) < 2)
-    scale = rb_float_new(1.0);
-  dest = new_mat_kind_object(cvGetSize(CVARR(self)), self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvMul(CVARR(self), CVARR(val), CVARR(dest), NUM2DBL(scale));
-    else {
-      CvScalar scl = VALUE_TO_CVSCALAR(val);
-      VALUE mat = new_object(cvGetSize(CVARR(self)), cvGetElemType(CVARR(self)));
-      cvSet(CVARR(mat), scl);
-      cvMul(CVARR(self), CVARR(mat), CVARR(dest), NUM2DBL(scale));
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   mat_mul(<i>val[,shiftvec]</i>) -> cvmat
- * Performs matrix multiplication
- *   dst = src1 * src2 + shiftvec
- * <i>val</i> and <i>shiftvec</i> should be CvMat
- * All the matrices should have the same data type and coordinated sizes.
- * Real or complex floating-point matrices are supported.
- */
-VALUE
-rb_mat_mul(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, shiftvec, dest;
-  rb_scan_args(argc, argv, "11", &val, &shiftvec);
-  CvArr* self_ptr = CVARR(self);  
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  try {
-    if (NIL_P(shiftvec))
-      cvMatMul(self_ptr, CVARR_WITH_CHECK(val), CVARR(dest));
-    else
-      cvMatMulAdd(self_ptr, CVARR_WITH_CHECK(val), CVARR_WITH_CHECK(shiftvec), CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   div(<i>val[,scale = 1.0]</i>) -> cvmat
- *
- * Return new matrix computed per-element division.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * For each element (I)
- *  dst(I) = scale * src1(I) / src2(I)
- */
-VALUE
-rb_div(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, scale;
-  if (rb_scan_args(argc, argv, "11", &val, &scale) < 2)
-    scale = rb_float_new(1.0);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvDiv(self_ptr, CVARR(val), CVARR(dest), NUM2DBL(scale));
-    else {
-      CvScalar scl = VALUE_TO_CVSCALAR(val);
-      VALUE mat = new_mat_kind_object(cvGetSize(self_ptr), self);
-      CvArr* mat_ptr = CVARR(mat);
-      cvSet(mat_ptr, scl);
-      cvDiv(self_ptr, mat_ptr, CVARR(dest), NUM2DBL(scale));
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   add_weighted(src1, alpha, src2, beta, gamma)
- *
- * Computes the weighted sum of two arrays.
- *
- * src1 - The first source array
- * alpha - Weight for the first array elements
- * src2 - The second source array
- * beta - Weight for the second array elements
- * gamma - Added to each sum
- *
- * The function calculates the weighted sum of two arrays as follows:
- *   dst(I)=src1(I)*alpha+src2(I)*beta+gamma
- * All the arrays must have the same type and the same size (or ROI size). 
- * For types that have limited range this operation is saturating.
- */
-VALUE
-rb_add_weighted(VALUE klass, VALUE src1, VALUE alpha, VALUE src2, VALUE beta, VALUE gamma)
-{
-  CvArr* src1_ptr = CVARR_WITH_CHECK(src1);
-  VALUE dst = new_mat_kind_object(cvGetSize(src1_ptr), src1);
-  try {
-    cvAddWeighted(src1_ptr, NUM2DBL(alpha),
-		  CVARR_WITH_CHECK(src2), NUM2DBL(beta),
-		  NUM2DBL(gamma), CVARR(dst));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dst;
-}
-
-/*
- * call-seq:
- *   and(<i>val[,mask]</i>) -> cvmat
- *
- * Return new matrix computed per-element bit-wise conjunction.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * For each element (I)
- *  dst(I) = src1(I) & src2(I) if mask(I) != 0
- */
-VALUE
-rb_and(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, mask, dest;
-  rb_scan_args(argc, argv, "11", &val, &mask);
-  dest = copy(self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvAnd(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
-    else
-      cvAndS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   or(<i>val[,mask]</i>) -> cvmat
- *
- * Return new matrix computed per-element bit-wise disjunction.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * For each element (I)
- *  dst(I) = src1(I) | src2(I) if mask(I) != 0
- */
-VALUE
-rb_or(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, mask, dest;
-  rb_scan_args(argc, argv, "11", &val, &mask);
-  dest = copy(self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvOr(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
-    else
-      cvOrS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   xor(<i>val[,mask]</i>) -> cvmat
- *
- * Return new matrix computed per-element bit-wise "exclusive or" operation.
- * <i>val</i> should be CvMat or CvScalar.
- * If <i>val</i> is CvMat, it must have same type (depth and channel).
- * For each element (I)
- *  dst(I) = src1(I) ^ src2(I) if mask(I) != 0
- */
-VALUE
-rb_xor(int argc, VALUE *argv, VALUE self)
-{
-  VALUE val, mask, dest;
-  rb_scan_args(argc, argv, "11", &val, &mask);
-  dest = copy(self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvXor(CVARR(self), CVARR(val), CVARR(dest), MASK(mask));
-    else
-      cvXorS(CVARR(self), VALUE_TO_CVSCALAR(val), CVARR(dest), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   not -> cvmat
- *
- * Return new matrix performed per-element bit-wise inversion.
- *  dst(I) =~ src(I)
- */
-VALUE
-rb_not(VALUE self)
-{
-  return rb_not_bang(copy(self));
-}
-
-/*
- * call-seq:
- *   not! -> self
- *
- * Performe per-element bit-wise inversion.
- */
-VALUE
-rb_not_bang(VALUE self)
-{
-  try {
-    cvNot(CVARR(self), CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-VALUE
-rb_cmp_internal(VALUE self, VALUE val, int operand)
-{
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_8U, 1);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvCmp(self_ptr, CVARR(val), CVARR(dest), operand);
-    else if (CV_MAT_CN(cvGetElemType(self_ptr)) == 1 && rb_obj_is_kind_of(val, rb_cNumeric))
-      cvCmpS(self_ptr, NUM2DBL(val), CVARR(dest), operand);
-    else {
-      VALUE mat = new_mat_kind_object(cvGetSize(CVARR(self)), self);
-      cvSet(CVARR(mat), VALUE_TO_CVSCALAR(val));
-      cvCmp(self_ptr, CVARR(mat), CVARR(dest), operand);
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   eq(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "equal".
- *  dst(I) = (self(I) == val(I) ? 0xFF : 0)
- */
-VALUE
-rb_eq(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_EQ);
-}
-
-/*
- * call-seq:
- *   gt(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "greater than".
- *  dst(I) = (self(I) > val(I) ? 0xFF : 0)
- */
-VALUE
-rb_gt(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_GT);
-}
-
-/*
- * call-seq:
- *   ge(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "greater or equal".
- *  dst(I) = (self(I) >= val(I) ? 0xFF : 0)
- */
-VALUE
-rb_ge(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_GE);
-}
-
-/*
- * call-seq:
- *   lt(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "less than".
- *  dst(I) = (self(I) < val(I) ? 0xFF : 0)
- */
-VALUE
-rb_lt(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_LT);
-}
-
-/*
- * call-seq:
- *   le(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "less or equal".
- *  dst(I) = (self(I) <= val(I) ? 0xFF : 0)
- */
-VALUE
-rb_le(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_LE);
-}
-
-/*
- * call-seq:
- *   ne(<i>val</i>) -> cvmat
- *
- * Return new matrix performed per-element comparision "not equal".
- *  dst(I) = (self(I) != val(I) ? 0xFF : 0)
- */
-VALUE
-rb_ne(VALUE self, VALUE val)
-{
-  return rb_cmp_internal(self, val, CV_CMP_NE);
-}
-
-/*
- * call-seq:
- *   in_range(<i>min, max</i>) -> cvmat
- *
- * Check that element lie between two object.
- * <i>min</i> and <i>max</i> should be CvMat that have same size and type, or CvScalar.
- * Return new matrix performed per-element,
- *  dst(I) = within the range ? 0xFF : 0
- */
-VALUE
-rb_in_range(VALUE self, VALUE min, VALUE max)
-{
-  CvArr* self_ptr = CVARR(self);
-  CvSize size = cvGetSize(self_ptr);
-  VALUE dest = new_object(size, CV_8UC1);
-  try {
-    if (rb_obj_is_kind_of(min, rb_klass) && rb_obj_is_kind_of(max, rb_klass))
-      cvInRange(self_ptr, CVARR(min), CVARR(max), CVARR(dest));
-    else if (rb_obj_is_kind_of(min, rb_klass)) {
-      VALUE tmp = new_object(size, cvGetElemType(self_ptr));
-      cvSet(CVARR(tmp), VALUE_TO_CVSCALAR(max));
-      cvInRange(self_ptr, CVARR(min), CVARR(tmp), CVARR(dest));
-    }
-    else if (rb_obj_is_kind_of(max, rb_klass)) {
-      VALUE tmp = new_object(size, cvGetElemType(self_ptr));
-      cvSet(CVARR(tmp), VALUE_TO_CVSCALAR(min));
-      cvInRange(self_ptr, CVARR(tmp), CVARR(max), CVARR(dest));
-    }
-    else
-      cvInRangeS(self_ptr, VALUE_TO_CVSCALAR(min), VALUE_TO_CVSCALAR(max), CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   abs_diff(<i>val</i>) -> cvmat
- *
- * Calculate absolute difference between two.
- * <i>val</i> should be CvMat that have same size and same type, or CvScalar.
- *  dst(I) = (src(I) - val(I)).abs
- */
-VALUE
-rb_abs_diff(VALUE self, VALUE val)
-{
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  try {
-    if (rb_obj_is_kind_of(val, rb_klass))
-      cvAbsDiff(self_ptr, CVARR(val), CVARR(dest));
-    else
-      cvAbsDiffS(self_ptr, CVARR(dest), VALUE_TO_CVSCALAR(val));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   normalize(alpha=1, beta=0, norm_type=NORM_L2, dtype=-1, mask=nil) -> cvmat
- *
- * Normalizes the norm or value range of an array.
- *
- * Parameters:
- *   * alpha - norm value to normalize to or the lower range boundary in case of the range normalization.
- *   * beta - upper range boundary in case of the range normalization; it is not used for the norm normalization.
- *   * norm_type - normalization type.
- *   * dtype - when negative, the output array has the same type as src; otherwise, it has the same number of channels as src and the depth
- *   * mask - optional operation mask.
- */
-VALUE
-rb_normalize(int argc, VALUE *argv, VALUE self)
-{
-  VALUE alpha_val, beta_val, norm_type_val, dtype_val, mask_val;
-  rb_scan_args(argc, argv, "05", &alpha_val, &beta_val, &norm_type_val, &dtype_val, &mask_val);
-
-  double alpha = NIL_P(alpha_val) ? 1.0 : NUM2DBL(alpha_val);
-  double beta = NIL_P(beta_val) ? 0.0 : NUM2DBL(beta_val);
-  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
-  int dtype = NIL_P(dtype_val) ? -1 : NUM2INT(dtype_val);
-  VALUE dst;
-
-  try {
-    cv::Mat self_mat(CVMAT(self));
-    cv::Mat dst_mat;
-
-    if (NIL_P(mask_val)) {
-      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype);
-    }
-    else {
-      cv::Mat mask(MASK(mask_val));
-      cv::normalize(self_mat, dst_mat, alpha, beta, norm_type, dtype, mask);
-    }
-    dst = new_mat_kind_object(cvGetSize(CVARR(self)), self, dst_mat.depth(), dst_mat.channels());
-
-    CvMat tmp = dst_mat;
-    cvCopy(&tmp, CVMAT(dst));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return dst;
-}
-
-/*
- * call-seq:
- *   count_non_zero -> int
- *
- * Returns the number of non-zero elements.
- *   result = sumI arr(I)!=0
- *
- * In case of IplImage both ROI and COI are supported.
- */
-VALUE
-rb_count_non_zero(VALUE self)
-{
-  int n = 0;
-  try {
-    n = cvCountNonZero(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return INT2NUM(n);
-}
-
-/*
- * call-seq:
- *   sum -> scalar
- *
- * Return summerizes elements as CvScalar. Independently for each channel.
- *
- * note: If COI is setted in IplImage, the method processes the selected channel only and store the sum to the first component scalar[0].
- */
-VALUE
-rb_sum(VALUE self)
-{
-  CvScalar sum;
-  try {
-    sum = cvSum(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvScalar::new_object(sum);
-}
-
-/*
- * call-seq:
- *   avg(<i>[mask]</i>) -> mean(as scalar)
- *
- * Return the average(mean) of elements as CvScalar. Independently for each channel.
- */
-VALUE
-rb_avg(int argc, VALUE *argv, VALUE self)
-{
-  VALUE mask;
-  rb_scan_args(argc, argv, "01", &mask);
-  CvScalar avg;
-  try {
-    avg = cvAvg(CVARR(self), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvScalar::new_object(avg);
-}
-
-/*
- * call-seq:
- *   avg_sdv(<i>mask</i>) -> [mean(as scalar), std_dev(as scalar)]
- *
- * Calculates the average value and standard deviation of array elements, independently for each channel.
- *
- * note: same as [CvMat#avg, CvMat#sdv]
- */
-VALUE
-rb_avg_sdv(int argc, VALUE *argv, VALUE self)
-{
-  VALUE mask, mean, std_dev;
-  rb_scan_args(argc, argv, "01", &mask);
-  mean = cCvScalar::new_object();
-  std_dev = cCvScalar::new_object();
-  try {
-    cvAvgSdv(CVARR(self), CVSCALAR(mean), CVSCALAR(std_dev), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, mean, std_dev);
-}
-
-/*
- * call-seq:
- *   sdv(<i>[mask]</i>) -> std_dev(as scalar)
- *
- * Return the standard deviation of elements as CvScalar. Independently for each channel.
- */
-VALUE
-rb_sdv(int argc, VALUE *argv, VALUE self)
-{
-  VALUE mask, std_dev;
-  rb_scan_args(argc, argv, "01", &mask);
-  std_dev = cCvScalar::new_object();
-  try {
-    cvAvgSdv(CVARR(self), NULL, CVSCALAR(std_dev), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return std_dev;
-}
-
-/*
- * call-seq:
- *   min_max_loc(<i>[mask]</i>) -> [min_val, max_val, min_loc(as point), max_loc(as point)]
- *
- * Finds minimum and maximum element values and their positions.
- * The extremums are searched over the whole array, selected ROI(in case of IplImage) or, if mask is not NULL, in the specified array region.
- * If the array has more than one channel, it must be IplImage with COI set.
- * In case if multi-dimensional arrays min_loc.x and max_loc.x will contain raw (linear) positions of the extremums.
- */
-VALUE
-rb_min_max_loc(int argc, VALUE *argv, VALUE self)
-{
-  VALUE mask, min_loc, max_loc;
-  double min_val = 0.0, max_val = 0.0;
-  rb_scan_args(argc, argv, "01", &mask);
-  min_loc = cCvPoint::new_object();
-  max_loc = cCvPoint::new_object();
-  try {
-    cvMinMaxLoc(CVARR(self), &min_val, &max_val, CVPOINT(min_loc), CVPOINT(max_loc), MASK(mask));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(4, rb_float_new(min_val), rb_float_new(max_val), min_loc, max_loc);
-}
-
-/*
- * call-seq:
- *   dot_product(<i>mat</i>) -> float
- *
- * Calculates dot product of two arrays in Euclidian metrics.
- * <i>mat</i> should be CvMat have same size and same type.
- *
- *  src1.src2 = sum(src1(I) * src2(I))
- */
-VALUE
-rb_dot_product(VALUE self, VALUE mat)
-{
-  double result = 0.0;
-  try {
-    result = cvDotProduct(CVARR(self), CVARR_WITH_CHECK(mat));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_float_new(result);
-}
-
-/*
- * call-seq:
- *   cross_product(<i>mat</i>) -> cvmat
- *
- * Calculate cross product of two 3D vectors.
- * <i>mat</i> should be CvMat have same size and same type.
- */
-VALUE
-rb_cross_product(VALUE self, VALUE mat)
-{
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvCrossProduct(self_ptr, CVARR_WITH_CHECK(mat), CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   transform(<i>transmat[,shiftvec]</i>) -> cvmat
- *
- * performs matrix transform of every element.
- *  dst(I) = transmat * src(I) + shiftvec
- */
-VALUE
-rb_transform(int argc, VALUE *argv, VALUE self)
-{
-  VALUE transmat, shiftvec;
-  rb_scan_args(argc, argv, "11", &transmat, &shiftvec);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvTransform(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(transmat),
-		NIL_P(shiftvec) ? NULL : CVMAT_WITH_CHECK(shiftvec));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   perspective_transform(<i>mat</i>) -> cvmat
- *
- * Return performed perspective matrix transform of vector array.
- * <i>mat</i> should be 3x3 or 4x4 transform matrix (CvMat).
- * Every element (by treating it as 2D or 3D vector) in the following way:
- *   (x, y, z) -> (x'/w, y'/w, z'/w) or
- *   (x, y) -> (x'/w, y'/w)
- * where
- *   (x', y', z', w') = mat4x4*(x, y, z, 1) or
- *   (x', y', w') = mat3x3*(x, y, 1)
- * and
- *   w = w' if w'!=0, inf otherwise.
- */
-VALUE
-rb_perspective_transform(VALUE self, VALUE mat)
-{
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvPerspectiveTransform(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(mat));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *  mul_transposed(<i>:order => 0 or 1, :delta => cvmat, :scale => number</i>)
- *
- * Calculates the product of self and its transposition.
- *
- * options
- * * :order -> should be 0 or 1 (default is 0)
- *    see below.
- * * :delta -> should be CvMat (default is nil)
- *     An optional array, subtracted from source before multiplication.
- * * :scale -> should be a number (default is 1.0)
- *     An optional scaling
- *
- * mul_transposed evaluates:
- *   :order => 0
- *     dst = scale * (self - delta) * (self - delta)T
- *   :order => 1
- *     dst = scale * (self - delta)T * (self - delta)
- *
- */
-VALUE
-rb_mul_transposed(int argc, VALUE *argv, VALUE self)
-{
-  VALUE options = Qnil;
-  VALUE _delta = Qnil, _scale = Qnil, _order = Qnil;
-
-  if (rb_scan_args(argc, argv, "01", &options) > 0) {
-    Check_Type(options, T_HASH);
-    _delta = LOOKUP_HASH(options, "delta");
-    _scale = LOOKUP_HASH(options, "scale");
-    _order = LOOKUP_HASH(options, "order");
-  }
-
-  CvArr* delta = NIL_P(_delta) ? NULL : CVARR_WITH_CHECK(_delta);
-  double scale = NIL_P(_scale) ? 1.0 : NUM2DBL(_scale);
-  int order = NIL_P(_order) ? 0 : NUM2INT(_order);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  try {
-    cvMulTransposed(self_ptr, CVARR(dest), order, delta, scale);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return dest;
-}
-
-
-/*
- * call-seq:
- *   trace -> scalar
- *
- * Returns trace of matrix. "trace" is sum of diagonal elements of the matrix.
- */
-VALUE
-rb_trace(VALUE self)
-{
-  CvScalar scalar;
-  try {
-    scalar = cvTrace(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvScalar::new_object(scalar);
-}
-
-/*
- * call-seq:
- *   transpose -> cvmat
- *
- * Return transposed matrix.
- */
-VALUE
-rb_transpose(VALUE self)
-{
-  CvMat* self_ptr = CVMAT(self);
-  VALUE dest = new_mat_kind_object(cvSize(self_ptr->rows, self_ptr->cols), self);
-  try {
-    cvTranspose(self_ptr, CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   det -> float
- *
- * Return determinant of matrix.
- * <i>self</i> should be single-channel and floating-point depth.
- */
-VALUE
-rb_det(VALUE self)
-{
-  double det = 0.0;
-  try {
-    det = cvDet(CVARR(self));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_float_new(det);
-}
-
-/*
- * call-seq:
- *   invert(<i>inversion_method=:lu[,delta]</i>) -> float
- *
- * Finds inverse or pseudo-inverse of matrix.
- * <i>inversion_method</i> should be following symbol.
- * * :lu
- *     Gaussian elimincation with optimal pivot element chose.
- *     Return self determinant (self must be square).
- * * :svd
- *     Singular value decomposition(SVD) method.
- *     Return the inversed condition number of self(ratio of the smallest singular value to the largest singular value)
- *     and 0 if self is all zeros. The SVD method calculate a pseudo-inverse matrix if self is singular.
- * * :svd_sym or :svd_symmetric
- *     SVD method for a symmetric positively-defined matrix.
- *
- * <i>self</i> type should be single-channel and floating-point matrix.
- */
-VALUE
-rb_invert(int argc, VALUE *argv, VALUE self)
-{
-  VALUE symbol;
-  rb_scan_args(argc, argv, "01", &symbol);
-  int method = CVMETHOD("INVERSION_METHOD", symbol, CV_LU);
-  VALUE dest = Qnil;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvInvert(self_ptr, CVARR(dest), method);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   solve(<i>src1, src2, inversion_method=:lu</i>)
- *
- * Solves linear system or least-squares problem (the latter is possible with SVD method).
- *
- * <i>inversion_method</i> should be following symbol.
- * * :lu
- *     Gaussian elimincation with optimal pivot element chose.
- *     Return self determinant (self must be square).
- * * :svd
- *     Singular value decomposition(SVD) method.
- *     Return the inversed condition number of self(ratio of the smallest singular value to the largest singular value)
- *     and 0 if self is all zeros. The SVD method calculate a pseudo-inverse matrix if self is singular.
- * * :svd_sym or :svd_symmetric
- *     SVD method for a symmetric positively-defined matrix.
- */
-VALUE
-rb_solve(int argc, VALUE *argv, VALUE self)
-{
-  VALUE src1, src2, symbol;
-  rb_scan_args(argc, argv, "21", &src1, &src2, &symbol);
-  VALUE dest = Qnil;
-  CvArr* src2_ptr = CVARR_WITH_CHECK(src2);
-  try {
-    dest = new_mat_kind_object(cvGetSize(src2_ptr), src2);
-    cvSolve(CVARR_WITH_CHECK(src1), src2_ptr, CVARR(dest), CVMETHOD("INVERSION_METHOD", symbol, CV_LU));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   svd(<i>l[flag=0]</i>)
- *
- * Performs singular value decomposition of real floating-point matrix.
- */
-VALUE
-rb_svd(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _flag = Qnil;
-  int flag = 0;
-  if (rb_scan_args(argc, argv, "01", &_flag) > 0) {
-    flag = NUM2INT(_flag);
-  }
-
-  CvMat* self_ptr = CVMAT(self);
-  VALUE w = new_mat_kind_object(cvSize(self_ptr->cols, self_ptr->rows), self);
-  
-  int rows = 0;
-  int cols = 0;
-  if (flag & CV_SVD_U_T) {
-    rows = MIN(self_ptr->rows, self_ptr->cols);
-    cols = self_ptr->rows;
-  }
-  else {
-    rows = self_ptr->rows;
-    cols = MIN(self_ptr->rows, self_ptr->cols);
-  }
-  VALUE u = new_mat_kind_object(cvSize(cols, rows), self);
-
-  if (flag & CV_SVD_V_T) {
-    rows = MIN(self_ptr->rows, self_ptr->cols);
-    cols = self_ptr->cols;
-  }
-  else {
-    rows = self_ptr->cols;
-    cols = MIN(self_ptr->rows, self_ptr->cols);
-  }
-  VALUE v = new_mat_kind_object(cvSize(cols, rows), self);
-
-  cvSVD(self_ptr, CVARR(w), CVARR(u), CVARR(v), flag);
-
-  return rb_ary_new3(3, w, u, v);
-}
-
-/*
- * call-seq:
- *   eigenvv!(<i>[eps = 0.0]</i>) -> [eigen_vectors(cvmat), eigen_values(cvmat)]
- *
- * Computes eigenvalues and eigenvectors of symmetric matrix.
- * <i>self</i> should be symmetric square matrix. <i>self</i> is modified during the processing.
- *
- *   self * eigen_vectors(i,:)' = eigen_values(i) * eigen_vectors(i,:)'
- *
- * Currently the function is slower than #svd yet less accurate, so if <i>self</i> is known to be positively-defined
- * (e.g., it is a convariation matrix), it is recommanded to use #svd to find eigenvalues and eigenvectors of <i>self</i>,
- * especially if eigenvectors are not required.
- */
-VALUE
-rb_eigenvv(int argc, VALUE *argv, VALUE self)
-{
-  VALUE epsilon, lowindex, highindex;
-  rb_scan_args(argc, argv, "03", &epsilon, &lowindex, &highindex);
-  double eps = (NIL_P(epsilon)) ? 0.0 : NUM2DBL(epsilon);
-  int lowidx = (NIL_P(lowindex)) ? -1 : NUM2INT(lowindex);
-  int highidx = (NIL_P(highindex)) ? -1 : NUM2INT(highindex);
-  VALUE eigen_vectors = Qnil, eigen_values = Qnil;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    CvSize size = cvGetSize(self_ptr);
-    int type = cvGetElemType(self_ptr);
-    eigen_vectors = new_object(size, type);
-    eigen_values = new_object(size.height, 1, type);
-    cvEigenVV(self_ptr, CVARR(eigen_vectors), CVARR(eigen_values), eps, lowidx, highidx);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, eigen_vectors, eigen_values);
-}
-
-
-/*
- * call-seq:
- *   dft(flags = CV_DXT_FORWARD, nonzero_rows = 0) -> cvmat
- *
- * Performs forward or inverse Discrete Fourier Transform(DFT) of 1D or 2D floating-point array.
- *
- * Params:
- *   * flags - transformation flags
- *   * nonzero_rows - when the parameter is not zero, the function assumes that only
- *       the first <i>nonzero_rows</i> rows of the input array (CV_DXT_INVERSE is not set)
- *       or only the first nonzero_rows of the output array (CV_DXT_INVERSE is set) contain non-zeros.
- */
-VALUE
-rb_dft(int argc, VALUE *argv, VALUE self)
-{
-  VALUE flag_value, nonzero_row_value;
-  rb_scan_args(argc, argv, "02", &flag_value, &nonzero_row_value);
-
-  int flags = NIL_P(flag_value) ? CV_DXT_FORWARD : NUM2INT(flag_value);
-  int nonzero_rows = NIL_P(nonzero_row_value) ? 0 : NUM2INT(nonzero_row_value);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvDFT(self_ptr, CVARR(dest), flags, nonzero_rows);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   dct(flags = CV_DXT_FORWARD) -> cvmat
- *
- * Performs forward or inverse Discrete Cosine Transform(DCT) of 1D or 2D floating-point array.
- *
- * Params:
- *   * flags - transformation flags
- */
-VALUE
-rb_dct(int argc, VALUE *argv, VALUE self)
-{
-  VALUE flag_value;
-  rb_scan_args(argc, argv, "01", &flag_value);
-
-  int flags = NIL_P(flag_value) ? CV_DXT_FORWARD : NUM2INT(flag_value);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvDCT(self_ptr, CVARR(dest), flags);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   line(<i>p1, p2[, drawing_option]</i>) -> mat
- *
- * Return image is drawn a line segment connecting two points.
- *
- * <i>drawing_option</i> should be Hash include these keys.
- *   :color
- *      Line color.
- *   :thickness
- *      Line Thickness.
- *   :line_type
- *      Type of the line:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the point coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- *
- * for example
- *   mat = CvMat.new(100, 100)
- *   mat.line(CvPoint.new(10, 10), CvPoint.new(90, 90), :thickness => 3, :line_type => :aa)
- */
-VALUE
-rb_line(int argc, VALUE *argv, VALUE self)
-{
-  return rb_line_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   line!(<i>p1, p2[, drawing_option]</i>) -> self
- *
- * Draws a line segment connecting two points.
- * Same as CvMat#line, but modifies the receiver in place.
- * see CvMat#line
- */
-VALUE
-rb_line_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, drawing_option;
-  rb_scan_args(argc, argv, "21", &p1, &p2, &drawing_option);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  try {
-    cvLine(CVARR(self), VALUE_TO_CVPOINT(p1), VALUE_TO_CVPOINT(p2),
-	   DO_COLOR(drawing_option),
-	   DO_THICKNESS(drawing_option),
-	   DO_LINE_TYPE(drawing_option),
-	   DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   rectangle(<i>p1, p2[, drawing_option]</i>) -> mat
- *
- * Return image is drawn a rectangle with two opposite corners <i>p1</i> and <i>p2</i>.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Line color.
- *   :thickness
- *      Thickness of lines that make up the rectangle.
- *      Negative values make the function to draw a filled rectangle.
- *   :line_type
- *      Type of the line:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the point coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_rectangle(int argc, VALUE *argv, VALUE self)
-{
-  return rb_rectangle_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   rectangle!(<i>p1, p2[, drawing_option]</i>) -> self
- *
- * Draws simple, thick or filled rectangle.
- * Same as CvMat#rectangle, but modifies the receiver in place.
- * see CvMat#rectangle
- */
-VALUE
-rb_rectangle_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, drawing_option;
-  rb_scan_args(argc, argv, "21", &p1, &p2, &drawing_option);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  try {
-    cvRectangle(CVARR(self), VALUE_TO_CVPOINT(p1), VALUE_TO_CVPOINT(p2),
-		DO_COLOR(drawing_option),
-		DO_THICKNESS(drawing_option),
-		DO_LINE_TYPE(drawing_option),
-		DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   circle(<i>center, radius[,drawing_option]</i>) -> cvmat
- *
- * Return image is drawn a simple or filled circle with given center and radius.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Circle color.
- *   :thickness
- *      Thickness of the circle outline if positive, otherwise that a filled circle has to be drawn.
- *   :line_type
- *      Type of the circle boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the center coordinates and radius value.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_circle(int argc, VALUE *argv, VALUE self)
-{
-  return rb_circle_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   circle!(<i>center, radius[,drawing_option]</i>) -> cvmat
- *
- * Draw a circle.
- * Same as CvMat#circle, but modifies the receiver in place.
- *
- * see CvMat#circle
- */
-VALUE
-rb_circle_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE center, radius, drawing_option;
-  rb_scan_args(argc, argv, "21", &center, &radius, &drawing_option);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  try {
-    cvCircle(CVARR(self), VALUE_TO_CVPOINT(center), NUM2INT(radius),
-	     DO_COLOR(drawing_option),
-	     DO_THICKNESS(drawing_option),
-	     DO_LINE_TYPE(drawing_option),
-	     DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   ellipse(<i>center, axis, angle, start_angle, end_angle[,drawing_option]</i>) -> mat
- *
- * Return image is drawn a simple or thick elliptic arc or fills an ellipse sector.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Ellipse color.
- *   :thickness
- *      Thickness of the ellipse arc.
- *   :line_type
- *      Type of the ellipse boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the center coordinates and axes' value.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_ellipse(int argc, VALUE *argv, VALUE self)
-{
-  return rb_ellipse_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   ellipse!(<i>center, axis, angle, start_angle, end_angle[,drawing_option]</i>) -> self
- *
- * Draws simple or thick elliptic arc or fills ellipse sector.
- * Same as CvMat#ellipse, but modifies the receiver in place.
- *
- * see CvMat#ellipse
- */
-VALUE
-rb_ellipse_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE center, axis, angle, start_angle, end_angle, drawing_option;
-  rb_scan_args(argc, argv, "51", &center, &axis, &angle, &start_angle, &end_angle, &drawing_option);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  try {
-    cvEllipse(CVARR(self), VALUE_TO_CVPOINT(center),
-	      VALUE_TO_CVSIZE(axis),
-	      NUM2DBL(angle), NUM2DBL(start_angle), NUM2DBL(end_angle),
-	      DO_COLOR(drawing_option),
-	      DO_THICKNESS(drawing_option),
-	      DO_LINE_TYPE(drawing_option),
-	      DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   ellipse_box(<i>box[, drawing_option]</i>) -> mat
- *
- * Return image is drawn a simple or thick ellipse outline, or fills an ellipse.
- * The method provides a convenient way to draw an ellipse approximating some shape.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Ellipse color.
- *   :thickness
- *      Thickness of the ellipse drawn.
- *   :line_type
- *      Type of the ellipse boundary:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the box vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_ellipse_box(int argc, VALUE *argv, VALUE self)
-{
-  return rb_ellipse_box_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   ellipse_box!(<i>box[, drawing_option]</i>) -> self
- *
- * Draws simple or thick elliptic arc or fills ellipse sector.
- * Same as CvMat#ellipse_box, but modifies the receiver in place.
- *
- * see CvMat#ellipse_box
- */
-VALUE
-rb_ellipse_box_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE box, drawing_option;
-  rb_scan_args(argc, argv, "11", &box, &drawing_option);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  try {
-    cvEllipseBox(CVARR(self), VALUE_TO_CVBOX2D(box),
-		 DO_COLOR(drawing_option),
-		 DO_THICKNESS(drawing_option),
-		 DO_LINE_TYPE(drawing_option),
-		 DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   fill_poly(<i>points[,drawing_option]</i>) -> mat
- *
- * Return image is filled an area bounded by several polygonal contours.
- * The method fills complex areas, for example, areas with holes, contour self-intersection, etc.
- */
-VALUE
-rb_fill_poly(int argc, VALUE *argv, VALUE self)
-{
-  return rb_fill_poly_bang(argc, argv, self);
-}
-
-/*
- * call-seq:
- *   fill_poly!(<i>points[,drawing_option]</i>) -> self
- *
- * Fills polygons interior.
- * Same as CvMat#fill_poly, but modifies the receiver in place.
- *
- * drawing_options should be Hash include these keys.
- *   :color
- *      Polygon color.
- *   :line_type
- *      Type of the polygon boundaries:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_fill_poly_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE polygons, drawing_option;
-  VALUE points;
-  int i, j;
-  int num_polygons;
-  int *num_points;
-  CvPoint **p;
-
-  rb_scan_args(argc, argv, "11", &polygons, &drawing_option);
-  Check_Type(polygons, T_ARRAY);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  num_polygons = RARRAY_LEN(polygons);
-  num_points = ALLOCA_N(int, num_polygons);
-
-  p = ALLOCA_N(CvPoint*, num_polygons);
-  for (j = 0; j < num_polygons; ++j) {
-    points = rb_ary_entry(polygons, j);
-    Check_Type(points, T_ARRAY);
-    num_points[j] = RARRAY_LEN(points);
-    p[j] = ALLOCA_N(CvPoint, num_points[j]);
-    for (i = 0; i < num_points[j]; ++i) {
-      p[j][i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
-    }
-  }
-  try {
-    cvFillPoly(CVARR(self), p, num_points, num_polygons,
-	       DO_COLOR(drawing_option),
-	       DO_LINE_TYPE(drawing_option),
-	       DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   fill_convex_poly(<i>points[,drawing_option]</i>) -> mat
- *
- * Return image is filled convex polygon interior.
- * This method is much faster than The function CvMat#fill_poly
- * and can fill not only the convex polygons but any monotonic polygon,
- * i.e. a polygon whose contour intersects every horizontal line (scan line)
- * twice at the most.
- *
- * <i>drawing_options</i> should be Hash include these keys.
- *   :color
- *      Polygon color.
- *   :line_type
- *      Type of the polygon boundaries:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_fill_convex_poly(int argc, VALUE *argv, VALUE self)
-{
-  return rb_fill_convex_poly_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   fill_convex_poly!(<i>points[,drawing_option]</i>) -> self
- *
- * Fills convex polygon.
- * Same as CvMat#fill_convex_poly, but modifies the receiver in place.
- *
- * see CvMat#fill_convex_poly
- */
-VALUE
-rb_fill_convex_poly_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE points, drawing_option;
-  int i, num_points;
-  CvPoint *p;
-
-  rb_scan_args(argc, argv, "11", &points, &drawing_option);
-  Check_Type(points, T_ARRAY);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  num_points = RARRAY_LEN(points);
-  p = ALLOCA_N(CvPoint, num_points);
-  for (i = 0; i < num_points; ++i)
-    p[i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
-
-  try {
-    cvFillConvexPoly(CVARR(self), p, num_points,
-		     DO_COLOR(drawing_option),
-		     DO_LINE_TYPE(drawing_option),
-		     DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   poly_line(<i>points[,drawing_option]</i>) -> mat
- *
- * Return image drawed a single or multiple polygonal curves.
- *
- * <i>drawing_option</i> should be Hash include these keys.
- *   :is_closed
- *      Indicates whether the polylines must be drawn closed.
- *      If closed, the method draws the line from the last vertex
- *      of every contour to the first vertex.
- *   :color
- *      Polyline color.
- *   :thickness
- *      Thickness of the polyline edges
- *   :line_type
- *      Type of line segments:
- *        * 0 or 8 - 8-connected line(default).
- *        * 4 - 4-connected line.
- *        * negative-value - antialiased line.
- *   :shift
- *      Number of fractional bits in the vertex coordinates.
- *
- * note: <i>drawing_option</i>'s default value is CvMat::DRAWING_OPTION.
- */
-VALUE
-rb_poly_line(int argc, VALUE *argv, VALUE self)
-{
-  return rb_poly_line_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   poly_line!(<i>points[,drawing_option]</i>) -> self
- *
- * Draws simple or thick polygons.
- *
- * Same as CvMat#poly_line, but modifies the receiver in place.
- *
- * see CvMat#poly_line
- */
-VALUE
-rb_poly_line_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE polygons, drawing_option;
-  VALUE points;
-  int i, j;
-  int num_polygons;
-  int *num_points;
-  CvPoint **p;
-
-  rb_scan_args(argc, argv, "11", &polygons, &drawing_option);
-  Check_Type(polygons, T_ARRAY);
-  drawing_option = DRAWING_OPTION(drawing_option);
-  num_polygons = RARRAY_LEN(polygons);
-  num_points = ALLOCA_N(int, num_polygons);
-  p = ALLOCA_N(CvPoint*, num_polygons);
-
-  for (j = 0; j < num_polygons; ++j) {
-    points = rb_ary_entry(polygons, j);
-    Check_Type(points, T_ARRAY);
-    num_points[j] = RARRAY_LEN(points);
-    p[j] = ALLOCA_N(CvPoint, num_points[j]);
-    for (i = 0; i < num_points[j]; ++i) {
-      p[j][i] = VALUE_TO_CVPOINT(rb_ary_entry(points, i));
-    }
-  }
-
-  try {
-    cvPolyLine(CVARR(self), p, num_points, num_polygons,
-	       DO_IS_CLOSED(drawing_option),
-	       DO_COLOR(drawing_option),
-	       DO_THICKNESS(drawing_option),
-	       DO_LINE_TYPE(drawing_option),
-	       DO_SHIFT(drawing_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return self;
-}
-
-
-/*
- * call-seq:
- *   put_text(<i>str, point, font[,color]</i>) -> cvmat
- *
- * Return image is drawn text string.
- * <i>font</i> should be CvFont object.
- */
-VALUE
-rb_put_text(int argc, VALUE* argv, VALUE self)
-{
-  return rb_put_text_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   put_text!(<i>str, point, font[,color]</i>) -> self
- *
- * Draws text string. Return self.
- */
-VALUE
-rb_put_text_bang(int argc, VALUE* argv, VALUE self)
-{
-  VALUE _text, _point, _font, _color;
-  rb_scan_args(argc, argv, "31", &_text, &_point, &_font, &_color);
-  CvScalar color = NIL_P(_color) ? CV_RGB(0, 0, 0) : VALUE_TO_CVSCALAR(_color);
-  try {
-    cvPutText(CVARR(self), StringValueCStr(_text), VALUE_TO_CVPOINT(_point),
-	      CVFONT_WITH_CHECK(_font), color);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   sobel(<i>xorder,yorder[,aperture_size=3]</i>) -> cvmat
- *
- * Calculates first, second, third or mixed image derivatives using extended Sobel operator.
- * <i>self</i> should be single-channel 8bit unsigned or 32bit floating-point.
- *
- * link:../images/CvMat_sobel.png
- */
-VALUE
-rb_sobel(int argc, VALUE *argv, VALUE self)
-{
-  VALUE xorder, yorder, aperture_size, dest;
-  if (rb_scan_args(argc, argv, "21", &xorder, &yorder, &aperture_size) < 3)
-    aperture_size = INT2FIX(3);
-  CvMat* self_ptr = CVMAT(self);
-  switch(CV_MAT_DEPTH(self_ptr->type)) {
-  case CV_8U:
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_16S, 1);
-    break;
-  case CV_32F:
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_32F, 1);
-    break;
-  default:
-    rb_raise(rb_eArgError, "source depth should be CV_8U or CV_32F.");
-    break;
-  }
-
-  try {
-    cvSobel(self_ptr, CVARR(dest), NUM2INT(xorder), NUM2INT(yorder), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   laplace(<i>[aperture_size = 3]</i>) -> cvmat
- *
- * Calculates Laplacian of the image.
- * <i>self</i> should be single-channel 8bit unsigned or 32bit floating-point.
- */
-VALUE
-rb_laplace(int argc, VALUE *argv, VALUE self)
-{
-  VALUE aperture_size, dest;
-  if (rb_scan_args(argc, argv, "01", &aperture_size) < 1)
-    aperture_size = INT2FIX(3);
-  CvMat* self_ptr = CVMAT(self);
-  switch(CV_MAT_DEPTH(self_ptr->type)) {
-  case CV_8U:
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_16S, 1);
-    break;
-  case CV_32F:
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self, CV_32F, 1);
-    break;
-  default:
-    rb_raise(rb_eArgError, "source depth should be CV_8U or CV_32F.");
-  }
-
-  try {
-    cvLaplace(self_ptr, CVARR(dest), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   canny(<i>thresh1,thresh2[,aperture_size = 3]</i>) -> cvmat
- *
- * Canny algorithm for edge detection.
- */
-VALUE
-rb_canny(int argc, VALUE *argv, VALUE self)
-{
-  VALUE thresh1, thresh2, aperture_size;
-  if (rb_scan_args(argc, argv, "21", &thresh1, &thresh2, &aperture_size) < 3)
-    aperture_size = INT2FIX(3);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  
-  try {
-    cvCanny(self_ptr, CVARR(dest), NUM2INT(thresh1), NUM2INT(thresh2), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   pre_corner_detect(<i>[aperture_size = 3]</i>) -> cvmat
- *
- * Calculates feature map for corner detection.
- * <i>aperture_size</i> is parameter for sobel operator(see #sobel).
- *
- * The corners can be found as local maximums of the function.
- */
-VALUE
-rb_pre_corner_detect(int argc, VALUE *argv, VALUE self)
-{
-  VALUE aperture_size, dest = Qnil;
-  if (rb_scan_args(argc, argv, "01", &aperture_size) < 1)
-    aperture_size = INT2FIX(3);
-
-  CvArr *self_ptr = CVARR(self);
-  try {
-    dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
-    cvPreCornerDetect(self_ptr, CVARR(dest), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   corner_eigenvv(<i>block_size[,aperture_size]</i>) -> cvmat
- *
- * For every pixel considers <i>block_size x block_size</i> neighborhood S(p).
- * It calculates convariation matrix of derivatives over the neighborhood.
- */
-VALUE
-rb_corner_eigenvv(int argc, VALUE *argv, VALUE self)
-{
-  VALUE block_size, aperture_size, dest;
-  if (rb_scan_args(argc, argv, "11", &block_size, &aperture_size) < 2)
-    aperture_size = INT2FIX(3);
-  CvMat* self_ptr = CVMAT(self);
-  dest = new_object(cvSize(self_ptr->cols * 6, self_ptr->rows), CV_MAKETYPE(CV_32F, 1));
-  try {
-    cvCornerEigenValsAndVecs(self_ptr, CVARR(dest), NUM2INT(block_size), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   corner_min_eigen_val(<i>block_size[,aperture_size = 3]</i>) -> cvmat
- *
- * Calculates minimal eigenvalue of gradient matrices for corner detection.
- */
-VALUE
-rb_corner_min_eigen_val(int argc, VALUE *argv, VALUE self)
-{
-  VALUE block_size, aperture_size, dest;
-  if (rb_scan_args(argc, argv, "11", &block_size, &aperture_size) < 2)
-    aperture_size = INT2FIX(3);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
-  try {
-    cvCornerMinEigenVal(self_ptr, CVARR(dest), NUM2INT(block_size), NUM2INT(aperture_size));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   corner_harris(<i>block_size[,aperture_size = 3][,k = 0.04]</i>) -> cvmat
- *
- * Return image Applied Harris edge detector.
- */
-VALUE
-rb_corner_harris(int argc, VALUE *argv, VALUE self)
-{
-  VALUE block_size, aperture_size, k, dest;
-  rb_scan_args(argc, argv, "12", &block_size, &aperture_size, &k);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_object(cvGetSize(self_ptr), CV_MAKETYPE(CV_32F, 1));
-  try {
-    cvCornerHarris(self_ptr, CVARR(dest), NUM2INT(block_size), IF_INT(aperture_size, 3), IF_DBL(k, 0.04));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   find_chessboard_corners(pattern_size, flag = CV_CALIB_CB_ADAPTIVE_THRESH) -> Array<Array<CvPoint2D32f>, Boolean>
- *
- * Returns an array which includes the positions of internal corners of the chessboard, and
- * a parameter indicating whether the complete board was found or not.
- *
- * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
- * flags (Integer) - Various operation flags that can be zero or a combination of the following values
- *   * CV_CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black and white,
- *         rather than a fixed threshold level (computed from the average image brightness).
- *   * CV_CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with CvMat#equalize_hist() before applying fixed
- *         or adaptive thresholding.
- *   * CV_CALIB_CB_FILTER_QUADS Use additional criteria (like contour area, perimeter, square-like shape)
- *         to filter out false quads extracted at the contour retrieval stage.
- *   * CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners, and shortcut
- *         the call if none is found. This can drastically speed up the call in the degenerate condition
- *         when no chessboard is observed.
- */
-VALUE
-rb_find_chessboard_corners(int argc, VALUE *argv, VALUE self)
-{
-  VALUE pattern_size_val, flag_val;
-  rb_scan_args(argc, argv, "11", &pattern_size_val, &flag_val);
-
-  int flag = NIL_P(flag_val) ? CV_CALIB_CB_ADAPTIVE_THRESH : NUM2INT(flag_val);
-  CvSize pattern_size = VALUE_TO_CVSIZE(pattern_size_val);
-  CvPoint2D32f* corners = ALLOCA_N(CvPoint2D32f, pattern_size.width * pattern_size.height);
-  int num_found_corners = 0;
-  int pattern_was_found = 0;
-  try {
-    pattern_was_found = cvFindChessboardCorners(CVARR(self), pattern_size, corners, &num_found_corners, flag);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  VALUE found_corners = rb_ary_new2(num_found_corners);
-  for (int i = 0; i < num_found_corners; i++) {
-    rb_ary_store(found_corners, i, cCvPoint2D32f::new_object(corners[i]));
-  }
-
-  VALUE found = (pattern_was_found > 0) ? Qtrue : Qfalse;
-  return rb_assoc_new(found_corners, found);
-}
-
-/*
- * call-seq:
- *   find_corner_sub_pix(corners, win_size, zero_zone, criteria) -> Array<CvPoint2D32f>
- *
- * Returns refined corner locations.
- *
- * corners - Initial coordinates of the input corners and refined coordinates provided for output.
- * win_size - Half of the side length of the search window.
- * zero_zone - Half of the size of the dead region in the middle of the search zone over
- *             which the summation in the formula below is not done.
- * criteria - Criteria for termination of the iterative process of corner refinement.
- */
-VALUE
-rb_find_corner_sub_pix(VALUE self, VALUE corners, VALUE win_size, VALUE zero_zone, VALUE criteria)
-{
-  Check_Type(corners, T_ARRAY);
-  int count = RARRAY_LEN(corners);
-  CvPoint2D32f* corners_buff = ALLOCA_N(CvPoint2D32f, count);
-  VALUE* corners_ptr = RARRAY_PTR(corners);
-
-  for (int i = 0; i < count; i++) {
-    corners_buff[i] = *(CVPOINT2D32F(corners_ptr[i]));
-  }
-
-  try {
-    cvFindCornerSubPix(CVARR(self), corners_buff, count, VALUE_TO_CVSIZE(win_size),
-		       VALUE_TO_CVSIZE(zero_zone), VALUE_TO_CVTERMCRITERIA(criteria));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  VALUE refined_corners = rb_ary_new2(count);
-  for (int i = 0; i < count; i++) {
-    rb_ary_store(refined_corners, i, cCvPoint2D32f::new_object(corners_buff[i]));
-  }
-
-  return refined_corners;
-}
-
-/*
- * call-seq:
- *   good_features_to_track(<i>quality_level, min_distance[, good_features_to_track_option]</i>)
- *         -> array (include CvPoint2D32f)
- * Determines strong corners on an image.
- *
- * quality_level – Multiplier for the max/min eigenvalue; specifies the minimal accepted quality of image corners
- * min_distance – Limit, specifying the minimum possible distance between the returned corners; Euclidian distance is used
- * <i>good_features_to_track_option</i> should be Hash include these keys.
- *   :mask
- *      Region of interest. The function selects points either in the specified region or in the whole image
- *      if the mask is nil.
- *   :block_size
- *      Size of the averaging block, passed to the underlying CornerMinEigenVal or CornerHarris used by the function.
- *   :use_harris
- *      If true, Harris operator ( CornerHarris ) is used instead of default CornerMinEigenVal
- *   :k
- *      Free parameter of Harris detector; used only if ( :use_harris => true )
- * note: <i>good_features_to_track_option</i>'s default value is CvMat::GOOD_FEATURES_TO_TRACK_OPTION
- */
-VALUE
-rb_good_features_to_track(int argc, VALUE *argv, VALUE self)
-{
-  VALUE quality_level, min_distance, good_features_to_track_option;
-  rb_scan_args(argc, argv, "21", &quality_level, &min_distance, &good_features_to_track_option);
-  good_features_to_track_option = GOOD_FEATURES_TO_TRACK_OPTION(good_features_to_track_option);
-  int np = GF_MAX(good_features_to_track_option);
-  if (np <= 0)
-    rb_raise(rb_eArgError, "option :max should be positive value.");
-
-  CvMat *self_ptr = CVMAT(self);
-  CvPoint2D32f *p32 = (CvPoint2D32f*)rb_cvAlloc(sizeof(CvPoint2D32f) * np);
-  int type = CV_MAKETYPE(CV_32F, 1);
-  CvMat* eigen = rb_cvCreateMat(self_ptr->rows, self_ptr->cols, type);
-  CvMat* tmp = rb_cvCreateMat(self_ptr->rows, self_ptr->cols, type);
-  try {
-    cvGoodFeaturesToTrack(self_ptr, &eigen, &tmp, p32, &np, NUM2DBL(quality_level), NUM2DBL(min_distance),
-			  GF_MASK(good_features_to_track_option),
-			  GF_BLOCK_SIZE(good_features_to_track_option),
-			  GF_USE_HARRIS(good_features_to_track_option),
-			  GF_K(good_features_to_track_option));
-  }
-  catch (cv::Exception& e) {
-    if (eigen != NULL)
-      cvReleaseMat(&eigen);
-    if (tmp != NULL)
-      cvReleaseMat(&tmp);
-    if (p32 != NULL)
-      cvFree(&p32);
-    raise_cverror(e);
-  }
-  VALUE corners = rb_ary_new2(np);
-  for (int i = 0; i < np; ++i)
-    rb_ary_store(corners, i, cCvPoint2D32f::new_object(p32[i]));
-  cvFree(&p32);
-  cvReleaseMat(&eigen);
-  cvReleaseMat(&tmp);
-  return corners;
-}
-
-
-/*
- * call-seq:
- *   rect_sub_pix(<i>center[, size = self.size]</i>) -> cvmat
- *
- * Retrieves pixel rectangle from image with sub-pixel accuracy.
- * Extracts pixels from <i>self</i>.
- *   dst(x,y) = self(x + center.x - (size.width - 1) * 0.5, y + center.y - (size.height - 1) * 0.5)
- * where the values of pixels at non-integer coordinates are retrived using bilinear iterpolation.
- * Every channel of multiple-channel images is processed independently.
- * Whereas the rectangle center must be inside the image, the whole rectangle may be partially occludedl.
- * In this case, the replication border mode is used to get pixel values beyond the image boundaries.
- */
-VALUE
-rb_rect_sub_pix(int argc, VALUE *argv, VALUE self)
-{
-  VALUE center, size;
-  VALUE dest = Qnil;
-  CvSize _size;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    if (rb_scan_args(argc, argv, "11", &center, &size) < 2)
-      _size = cvGetSize(self_ptr);
-    else
-      _size = VALUE_TO_CVSIZE(size);
-    dest = new_mat_kind_object(_size, self);
-    cvGetRectSubPix(self_ptr, CVARR(dest), VALUE_TO_CVPOINT2D32F(center));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   quandrangle_sub_pix(<i>map_matrix[, size = self.size]</i>) -> cvmat
- *
- * Retrives pixel quadrangle from image with sub-pixel accuracy.
- * Extracts pixel from <i>self</i> at sub-pixel accuracy and store them:
- */
-VALUE
-rb_quadrangle_sub_pix(int argc, VALUE *argv, VALUE self)
-{
-  VALUE map_matrix, size;
-  VALUE dest = Qnil;
-  CvSize _size;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    if (rb_scan_args(argc, argv, "11", &map_matrix, &size) < 2)
-      _size = cvGetSize(self_ptr);
-    else
-      _size = VALUE_TO_CVSIZE(size);
-    dest = new_mat_kind_object(_size, self);
-    cvGetQuadrangleSubPix(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   resize(<i>size[,interpolation = :linear]</i>) -> cvmat
- *
- * Resize image.
- * <i>interpolation</i> is interpolation method:
- * * CV_INTER_NN
- *   nearest-neighbor interpolation.
- * * CV_INTER_LINEAR
- *   bilinear interpolation (used by default)
- * * CV_INTER_AREA
- *   resampling using pixel area relation. It is preferred method for image decimation that give moire-free results.
- *   In case of zooming it is similar to NN method.
- * * CV_INTER_CUBIC
- *   bicubic interpolation.
- * Return <i>self</i> resized image that it fits exactly to <i>size</i>. If ROI is set, the method consideres the ROI as supported as usual.
- */
-VALUE
-rb_resize(int argc, VALUE *argv, VALUE self)
-{
-  VALUE size, interpolation;
-  rb_scan_args(argc, argv, "11", &size, &interpolation);
-  VALUE dest = new_mat_kind_object(VALUE_TO_CVSIZE(size), self);
-  int method = NIL_P(interpolation) ? CV_INTER_LINEAR : NUM2INT(interpolation);
-
-  try {
-    cvResize(CVARR(self), CVARR(dest), method);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   warp_affine(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval = 0]</i>) -> cvmat
- *
- * Applies affine transformation to the image.
- */
-VALUE
-rb_warp_affine(int argc, VALUE *argv, VALUE self)
-{
-  VALUE map_matrix, flags_val, fill_value;
-  VALUE dest = Qnil;
-  if (rb_scan_args(argc, argv, "12", &map_matrix, &flags_val, &fill_value) < 3)
-    fill_value = INT2FIX(0);
-  CvArr* self_ptr = CVARR(self);
-  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvWarpAffine(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		 flags, VALUE_TO_CVSCALAR(fill_value));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-
-/*
- * call-seq:
- *   CvMat.find_homograpy(<i>src_points, dst_points[,method = :all][,ransac_reproj_threshold = 0][,get_status = nil]</i>) -> cvmat
- * 
- * Finds the perspective transformation between two planes.
- * <i>src_points:</i> Coordinates of the points in the original plane, 2xN, Nx2, 3xN or Nx3 1-channel array (the latter two are for representation in homogeneous coordinates), where N is the number of points. 1xN or Nx1 2- or 3-channel array can also be passed.
- * <i>dst_points:</i> Point coordinates in the destination plane, 2xN, Nx2, 3xN or Nx3 1-channel, or 1xN or Nx1 2- or 3-channel array.
- * <i>method:</i> The method used to computed homography matrix; one of the following symbols:
- *     :all - a regular method using all the points
- *     :ransac - RANSAC-based robust method
- *     :lmeds - Least-Median robust method
- * <i>ransac_reproj_threshold:</i> The maximum allowed reprojection error to treat a point pair as an inlier (used in the RANSAC method only). If src_points and dst_points are measured in pixels, it usually makes sense to set this parameter somewhere in the range 1 to 10.
- * <i>get_status</i> If true, the optional output mask set by a robust method (:ransac or :lmeds) is returned additionally.
- */
-VALUE
-rb_find_homograpy(int argc, VALUE *argv, VALUE self)
-{
-  VALUE src_points, dst_points, method, ransac_reproj_threshold, get_status;
-  rb_scan_args(argc, argv, "23", &src_points, &dst_points, &method, &ransac_reproj_threshold, &get_status);
-
-  VALUE homography = new_object(cvSize(3, 3), CV_32FC1);
-  int _method = CVMETHOD("HOMOGRAPHY_CALC_METHOD", method, 0);
-  double _ransac_reproj_threshold = NIL_P(ransac_reproj_threshold) ? 0.0 : NUM2DBL(ransac_reproj_threshold);
-
-  if ((_method != 0) && (!NIL_P(get_status)) && IF_BOOL(get_status, 1, 0, 0)) {
-    CvMat *src = CVMAT_WITH_CHECK(src_points);
-    int num_points = MAX(src->rows, src->cols);
-    VALUE status = new_object(cvSize(num_points, 1), CV_8UC1);
-    try {
-      cvFindHomography(src, CVMAT_WITH_CHECK(dst_points), CVMAT(homography),
-		       _method, _ransac_reproj_threshold, CVMAT(status));
-    }
-    catch (cv::Exception& e) {
-      raise_cverror(e);
-    }
-    return rb_assoc_new(homography, status);
-  }
-  else {
-    try {
-      cvFindHomography(CVMAT(src_points), CVMAT(dst_points), CVMAT(homography),
-		       _method, _ransac_reproj_threshold, NULL);
-    }
-    catch (cv::Exception& e) {
-      raise_cverror(e);
-    }
-    return homography;
-  }
-}
-
-/*
- * call-seq:
- *   CvMat.rotation_matrix2D(<i>center,angle,scale</i>) -> cvmat
- *
- * Create new affine matrix of 2D rotation (2x3 32bit floating-point matrix).
- * <i>center</i> is center of rotation (x, y).
- * <i>angle</i> is rotation angle in degrees.
- * Positive values mean counter-clockwise rotation
- * (the coordinate origin is assumed at top-left corner).
- * <i>scale</i> is isotropic scale factor.
- *
- *  [ a b | (1 - a) * center.x - b * center.y  ]
- *  [-b a | (b * center.x + (1 + a) * center.y ]
- *  where a = scale * cos(angle), b = scale * sin(angle)
- */
-VALUE
-rb_rotation_matrix2D(VALUE self, VALUE center, VALUE angle, VALUE scale)
-{
-  VALUE map_matrix = new_object(cvSize(3, 2), CV_MAKETYPE(CV_32F, 1));
-  try {
-    cv2DRotationMatrix(VALUE_TO_CVPOINT2D32F(center), NUM2DBL(angle), NUM2DBL(scale), CVMAT(map_matrix));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return map_matrix;
-}
-
-/*
- * call-seq:
- *   CvMat.get_perspective_transform(<i>from_points,to_points</i>) -> cvmat
- *
- * Calculates a perspective transform from four pairs of the corresponding points.
- * Returns a matrix suitable for use with warp_perspective
- */
-VALUE
-rb_get_perspective_transform(VALUE self, VALUE source, VALUE dest)
-{
-  Check_Type(source, T_ARRAY);
-  Check_Type(dest, T_ARRAY);
-
-  int count = RARRAY_LEN(source);
-
-  CvPoint2D32f* source_buff = ALLOCA_N(CvPoint2D32f, count);
-  CvPoint2D32f* dest_buff = ALLOCA_N(CvPoint2D32f, count);
-
-  for (int i = 0; i < count; i++) {
-    source_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(source)[i]));
-    dest_buff[i] = *(CVPOINT2D32F(RARRAY_PTR(dest)[i]));
-  }
-
-  VALUE map_matrix = new_object(cvSize(3, 3), CV_MAKETYPE(CV_32F, 1));
-
-  try {
-    cvGetPerspectiveTransform(source_buff, dest_buff, CVMAT(map_matrix));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return map_matrix;
-}
-
-/*
- * call-seq:
- *   warp_perspective(<i>map_matrix[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0])</i>) -> cvmat
- *
- * Applies perspective transformation to the image.
- */
-VALUE
-rb_warp_perspective(int argc, VALUE *argv, VALUE self)
-{
-  VALUE map_matrix, flags_val, option, fillval;
-  if (rb_scan_args(argc, argv, "13", &map_matrix, &flags_val, &option, &fillval) < 4)
-    fillval = INT2FIX(0);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvWarpPerspective(self_ptr, CVARR(dest), CVMAT_WITH_CHECK(map_matrix),
-		      flags, VALUE_TO_CVSCALAR(fillval));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   remap(<i>mapx,mapy[,flags = CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS][,fillval=0]</i>) -> cvmat
- *
- * Applies generic geometrical transformation to the image.
- * Transforms source image using the specified map:
- *   dst(x,y)<-src(mapx(x,y),mapy(x,y))
- * Similar to other geometrical transformations, some interpolation method (specified by user) is used to
- * extract pixels with non-integer coordinates.
- */
-VALUE
-rb_remap(int argc, VALUE *argv, VALUE self)
-{
-  VALUE mapx, mapy, flags_val, option, fillval;
-  if (rb_scan_args(argc, argv, "23", &mapx, &mapy, &flags_val, &option, &fillval) < 5)
-    fillval = INT2FIX(0);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  int flags = NIL_P(flags_val) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags_val);
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvRemap(self_ptr, CVARR(dest), CVARR_WITH_CHECK(mapx), CVARR_WITH_CHECK(mapy),
-	    flags, VALUE_TO_CVSCALAR(fillval));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   log_polar(<i>size, center, magnitude[ ,flags=CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS]</i>)
- *
- * Remaps image to log-polar space.
- */
-VALUE
-rb_log_polar(int argc, VALUE *argv, VALUE self)
-{
-  VALUE dst_size, center, m, flags;
-  rb_scan_args(argc, argv, "31", &dst_size, &center, &m, &flags);
-  int _flags = NIL_P(flags) ? (CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS) : NUM2INT(flags);
-  VALUE dest = new_mat_kind_object(VALUE_TO_CVSIZE(dst_size), self);
-  try {
-    cvLogPolar(CVARR(self), CVARR(dest), VALUE_TO_CVPOINT2D32F(center), NUM2DBL(m), _flags);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   erode(<i>[element = nil, iteration = 1]</i>) -> cvmat
- *
- * Create erodes image by using arbitrary structuring element.
- * <i>element</i> is structuring element used for erosion.
- * <i>element</i> should be IplConvKernel. If it is nil, a 3x3 rectangular structuring element is used.
- * <i>iterations</i> is number of times erosion is applied.
- */
-VALUE
-rb_erode(int argc, VALUE *argv, VALUE self)
-{
-  return rb_erode_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   erode!(<i>[element = nil][,iteration = 1]</i>) -> self
- *
- * Erodes image by using arbitrary structuring element.
- * see also #erode.
- */
-VALUE
-rb_erode_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE element, iteration;
-  rb_scan_args(argc, argv, "02", &element, &iteration);
-  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
-  try {
-    cvErode(CVARR(self), CVARR(self), kernel, IF_INT(iteration, 1));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   dilate(<i>[element = nil][,iteration = 1]</i>) -> cvmat
- *
- * Create dilates image by using arbitrary structuring element.
- * <i>element</i> is structuring element used for erosion.
- * <i>element</i> should be IplConvKernel. If it is nil, a 3x3 rectangular structuring element is used.
- * <i>iterations</i> is number of times erosion is applied.
- */
-VALUE
-rb_dilate(int argc, VALUE *argv, VALUE self)
-{
-  return rb_dilate_bang(argc, argv, rb_clone(self));
-}
-
-/*
- * call-seq:
- *   dilate!(<i>[element = nil][,iteration = 1]</i>) -> self
- *
- * Dilate image by using arbitrary structuring element.
- * see also #dilate.
- */
-VALUE
-rb_dilate_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE element, iteration;
-  rb_scan_args(argc, argv, "02", &element, &iteration);
-  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
-  try {
-    cvDilate(CVARR(self), CVARR(self), kernel, IF_INT(iteration, 1));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   morpholohy(<i>operation[,element = nil][,iteration = 1]</i>) -> cvmat
- *
- * Performs advanced morphological transformations.
- * <i>operation</i>
- * Type of morphological operation, one of:
- *   CV_MOP_OPEN - opening
- *   CV_MOP_CLOSE - closing
- *   CV_MOP_GRADIENT - morphological gradient
- *   CV_MOP_TOPHAT - top hat
- *   CV_MOP_BLACKHAT - black hat
- */
-VALUE
-rb_morphology(int argc, VALUE *argv, VALUE self)
-{
-  VALUE element, iteration, operation_val;
-  rb_scan_args(argc, argv, "12", &operation_val, &element, &iteration);
-
-  int operation = CVMETHOD("MORPHOLOGICAL_OPERATION", operation_val, -1);
-  CvArr* self_ptr = CVARR(self);
-  CvSize size = cvGetSize(self_ptr);
-  VALUE dest = new_mat_kind_object(size, self);
-  IplConvKernel* kernel = NIL_P(element) ? NULL : IPLCONVKERNEL_WITH_CHECK(element);
-  try {
-    if (operation == CV_MOP_GRADIENT) {
-      CvMat* temp = rb_cvCreateMat(size.height, size.width, cvGetElemType(self_ptr));
-      cvMorphologyEx(self_ptr, CVARR(dest), temp, kernel, CV_MOP_GRADIENT, IF_INT(iteration, 1));
-      cvReleaseMat(&temp);
-    }
-    else {
-      cvMorphologyEx(self_ptr, CVARR(dest), 0, kernel, operation, IF_INT(iteration, 1));
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return dest;
-}
-
-/*
- * call-seq:
- *   smooth_blur_no_scale(<i>[p1 = 3, p2 = 3]</i>) -> cvmat
- *
- * Smooths the image by simple blur with no scaling.
- * * 8bit unsigned -> return 16bit unsigned
- * * 32bit floating point -> return 32bit floating point
- * <b>support single-channel image only.</b>
- */
-VALUE
-rb_smooth_blur_no_scale(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, dest;
-  rb_scan_args(argc, argv, "02", &p1, &p2);
-  CvArr* self_ptr = CVARR(self);
-  int type = cvGetElemType(self_ptr), dest_type;
-  switch (CV_MAT_DEPTH(type)) {
-  case CV_8U:
-    dest_type = CV_16U;
-    break;
-  case CV_32F:
-    dest_type = CV_32F;
-    break;
-  default:
-    rb_raise(rb_eNotImpError, "unsupport format. (support 8bit unsigned/signed or 32bit floating point only)");
-  }
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self, dest_type, CV_MAT_CN(type));
-  cvSmooth(self_ptr, CVARR(dest), CV_BLUR_NO_SCALE, IF_INT(p1, 3), IF_INT(p2, 3));
-  return dest;
-}
-
-/*
- * call-seq:
- *   smooth_blur(<i>[p1 = 3, p2 = 3]</i>) -> cvmat
- *
- * Smooths the image by simple blur.
- * Summation over a pixel <i>p1</i> x <i>p2</i> neighborhood with subsequent scaling by 1 / (p1*p2).
- */
-VALUE
-rb_smooth_blur(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, dest;
-  rb_scan_args(argc, argv, "02", &p1, &p2);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  cvSmooth(self_ptr, CVARR(dest), CV_BLUR, IF_INT(p1, 3), IF_INT(p2, 3));
-  return dest;
-}
-
-/*
- * call-seq:
- *   smooth_gaussian(<i>[p1 = 3, p2 = 3, p3 = 0.0, p4 = 0.0]</i>) -> cvmat
- *
- * Smooths the image by gaussian blur.
- * Convolving image with <i>p1</i> x <i>p2</i> Gaussian kernel.
- *
- * <i>p3</i> may specify Gaussian sigma (standard deviation).
- * If it is zero, it is calculated from the kernel size:
- *    sigma = (n/2 - 1)*0.3 + 0.8, where n = p1 for horizontal kernel,
- *                                       n = p2 for vertical kernel.
- *
- * <i>p4</i> is in case of non-square Gaussian kernel the parameter.
- * It may be used to specify a different (from p3) sigma in the vertical direction.
- */
-VALUE
-rb_smooth_gaussian(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, p3, p4, dest;
-  rb_scan_args(argc, argv, "04", &p1, &p2, &p3, &p4);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  cvSmooth(self_ptr, CVARR(dest), CV_GAUSSIAN, IF_INT(p1, 3), IF_INT(p2, 3), IF_DBL(p3, 0.0), IF_DBL(p4, 0.0));
-  return dest;
-}
-
-/*
- * call-seq:
- *   smooth_median(<i>[p1 = 3]</i>) -> cvmat
- *
- * Smooths the image by median blur.
- * Finding median of <i>p1</i> x <i>p1</i> neighborhood (i.e. the neighborhood is square).
- */
-VALUE
-rb_smooth_median(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, dest;
-  rb_scan_args(argc, argv, "01", &p1);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  cvSmooth(self_ptr, CVARR(dest), CV_MEDIAN, IF_INT(p1, 3));
-  return dest;
-}
-
-/*
- * call-seq:
- *   smooth_bilateral(<i>[p1 = 3][p2 = 3]</i>) -> cvmat
- *
- * Smooths the image by bilateral filter.
- * Applying bilateral 3x3 filtering with color sigma=<i>p1</i> and space sigma=<i>p2</i>.
- */
-VALUE
-rb_smooth_bilateral(int argc, VALUE *argv, VALUE self)
-{
-  VALUE p1, p2, dest;
-  rb_scan_args(argc, argv, "02", &p1, &p2);
-  CvArr* self_ptr = CVARR(self);
-  dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-  cvSmooth(self_ptr, CVARR(dest), CV_BILATERAL, IF_INT(p1, 3), IF_INT(p2, 3));
-  return dest;
-}
-
-VALUE
-rb_smooth(int argc, VALUE *argv, VALUE self)
-{
-  VALUE smoothtype, p1, p2, p3, p4;
-  rb_scan_args(argc, argv, "14", &smoothtype, &p1, &p2, &p3, &p4);
-  int _smoothtype = CVMETHOD("SMOOTHING_TYPE", smoothtype, -1);
-  
-  VALUE (*smooth_func)(int c, VALUE* v, VALUE s);
-  argc--;
-  switch (_smoothtype) {
-  case CV_BLUR_NO_SCALE:
-    smooth_func = rb_smooth_blur_no_scale;
-    argc = (argc > 2) ? 2 : argc;
-    break;
-  case CV_BLUR:
-    smooth_func = rb_smooth_blur;
-    argc = (argc > 2) ? 2 : argc;
-    break;
-  case CV_GAUSSIAN:
-    smooth_func = rb_smooth_gaussian;
-    break;
-  case CV_MEDIAN:
-    smooth_func = rb_smooth_median;
-    argc = (argc > 1) ? 1 : argc;
-    break;
-  case CV_BILATERAL:
-    smooth_func = rb_smooth_bilateral;
-    argc = (argc > 2) ? 2 : argc;
-    break;
-  default:
-    smooth_func = rb_smooth_gaussian;
-    break;
-  }
-  VALUE result = Qnil;
-  try {
-    result = (*smooth_func)(argc, argv + 1, self);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return result;
-}
-
-/*
- * call-seq:
- *   filter2d(<i>kernel[,anchor]</i>) -> cvmat
- *
- * Convolves image with the kernel.
- * Convolution kernel, single-channel floating point matrix (or same depth of self's).
- * If you want to apply different kernels to different channels,
- * split the image using CvMat#split into separate color planes and process them individually.
- */
-VALUE
-rb_filter2d(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _kernel, _anchor;
-  rb_scan_args(argc, argv, "11", &_kernel, &_anchor);
-  CvMat* kernel = CVMAT_WITH_CHECK(_kernel);
-  CvArr* self_ptr = CVARR(self);
-  VALUE _dest = Qnil;
-  try {
-    _dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvFilter2D(self_ptr, CVARR(_dest), kernel, NIL_P(_anchor) ? cvPoint(-1,-1) : VALUE_TO_CVPOINT(_anchor));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return _dest;
-}
-
-/*
- * call-seq:
- *   copy_make_border(<i>border_type, size, offset[,value = CvScalar.new(0)]</i>)
- *
- * Copies image and makes border around it.
- * <i>border_type</i>:
- * - IPL_BORDER_CONSTANT, :constant
- *     border is filled with the fixed value, passed as last parameter of the function.
- * - IPL_BORDER_REPLICATE, :replicate
- *     the pixels from the top and bottom rows, the left-most and right-most columns are replicated to fill the border
- * <i>size</i>: The destination image size
- * <i>offset</i>: Coordinates of the top-left corner (or bottom-left in the case of images with bottom-left origin) of the destination image rectangle.
- * <i>value</i>: Value of the border pixels if bordertype is IPL_BORDER_CONSTANT or :constant.
- */
-VALUE
-rb_copy_make_border(int argc, VALUE *argv, VALUE self)
-{
-  VALUE border_type, size, offset, value, dest;
-  rb_scan_args(argc, argv, "31", &border_type, &size, &offset, &value);
-  dest = new_mat_kind_object(VALUE_TO_CVSIZE(size), self);
-
-  int type = 0;
-  if (SYMBOL_P(border_type)) {
-    ID type_id = rb_to_id(border_type);
-    if (type_id == rb_intern("constant"))
-      type = IPL_BORDER_CONSTANT;
-    else if (type_id == rb_intern("replicate"))
-      type = IPL_BORDER_REPLICATE;
-    else
-      rb_raise(rb_eArgError, "Invalid border_type (should be :constant or :replicate)");
-  }
-  else
-    type = NUM2INT(border_type);
-
-  try {
-    cvCopyMakeBorder(CVARR(self), CVARR(dest), VALUE_TO_CVPOINT(offset), type,
-		     NIL_P(value) ? cvScalar(0) : VALUE_TO_CVSCALAR(value));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   integral(<i>need_sqsum = false, need_tilted_sum = false</i>) -> [cvmat, cvmat or nil, cvmat or nil]
- *
- * Calculates integral images.
- * If <i>need_sqsum</i> = true, calculate the integral image for squared pixel values.
- * If <i>need_tilted_sum</i> = true, calculate the integral for the image rotated by 45 degrees.
- *
- *   sum(X,Y)=sumx<X,y<Yimage(x,y)
- *   sqsum(X,Y)=sumx<X,y<Yimage(x,y)2
- *   tilted_sum(X,Y)=sumy<Y,abs(x-X)<yimage(x,y)
- *
- * Using these integral images, one may calculate sum, mean, standard deviation over arbitrary up-right or rotated rectangular region of the image in a constant time.
- */
-VALUE
-rb_integral(int argc, VALUE *argv, VALUE self)
-{
-  VALUE need_sqsum = Qfalse, need_tiled_sum = Qfalse;
-  rb_scan_args(argc, argv, "02", &need_sqsum, &need_tiled_sum);
-
-  VALUE sum = Qnil;
-  VALUE sqsum = Qnil;
-  VALUE tiled_sum = Qnil;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    CvSize self_size = cvGetSize(self_ptr);
-    CvSize size = cvSize(self_size.width + 1, self_size.height + 1);
-    int type_cv64fcn = CV_MAKETYPE(CV_64F, CV_MAT_CN(cvGetElemType(self_ptr)));
-    sum = cCvMat::new_object(size, type_cv64fcn);
-    sqsum = (need_sqsum == Qtrue ? cCvMat::new_object(size, type_cv64fcn) : Qnil);
-    tiled_sum = (need_tiled_sum == Qtrue ? cCvMat::new_object(size, type_cv64fcn) : Qnil);
-    cvIntegral(self_ptr, CVARR(sum), (need_sqsum == Qtrue) ? CVARR(sqsum) : NULL,
-	       (need_tiled_sum == Qtrue) ? CVARR(tiled_sum) : NULL);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  
-  if ((need_sqsum != Qtrue) && (need_tiled_sum != Qtrue))
-    return sum;
-  else {
-    VALUE dest = rb_ary_new3(1, sum);
-    if (need_sqsum == Qtrue)
-      rb_ary_push(dest, sqsum);
-    if (need_tiled_sum == Qtrue)
-      rb_ary_push(dest, tiled_sum);
-    return dest;
-  }
-}
-
-inline VALUE
-rb_threshold_internal(int threshold_type, VALUE threshold, VALUE max_value, VALUE use_otsu, VALUE self)
-{
-  CvArr* self_ptr = CVARR(self);
-  int otsu = (use_otsu == Qtrue) && ((threshold_type & CV_THRESH_OTSU) == 0);
-  int type = threshold_type | (otsu ? CV_THRESH_OTSU : 0);
-  VALUE dest = Qnil;
-  double otsu_threshold = 0;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    otsu_threshold = cvThreshold(self_ptr, CVARR(dest), NUM2DBL(threshold), NUM2DBL(max_value), type);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  if ((use_otsu == Qtrue) || (threshold_type & CV_THRESH_OTSU))
-    return rb_assoc_new(dest, DBL2NUM(otsu_threshold));
-  else
-    return dest;
-}
-
-/*
- * call-seq:
- *   threshold(<i>threshold, max_value, threshold_type[,use_otsu = false]</i>)
- *
- * Applies fixed-level threshold to array elements.
- *
- */
-VALUE
-rb_threshold(int argc, VALUE *argv, VALUE self)
-{
-  VALUE threshold, max_value, threshold_type, use_otsu;
-  rb_scan_args(argc, argv, "31", &threshold, &max_value, &threshold_type, &use_otsu);
-  const int INVALID_TYPE = -1;
-  int type = CVMETHOD("THRESHOLD_TYPE", threshold_type, INVALID_TYPE);
-  if (type == INVALID_TYPE)
-    rb_raise(rb_eArgError, "Invalid threshold type.");
-  
-  return rb_threshold_internal(type, threshold, max_value, use_otsu, self);
-}
-
-
-/*
- * call-seq:
- *   adaptive_threshold(max_value[, options]) -> cvmat
- *
- * Applies an adaptive threshold to an array.
- *
- * ==== params:
- *
- * * <b>max_value (Number)</b> - Maximum value that is used with +CV_THRESH_BINARY+ and +CV_THRESH_BINARY_INV+
- * * <b>options (Hash)</b> - threshold option
- *   * <b>:threshold_type (Integer or Symbol)</b> - Thresholding type; must be one of +CV_THRESH_BINARY+ or +:binary+, +CV_THRESH_BINARY_INV+ or +:binary_inv+ (default: +CV_THRESH_BINARY+)
- *   * <b>:adaptive_method (Integer or Symbol)</b> - Adaptive thresholding algorithm to use: +CV_ADAPTIVE_THRESH_MEAN_C+ or +:mean_c+, +CV_ADAPTIVE_THRESH_GAUSSIAN_C+ or +:gaussian_c+ (default: +CV_ADAPTIVE_THRESH_MEAN_C+)
- *   * <b>:block_size (Integer)</b> - The size of a pixel neighborhood that is used to calculate a threshold value for the pixel: 3, 5, 7, and so on (default: 3)
- *   * <b>:param1 (Number)</b> - The method-dependent parameter. For the methods +CV_ADAPTIVE_THRESH_MEAN_C+ and +CV_ADAPTIVE_THRESH_GAUSSIAN_C+ it is a constant subtracted from the mean or weighted mean, though it may be negative (default: 5)
- */
-VALUE
-rb_adaptive_threshold(int argc, VALUE *argv, VALUE self)
-{
-  VALUE max_value, options;
-  rb_scan_args(argc, argv, "11", &max_value, &options);
-
-  int threshold_type = CV_THRESH_BINARY;
-  int adaptive_method = CV_ADAPTIVE_THRESH_MEAN_C;
-  int block_size = 3;
-  double param1 = 5;
-  if (!NIL_P(options)) {
-    Check_Type(options, T_HASH);
-    threshold_type = CVMETHOD("THRESHOLD_TYPE", LOOKUP_HASH(options, "threshold_type"),
-			      CV_THRESH_BINARY);
-    adaptive_method = CVMETHOD("ADAPTIVE_METHOD", LOOKUP_HASH(options, "adaptive_method"),
-			       CV_ADAPTIVE_THRESH_MEAN_C);
-    VALUE _block_size = LOOKUP_HASH(options, "block_size");
-    if (!NIL_P(_block_size)) {
-      block_size = NUM2INT(_block_size);
-    }
-    VALUE _param1 = LOOKUP_HASH(options, "param1");
-    if (!NIL_P(_param1)) {
-      param1 = NUM2INT(_param1);
-    }
-  }
-  CvArr* self_ptr = CVARR(self);
-  VALUE dst = new_mat_kind_object(cvGetSize(self_ptr), self);
-  try {
-    cvAdaptiveThreshold(self_ptr, CVARR(dst), NUM2DBL(max_value), adaptive_method, threshold_type,
-			block_size, param1);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  
-  return dst;
-}
-
-/*
- * call-seq:
- *   pyr_down(<i>[filter = :gaussian_5x5]</i>) -> cvmat
- *
- * Return downsamples image.
- *
- * This operation performs downsampling step of Gaussian pyramid decomposition.
- * First it convolves source image with the specified filter and then downsamples the image by rejecting even rows and columns.
- *
- * note: filter - only :gaussian_5x5 is currently supported.
- */
-VALUE
-rb_pyr_down(int argc, VALUE *argv, VALUE self)
-{
-  int filter = CV_GAUSSIAN_5x5;
-  if (argc > 0) {
-    VALUE filter_type = argv[0];
-    switch (TYPE(filter_type)) {
-    case T_SYMBOL:
-      // currently suport CV_GAUSSIAN_5x5 only.
-      break;
-    default:
-      raise_typeerror(filter_type, rb_cSymbol);
-    }
-  }
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    CvSize original_size = cvGetSize(self_ptr);
-    CvSize size = { original_size.width >> 1, original_size.height >> 1 };
-    dest = new_mat_kind_object(size, self);
-    cvPyrDown(self_ptr, CVARR(dest), filter);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   pyr_up(<i>[filter = :gaussian_5x5]</i>) -> cvmat
- *
- * Return upsamples image.
- *
- * This operation performs up-sampling step of Gaussian pyramid decomposition.
- * First it upsamples the source image by injecting even zero rows and columns and then convolves result with the specified filter multiplied by 4 for interpolation.
- * So the destination image is four times larger than the source image.
- *
- * note: filter - only :gaussian_5x5 is currently supported.
- */
-VALUE
-rb_pyr_up(int argc, VALUE *argv, VALUE self)
-{
-  VALUE filter_type;
-  rb_scan_args(argc, argv, "01", &filter_type);
-  int filter = CV_GAUSSIAN_5x5;
-  if (argc > 0) {
-    switch (TYPE(filter_type)) {
-    case T_SYMBOL:
-      // currently suport CV_GAUSSIAN_5x5 only.
-      break;
-    default:
-      raise_typeerror(filter_type, rb_cSymbol);
-    }
-  }
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    CvSize original_size = cvGetSize(self_ptr);
-    CvSize size = { original_size.width << 1, original_size.height << 1 };
-    dest = new_mat_kind_object(size, self);
-    cvPyrUp(self_ptr, CVARR(dest), filter);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   flood_fill(<i>seed_point, new_val, lo_diff, up_diff[,flood_fill_option]</i>) -> [cvmat, cvconnectedcomp, iplimage(mask)]
- *
- * Return image filled a connnected compoment with given color.
- * This operation fills a connected component starting from the seed point with the specified color.
- * The connectivity is determined by the closeness of pixel values.
- * The pixel at (x, y) is considered to belong to the repainted domain if:
- *
- *   src(x',y')-lo_diff<=src(x,y)<=src(x',y')+up_diff,     grayscale image, floating range
- *   src(seed.x,seed.y)-lo<=src(x,y)<=src(seed.x,seed.y)+up_diff, grayscale image, fixed range
- *   src(x',y')r-lo_diffr<=src(x,y)r<=src(x',y')r+up_diffr and
- *   src(x',y')g-lo_diffg<=src(x,y)g<=src(x',y')g+up_diffg and
- *   src(x',y')b-lo_diffb<=src(x,y)b<=src(x',y')b+up_diffb, color image, floating range
- *   src(seed.x,seed.y)r-lo_diffr<=src(x,y)r<=src(seed.x,seed.y)r+up_diffr and
- *   src(seed.x,seed.y)g-lo_diffg<=src(x,y)g<=src(seed.x,seed.y)g+up_diffg and
- *   src(seed.x,seed.y)b-lo_diffb<=src(x,y)b<=src(seed.x,seed.y)b+up_diffb, color image, fixed range
- *
- * where src(x',y') is value of one of pixel neighbors.
- * That is, to be added to the connected component, a pixel's color/brightness should be close enough to:
- * * color/brightness of one of its neighbors that are already referred to the connected component in case of floating range
- * * color/brightness of the seed point in case of fixed range.
- *
- * arguments
- * * seed_point -The starting point.
- * * new_val - New value of repainted domain pixels.
- * * lo_diff - Maximal lower brightness/color difference between the currently observed pixel and one of its neighbor belong to the component or seed pixel to add the pixel to component. In case of 8-bit color images it is packed value.
- * * up_diff - Maximal upper brightness/color difference between the currently observed pixel and one of its neighbor belong to the component or seed pixel to add the pixel to component. In case of 8-bit color images it is packed value.
- *
- * and flood_fill_option
- *   :connectivity => 4 or 8, 4 default
- *     Connectivity determines which neighbors of a pixel are considered.
- *   :fixed_range => true or false, false default
- *     If set the difference between the current pixel and seed pixel is considered, otherwise difference between neighbor pixels is considered (the range is floating).
- *   :mask_only => true or false, false default
- *     If set, the function does not fill the image(new_val is ignored), but the fills mask.
- *
- * note: <i>flood_fill_option</i>'s default value is CvMat::FLOOD_FILL_OPTION.
- */
-VALUE
-rb_flood_fill(int argc, VALUE *argv, VALUE self)
-{
-  return rb_flood_fill_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   flood_fill!(<i>seed_point, new_val, lo_diff, up_diff[,flood_fill_option]</i>) -> [self, cvconnectedcomp, iplimage(mask)]
- *
- * Fills a connected component with given color.
- * see CvMat#flood_fill
- */
-VALUE
-rb_flood_fill_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE seed_point, new_val, lo_diff, up_diff, flood_fill_option;
-  rb_scan_args(argc, argv, "23", &seed_point, &new_val, &lo_diff, &up_diff, &flood_fill_option);
-  flood_fill_option = FLOOD_FILL_OPTION(flood_fill_option);
-  int flags = FF_CONNECTIVITY(flood_fill_option);
-  if (FF_FIXED_RANGE(flood_fill_option)) {
-    flags |= CV_FLOODFILL_FIXED_RANGE;
-  }
-  if (FF_MASK_ONLY(flood_fill_option)) {
-    flags |= CV_FLOODFILL_MASK_ONLY;
-  }
-  CvArr* self_ptr = CVARR(self);
-  VALUE comp = cCvConnectedComp::new_object();
-  VALUE mask = Qnil;
-  try {
-    CvSize size = cvGetSize(self_ptr);
-    // TODO: Change argument format to set mask
-    mask = new_object(size.height + 2, size.width + 2, CV_MAKETYPE(CV_8U, 1));
-    CvMat* mask_ptr = CVMAT(mask);
-    cvSetZero(mask_ptr);
-    cvFloodFill(self_ptr,
-		VALUE_TO_CVPOINT(seed_point),
-		VALUE_TO_CVSCALAR(new_val),
-		NIL_P(lo_diff) ? cvScalar(0) : VALUE_TO_CVSCALAR(lo_diff),
-		NIL_P(up_diff) ? cvScalar(0) : VALUE_TO_CVSCALAR(up_diff),
-		CVCONNECTEDCOMP(comp),
-		flags,
-		mask_ptr);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(3, self, comp, mask);
-}
-
-/*
- * call-seq:
- *   find_contours([find_contours_options]) -> cvchain or cvcontour or nil
- *
- * Finds contours in binary image, and return contours as CvContour or CvChain.
- * If contours not found, return nil.
- *
- * <i>flood_fill_option</i> should be Hash include these keys.
- *   :mode - Retrieval mode.
- *      :external - retrive only the extreme outer contours
- *      :list - retrieve all the contours and puts them in the list.(default)
- *      :ccomp - retrieve all the contours and organizes them into two-level hierarchy:
- *               top level are external boundaries of the components, second level are bounda boundaries of the holes
- *      :tree - retrieve all the contours and reconstructs the full hierarchy of nested contours
- *              Connectivity determines which neighbors of a pixel are considered.
- *   :method - Approximation method.
- *      :code - output contours in the Freeman chain code. All other methods output polygons (sequences of vertices).
- *      :approx_none - translate all the points from the chain code into points;
- *      :approx_simple - compress horizontal, vertical, and diagonal segments, that is, the function leaves only their ending points;(default)
- *      :approx_tc89_l1
- *      :approx_tc89_kcos - apply one of the flavors of Teh-Chin chain approximation algorithm.
- *      If set the difference between the current pixel and seed pixel is considered,
- *      otherwise difference between neighbor pixels is considered (the range is floating).
- *   :offset - Offset, by which every contour point is shifted.
- *             This is useful if the contours are extracted from the image ROI
- *             and then they should be analyzed in the whole image context. Should be CvPoint.
- *
- * note: <i>find_contours_option</i>'s default value is CvMat::FIND_CONTOURS_OPTION.
- *
- * <b>support single-channel 8bit unsigned image only.</b>
- *
- * note: Non-zero pixels are treated as 1's, zero pixels remain 0's
- * that is image treated as binary. To get such a binary image from grayscale,
- * one may use threshold, adaptive_threshold or canny.
- */
-VALUE
-rb_find_contours(int argc, VALUE *argv, VALUE self)
-{
-  return rb_find_contours_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   find_contours!([find_contours_options]) -> cvchain or chcontour or nil
- *
- * Finds contours in binary image.
- * The function modifies the source image content.
- * (Because the copy is not made, it is slightly faster than find_contours.)
- *
- * see find_contours
- *
- * <b>support single-channel 8bit unsigned image only.</b>
- */
-VALUE
-rb_find_contours_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE find_contours_option, klass, element_klass, storage;
-  rb_scan_args(argc, argv, "01", &find_contours_option);
-  CvSeq *contour = NULL;
-  find_contours_option = FIND_CONTOURS_OPTION(find_contours_option);
-  int mode = FC_MODE(find_contours_option);
-  int method = FC_METHOD(find_contours_option);
-  int header_size;
-  if (method == CV_CHAIN_CODE) {
-    klass = cCvChain::rb_class();
-    element_klass = T_FIXNUM;
-    header_size = sizeof(CvChain);
-  }
-  else {
-    klass = cCvContour::rb_class();
-    element_klass = cCvPoint::rb_class();
-    header_size = sizeof(CvContour);
-  }
-  storage = cCvMemStorage::new_object();
-
-  int count = 0;
-  try {
-    count = cvFindContours(CVARR(self), CVMEMSTORAGE(storage), &contour, header_size,
-			   mode, method, FC_OFFSET(find_contours_option));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  if (count == 0)
-    return Qnil;
-  else
-    return cCvSeq::new_sequence(klass, contour, element_klass, storage);
-}
-
-/*
- * call-seq:
- *   draw_contours(contour, external_color, hole_color, max_level, options) -> cvmat
- *
- * Draws contour outlines or interiors in an image.
- *
- * * <i>contour</i> (CvContour) - Pointer to the first contour
- * * <i>external_color</i> (CvScalar) -  Color of the external contours
- * * <i>hole_color</i> (CvScalar) - Color of internal contours (holes)
- * * <i>max_level</i> (Integer) - Maximal level for drawn contours. If 0, only contour is drawn. If 1, the contour and all contours following it on the same level are drawn. If 2, all contours following and all contours one level below the contours are drawn, and so forth. If the value is negative, the function does not draw the contours following after contour but draws the child contours of contour up to the |max_level| - 1 level.
- * * <i>options</i> (Hash) - Drawing options.
- *   * :thickness (Integer) - Thickness of lines the contours are drawn with. If it is negative, the contour interiors are drawn (default: 1).
- *   * :line_type (Integer or Symbol) - Type of the contour segments, see CvMat#line description (default: 8).
- */
-VALUE
-rb_draw_contours(int argc, VALUE *argv, VALUE self)
-{
-  return rb_draw_contours_bang(argc, argv, copy(self));
-}
-
-/*
- * call-seq:
- *   draw_contours!(contour, external_color, hole_color, max_level, options) -> cvmat
- *
- * Draws contour outlines or interiors in an image.
- *
- * see CvMat#draw_contours
- */
-VALUE
-rb_draw_contours_bang(int argc, VALUE *argv, VALUE self)
-{
-  VALUE contour, external_color, hole_color, max_level, options;
-  rb_scan_args(argc, argv, "41", &contour, &external_color, &hole_color, &max_level, &options);
-  options = DRAWING_OPTION(options);
-  try {
-    cvDrawContours(CVARR(self), CVSEQ_WITH_CHECK(contour), VALUE_TO_CVSCALAR(external_color),
-		   VALUE_TO_CVSCALAR(hole_color), NUM2INT(max_level),
-		   DO_THICKNESS(options), DO_LINE_TYPE(options));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return self;
-}
-
-/*
- * call-seq:
- *   draw_chessboard_corners(pattern_size, corners, pattern_was_found) -> nil
- *
- * Returns an image which is rendered the detected chessboard corners.
- *
- * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
- * corners (Array<CvPoint2D32f>) - Array of detected corners, the output of CvMat#find_chessboard_corners.
- * pattern_was_found (Boolean)- Parameter indicating whether the complete board was found or not.
- */
-VALUE
-rb_draw_chessboard_corners(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found)
-{
-  return rb_draw_chessboard_corners_bang(copy(self), pattern_size, corners, pattern_was_found);
-}
-
-/*
- * call-seq:
- *   draw_chessboard_corners!(pattern_size, corners, pattern_was_found) -> self
- *
- * Renders the detected chessboard corners.
- *
- * pattern_size (CvSize) - Number of inner corners per a chessboard row and column.
- * corners (Array<CvPoint2D32f>) - Array of detected corners, the output of CvMat#find_chessboard_corners.
- * pattern_was_found (Boolean)- Parameter indicating whether the complete board was found or not.
- */
-VALUE
-rb_draw_chessboard_corners_bang(VALUE self, VALUE pattern_size, VALUE corners, VALUE pattern_was_found)
-{
-  Check_Type(corners, T_ARRAY);
-  int count = RARRAY_LEN(corners);
-  CvPoint2D32f* corners_buff = ALLOCA_N(CvPoint2D32f, count);
-  VALUE* corners_ptr = RARRAY_PTR(corners);
-  for (int i = 0; i < count; i++) {
-    corners_buff[i] = *(CVPOINT2D32F(corners_ptr[i]));
-  }
-
-  try {
-    int found = (pattern_was_found == Qtrue);
-    cvDrawChessboardCorners(CVARR(self), VALUE_TO_CVSIZE(pattern_size), corners_buff, count, found);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return self;
-}
-
-/*
- * call-seq:
- *   pyr_mean_shift_filtering(<i>sp, sr[,max_level = 1][termcrit = CvTermCriteria.new(5,1)]</i>) -> cvmat
- *
- * Does meanshift image segmentation.
- *
- *   sp - The spatial window radius.
- *   sr - The color window radius.
- *   max_level - Maximum level of the pyramid for the segmentation.
- *   termcrit - Termination criteria: when to stop meanshift iterations.
- *
- * This method is implements the filtering stage of meanshift segmentation,
- * that is, the output of the function is the filtered "posterized" image with color gradients and fine-grain texture flattened.
- * At every pixel (X,Y) of the input image (or down-sized input image, see below)
- * the function executes meanshift iterations, that is, the pixel (X,Y) neighborhood in the joint space-color hyperspace is considered:
- *   {(x,y): X-sp≤x≤X+sp && Y-sp≤y≤Y+sp && ||(R,G,B)-(r,g,b)|| ≤ sr},
- * where (R,G,B) and (r,g,b) are the vectors of color components at (X,Y) and (x,y),
- * respectively (though, the algorithm does not depend on the color space used,
- * so any 3-component color space can be used instead).
- * Over the neighborhood the average spatial value (X',Y')
- * and average color vector (R',G',B') are found and they act as the neighborhood center on the next iteration:
- *   (X,Y)~(X',Y'), (R,G,B)~(R',G',B').
- * After the iterations over, the color components of the initial pixel (that is, the pixel from where the iterations started)
- * are set to the final value (average color at the last iteration):
- *   I(X,Y) <- (R*,G*,B*).
- * Then max_level > 0, the gaussian pyramid of max_level+1 levels is built,
- * and the above procedure is run on the smallest layer.
- * After that, the results are propagated to the larger layer and the iterations are run again
- * only on those pixels where the layer colors differ much (>sr) from the lower-resolution layer,
- * that is, the boundaries of the color regions are clarified.
- *
- * Note, that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when max_level==0).
- */
-VALUE
-rb_pyr_mean_shift_filtering(int argc, VALUE *argv, VALUE self)
-{
-  VALUE spatial_window_radius, color_window_radius, max_level, termcrit;
-  rb_scan_args(argc, argv, "22", &spatial_window_radius, &color_window_radius, &max_level, &termcrit);
-  CvArr* self_ptr = CVARR(self);
-  VALUE dest = Qnil;
-  try {
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvPyrMeanShiftFiltering(self_ptr, CVARR(dest),
-			    NUM2DBL(spatial_window_radius),
-			    NUM2DBL(color_window_radius),
-			    IF_INT(max_level, 1),
-			    NIL_P(termcrit) ? cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 5, 1)
-			    : VALUE_TO_CVTERMCRITERIA(termcrit));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   watershed -> cvmat(mean markers:cv32s)
- *
- * Does watershed segmentation.
- */
-VALUE
-rb_watershed(VALUE self, VALUE markers)
-{
-  try {
-    cvWatershed(CVARR(self), CVARR_WITH_CHECK(markers));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return markers;
-}
-
-/*
- * call-seq:
- *   moments -> cvmoments
- *
- * Calculates moments.
- */
-VALUE
-rb_moments(int argc, VALUE *argv, VALUE self)
-{
-  VALUE is_binary;
-  rb_scan_args(argc, argv, "01", &is_binary);
-  CvArr *self_ptr = CVARR(self);
-  VALUE moments = Qnil;
-  try {
-    moments = cCvMoments::new_object(self_ptr, TRUE_OR_FALSE(is_binary, 0));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return moments;
-}
-
-/*
- * call-seq:
- *   hough_lines(<i>method, rho, theta, threshold, param1, param2</i>) -> cvseq(include CvLine or CvTwoPoints)
- *
- * Finds lines in binary image using a Hough transform.
- * * method –
-
- * *   The Hough transform variant, one of the following:
- * *   - CV_HOUGH_STANDARD - classical or standard Hough transform.
- * *   - CV_HOUGH_PROBABILISTIC - probabilistic Hough transform (more efficient in case if picture contains a few long linear segments).
- * *   - CV_HOUGH_MULTI_SCALE - multi-scale variant of the classical Hough transform. The lines are encoded the same way as CV_HOUGH_STANDARD.
- * * rho - Distance resolution in pixel-related units.
- * * theta - Angle resolution measured in radians.
- * * threshold - Threshold parameter. A line is returned by the function if the corresponding accumulator value is greater than threshold.
- * * param1 –
-
- * *   The first method-dependent parameter:
- * *     For the classical Hough transform it is not used (0).
- * *     For the probabilistic Hough transform it is the minimum line length.
- * *     For the multi-scale Hough transform it is the divisor for the distance resolution . (The coarse distance resolution will be rho and the accurate resolution will be (rho / param1)).
- * * param2 –
-
- * *   The second method-dependent parameter:
- * *     For the classical Hough transform it is not used (0).
- * *     For the probabilistic Hough transform it is the maximum gap between line segments lying on the same line to treat them as a single line segment (i.e. to join them).
- * *     For the multi-scale Hough transform it is the divisor for the angle resolution. (The coarse angle resolution will be theta and the accurate resolution will be (theta / param2).)
- */
-VALUE
-rb_hough_lines(int argc, VALUE *argv, VALUE self)
-{
-  const int INVALID_TYPE = -1;
-  VALUE method, rho, theta, threshold, p1, p2;
-  rb_scan_args(argc, argv, "42", &method, &rho, &theta, &threshold, &p1, &p2);
-  int method_flag = CVMETHOD("HOUGH_TRANSFORM_METHOD", method, INVALID_TYPE);
-  if (method_flag == INVALID_TYPE)
-    rb_raise(rb_eArgError, "Invalid method: %d", method_flag);
-  VALUE storage = cCvMemStorage::new_object();
-  CvSeq *seq = NULL;
-  try {
-    seq = cvHoughLines2(CVARR(copy(self)), CVMEMSTORAGE(storage),
-			method_flag, NUM2DBL(rho), NUM2DBL(theta), NUM2INT(threshold),
-			IF_DBL(p1, 0), IF_DBL(p2, 0));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  switch (method_flag) {
-  case CV_HOUGH_STANDARD:
-  case CV_HOUGH_MULTI_SCALE:
-    return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvLine::rb_class(), storage);
-    break;
-  case CV_HOUGH_PROBABILISTIC:
-    return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvTwoPoints::rb_class(), storage);
-    break;
-  default:
-    break;
-  }
-
-  return Qnil;
-}
-
-/*
- * call-seq:
- *   hough_circles(<i>method, dp, min_dist, param1, param2, min_radius = 0, max_radius = max(width,height)</i>) -> cvseq(include CvCircle32f)
- *
- * Finds circles in grayscale image using Hough transform.
- */
-VALUE
-rb_hough_circles(int argc, VALUE *argv, VALUE self)
-{
-  const int INVALID_TYPE = -1;
-  VALUE method, dp, min_dist, param1, param2, min_radius, max_radius, storage;
-  rb_scan_args(argc, argv, "52", &method, &dp, &min_dist, &param1, &param2, 
-	       &min_radius, &max_radius);
-  storage = cCvMemStorage::new_object();
-  int method_flag = CVMETHOD("HOUGH_TRANSFORM_METHOD", method, INVALID_TYPE);
-  if (method_flag == INVALID_TYPE)
-    rb_raise(rb_eArgError, "Invalid method: %d", method_flag);
-  CvSeq *seq = NULL;
-  try {
-    seq = cvHoughCircles(CVARR(self), CVMEMSTORAGE(storage),
-			 method_flag, NUM2DBL(dp), NUM2DBL(min_dist),
-			 NUM2DBL(param1), NUM2DBL(param2),
-			 IF_INT(min_radius, 0), IF_INT(max_radius, 0));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return cCvSeq::new_sequence(cCvSeq::rb_class(), seq, cCvCircle32f::rb_class(), storage);
-}
-
-/*
- * call-seq:
- *   inpaint(<i>inpaint_method, mask, radius</i>) -> cvmat
- *
- * Inpaints the selected region in the image
- * The radius of circlular neighborhood of each point inpainted that is considered by the algorithm.
- */
-VALUE
-rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius)
-{
-  const int INVALID_TYPE = -1;
-  VALUE dest = Qnil;
-  int method = CVMETHOD("INPAINT_METHOD", inpaint_method, INVALID_TYPE);
-  if (method == INVALID_TYPE)
-    rb_raise(rb_eArgError, "Invalid method");
-  try {
-    CvArr* self_ptr = CVARR(self);
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvInpaint(self_ptr, MASK(mask), CVARR(dest), NUM2DBL(radius), method);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   equalize_hist - cvmat
- *
- * Equalize histgram of grayscale of image.
- *
- * equalizes histogram of the input image using the following algorithm:
- * 1. calculate histogram H for src.
- * 2. normalize histogram, so that the sum of histogram bins is 255.
- * 3. compute integral of the histogram:
- *    H’(i) = sum0≤j≤iH(j)
- * 4. transform the image using H’ as a look-up table: dst(x,y)=H’(src(x,y))
- * The algorithm normalizes brightness and increases contrast of the image.
- *
- * <b>support single-channel 8bit image (grayscale) only.</b>
- */
-VALUE
-rb_equalize_hist(VALUE self)
-{
-  VALUE dest = Qnil;
-  try {
-    CvArr* self_ptr = CVARR(self);
-    dest = new_mat_kind_object(cvGetSize(self_ptr), self);
-    cvEqualizeHist(self_ptr, CVARR(dest));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return dest;
-}
-
-/*
- * call-seq:
- *   apply_color_map(colormap) -> cvmat
- *
- * Applies a GNU Octave/MATLAB equivalent colormap on a given image.
- *
- * Parameters:
- *   colormap - The colormap to apply.
- */
-VALUE
-rb_apply_color_map(VALUE self, VALUE colormap)
-{
-  VALUE dst;
-  try {
-    cv::Mat dst_mat;
-    cv::Mat self_mat(CVMAT(self));
-
-    cv::applyColorMap(self_mat, dst_mat, NUM2INT(colormap));
-    CvMat tmp = dst_mat;
-    dst = new_object(tmp.rows, tmp.cols, tmp.type);
-    cvCopy(&tmp, CVMAT(dst));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return dst;
-}
-
-/*
- * call-seq:
- *   match_template(<i>template[,method = :sqdiff]</i>) -> cvmat(result)
- *
- * Compares template against overlapped image regions.
-
- * <i>method</i> is specifies the way the template must be compared with image regions.
- * <i>method</i> should be following symbol. (see OpenCV::MATCH_TEMPLATE_METHOD 's key and value.)
- *
- * * :sqdiff
- *   R(x,y)=sumx',y'[T(x',y')-I(x+x',y+y')]2
- * * :sqdiff_normed
- *   R(x,y)=sumx',y'[T(x',y')-I(x+x',y+y')]2/sqrt[sumx',y'T(x',y')2*sumx',y'I(x+x',y+y')2]
- * * :ccorr
- *   R(x,y)=sumx',y'[T(x',y')*I(x+x',y+y')]
- * * :ccorr_normed
- *   R(x,y)=sumx',y'[T(x',y')*I(x+x',y+y')]/sqrt[sumx',y'T(x',y')2*sumx',y'I(x+x',y+y')2]
- * * :ccoeff
- *   R(x,y)=sumx',y'[T'(x',y')*I'(x+x',y+y')],
- *     where T'(x',y')=T(x',y') - 1/(w*h)*sumx",y"T(x",y")
- *   I'(x+x',y+y')=I(x+x',y+y') - 1/(w*h)*sumx",y"I(x+x",y+y")
- * * :ccoeff_normed
- *   R(x,y)=sumx',y'[T'(x',y')*I'(x+x',y+y')]/sqrt[sumx',y'T'(x',y')2*sumx',y'I'(x+x',y+y')2]
- *
- * After the match_template finishes comparison, the best matches can be found as global
- * minimums (:sqdiff*) or maximums(:ccorr* or :ccoeff*) using minmax function.
- * In case of color image and template summation in both numerator and each sum in denominator
- * is done over all the channels (and separate mean values are used for each channel).
- */
-VALUE
-rb_match_template(int argc, VALUE *argv, VALUE self)
-{
-  VALUE templ, method;
-  int method_flag;
-  if (rb_scan_args(argc, argv, "11", &templ, &method) == 1)
-    method_flag = CV_TM_SQDIFF;
-  else
-    method_flag = CVMETHOD("MATCH_TEMPLATE_METHOD", method);
-
-  CvArr* self_ptr = CVARR(self);
-  CvArr* templ_ptr = CVARR_WITH_CHECK(templ);
-  VALUE result = Qnil;
-  try {
-    CvSize src_size = cvGetSize(self_ptr);
-    CvSize template_size = cvGetSize(templ_ptr);
-    result = cCvMat::new_object(src_size.height - template_size.height + 1,
-				src_size.width - template_size.width + 1,
-				CV_32FC1);
-    cvMatchTemplate(self_ptr, templ_ptr, CVARR(result), method_flag);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return result;
-}
-
-/*
- * call-seq:
- *   match_shapes(<i>object, method</i>) -> float
- *
- * Compares two shapes(self and object). <i>object</i> should be CvMat or CvContour.
- *
- * A - object1, B - object2:
- * * method=CV_CONTOURS_MATCH_I1
- *     I1(A,B)=sumi=1..7abs(1/mAi - 1/mBi)
- * * method=CV_CONTOURS_MATCH_I2
- *     I2(A,B)=sumi=1..7abs(mAi - mBi)
- * * method=CV_CONTOURS_MATCH_I3
- *     I3(A,B)=sumi=1..7abs(mAi - mBi)/abs(mAi)
- */
-VALUE
-rb_match_shapes(int argc, VALUE *argv, VALUE self)
-{
-  VALUE object, method, param;
-  rb_scan_args(argc, argv, "21", &object, &method, &param);
-  int method_flag = CVMETHOD("COMPARISON_METHOD", method);
-  if (!(rb_obj_is_kind_of(object, cCvMat::rb_class()) || rb_obj_is_kind_of(object, cCvContour::rb_class())))
-    rb_raise(rb_eTypeError, "argument 1 (shape) should be %s or %s",
-	     rb_class2name(cCvMat::rb_class()), rb_class2name(cCvContour::rb_class()));
-  double result = 0;
-  try {
-    result = cvMatchShapes(CVARR(self), CVARR(object), method_flag);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_float_new(result);
-}
-
-
-/**
- * Port from OpenCV sample: matching_to_many_images.cpp
- * call-seq:
- *   match_descriptors(<i>images[, detector_type="SURF"][, descriptor_type="SURF"][, matcher_type="FlannBased"]</i>) -> Hash
- *
- * Matching descriptors detected on one image to descriptors detected in image array.
- * Returns a Hash contains match count of each image index.
- * For example, a Hash {0 => 5, 2 => 10} means the images[0] has 5 key points matched, images[2] has 10 key points matched, 
- * and all of other images in the images array have no key point matched.
- * Hence images[2] is the best match in general.
- *
- * <i>images</i> is an array of CvMat objects.
- * <i>detector_type</i> is a string, default is "SURF", options: "SURF", "FAST", "SIFT", "STAR"
- * <i>descriptor_type</i> is a string, default is "SURF", options: "SURF", "SIFT", "BRIEF"
- * <i>matcher_type</i> is a string, default is "FlannBased", options: "FlannBased", "BruteForce"
- */
-VALUE
-rb_match_descriptors(int argc, VALUE *argv, VALUE self)
-{
-  VALUE images, detector_type, descriptor_type, matcher_type;
-  rb_scan_args(argc, argv, "13", &images, &detector_type, &descriptor_type, &matcher_type);
-  if (RARRAY_LEN(images) == 0) {
-    return rb_hash_new();
-  }
-  if (NIL_P(detector_type)) {
-    detector_type = rb_str_new2("SURF");
-  }
-  if (NIL_P(descriptor_type)) {
-    descriptor_type = rb_str_new2("SURF");
-  }
-  if (NIL_P(matcher_type)) {
-    matcher_type = rb_str_new2("FlannBased");
-  }
-
-  VALUE _matches = rb_hash_new();
-  try {
-    cv::Mat queryImage(CVMAT(self));
-    std::vector<cv::Mat> trainImages;
-    for(int i = 0, n = RARRAY_LEN(images); i < n; i++) {
-      trainImages.push_back(CVMAT_WITH_CHECK(RARRAY_PTR(images)[i]));
-    }
-
-    cv::Ptr<cv::FeatureDetector> featureDetector = cv::FeatureDetector::create(StringValueCStr(detector_type));
-    if (featureDetector.empty()) {
-      rb_raise(rb_eArgError, "Could not create feature detector by given detector type: %s", StringValueCStr(detector_type));
-    }
-    cv::Ptr<cv::DescriptorExtractor> descriptorExtractor = cv::DescriptorExtractor::create(StringValueCStr(descriptor_type));
-    if (descriptorExtractor.empty()) {
-      rb_raise(rb_eArgError, "Could not create descriptor extractor by given descriptor type: %s", StringValueCStr(descriptor_type));
-    }
-    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-    try {
-      descriptorMatcher = cv::DescriptorMatcher::create(StringValueCStr(matcher_type));
-    }
-    catch(cv::Exception& e) {
-      rb_raise(rb_eArgError, "Could not create descriptor matcher by given matcher type: %s", StringValueCStr(matcher_type));
-    }
-
-    std::vector<cv::KeyPoint> queryKeypoints;
-    std::vector<std::vector<cv::KeyPoint> > trainKeypoints;
-    featureDetector->detect(queryImage, queryKeypoints);
-    featureDetector->detect(trainImages, trainKeypoints);
-    cv::Mat queryDescriptors;
-    std::vector<cv::Mat> trainDescriptors;
-    descriptorExtractor->compute(queryImage, queryKeypoints, queryDescriptors);
-    descriptorExtractor->compute(trainImages, trainKeypoints, trainDescriptors);
-    std::vector<cv::DMatch> matches;
-    descriptorMatcher->add(trainDescriptors);
-    descriptorMatcher->train();
-    descriptorMatcher->match(queryDescriptors, matches);
-
-    for (size_t i = 0, n = matches.size(); i < n; i++) {
-      VALUE match = INT2FIX(matches[i].imgIdx);
-      VALUE count = rb_hash_lookup(_matches, match);
-      if (NIL_P(count)) {
-	count = INT2FIX(1);
-      } else {
-	count = INT2FIX(FIX2INT(count) + 1);
-      }
-      rb_hash_aset(_matches, match, count);
-    }
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return _matches;
-}
-
-/*
- * call-seq:
- *   mean_shift(window, criteria) -> comp
- *
- * Implements CAMSHIFT object tracking algrorithm.
- * First, it finds an object center using mean_shift and, after that,
- * calculates the object size and orientation.
- */
-VALUE
-rb_mean_shift(VALUE self, VALUE window, VALUE criteria)
-{
-  VALUE comp = cCvConnectedComp::new_object();
-  try {
-    cvMeanShift(CVARR(self), VALUE_TO_CVRECT(window), VALUE_TO_CVTERMCRITERIA(criteria), CVCONNECTEDCOMP(comp));    
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return comp;
-}
-
-/*
- * call-seq:
- *   cam_shift(window, criteria) -> [comp, box]
- *
- * Implements CAMSHIFT object tracking algrorithm. First, it finds an object center using cvMeanShift and,
- * after that, calculates the object size and orientation. The function returns number of iterations made
- * within cvMeanShift.
- */
-VALUE
-rb_cam_shift(VALUE self, VALUE window, VALUE criteria)
-{
-  VALUE comp = cCvConnectedComp::new_object();
-  VALUE box = cCvBox2D::new_object();
-  try {
-    cvCamShift(CVARR(self), VALUE_TO_CVRECT(window), VALUE_TO_CVTERMCRITERIA(criteria),
-	       CVCONNECTEDCOMP(comp), CVBOX2D(box));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, comp, box);
-}
-
-/*
- * call-seq:
- *   snake_image(<i>points, alpha, beta, gamma, window, criteria[, calc_gradient = true]</i>) -> array(pointset)
- *
- * Updates snake in order to minimize its total energy that is a sum of internal energy
- * that depends on contour shape (the smoother contour is, the smaller internal energy is)
- * and external energy that depends on the energy field and reaches minimum at the local energy
- * extremums that correspond to the image edges in case of image gradient.
-
- * The parameter criteria.epsilon is used to define the minimal number of points that must be moved
- * during any iteration to keep the iteration process running.
- *
- * If at some iteration the number of moved points is less than criteria.epsilon or
- * the function performed criteria.max_iter iterations, the function terminates.
- *
- * points
- *   Contour points (snake).
- * alpha
- *   Weight[s] of continuity energy, single float or array of length floats, one per each contour point.
- * beta
- *   Weight[s] of curvature energy, similar to alpha.
- * gamma
- *   Weight[s] of image energy, similar to alpha.
- * window
- *   Size of neighborhood of every point used to search the minimum, both win.width and win.height must be odd.
- * criteria
- *  Termination criteria.
- * calc_gradient
- *  Gradient flag. If not 0, the function calculates gradient magnitude for every image pixel and consideres
- *  it as the energy field, otherwise the input image itself is considered.
- */
-VALUE
-rb_snake_image(int argc, VALUE *argv, VALUE self)
-{
-  VALUE points, alpha, beta, gamma, window, criteria, calc_gradient;
-  rb_scan_args(argc, argv, "61", &points, &alpha, &beta, &gamma, &window, &criteria, &calc_gradient);
-  CvPoint *pointset = 0;
-  int length = CVPOINTS_FROM_POINT_SET(points, &pointset);
-  int coeff = (TYPE(alpha) == T_ARRAY && TYPE(beta) == T_ARRAY && TYPE(gamma) == T_ARRAY) ? CV_ARRAY : CV_VALUE;
-  float *a = 0, *b = 0, *c = 0;
-  IplImage stub;
-  int i;
-  if (coeff == CV_VALUE) {
-    float buff_a, buff_b, buff_c;
-    buff_a = (float)NUM2DBL(alpha);
-    buff_b = (float)NUM2DBL(beta);
-    buff_c = (float)NUM2DBL(gamma);
-    a = &buff_a;
-    b = &buff_b;
-    c = &buff_c;
-  }
-  else { // CV_ARRAY
-    if ((RARRAY_LEN(alpha) != length) ||
-	(RARRAY_LEN(beta) != length) ||
-	(RARRAY_LEN(gamma) != length))
-      rb_raise(rb_eArgError, "alpha, beta, gamma should be same size of points");
-    a = ALLOCA_N(float, length);
-    b = ALLOCA_N(float, length);
-    c = ALLOCA_N(float, length);
-    for (i = 0; i < length; ++i) {
-      a[i] = (float)NUM2DBL(RARRAY_PTR(alpha)[i]);
-      b[i] = (float)NUM2DBL(RARRAY_PTR(beta)[i]);
-      c[i] = (float)NUM2DBL(RARRAY_PTR(gamma)[i]);
-    }
-  }
-  CvSize win = VALUE_TO_CVSIZE(window);
-  CvTermCriteria tc = VALUE_TO_CVTERMCRITERIA(criteria);
-  try {
-    cvSnakeImage(cvGetImage(CVARR(self), &stub), pointset, length,
-		 a, b, c, coeff, win, tc, IF_BOOL(calc_gradient, 1, 0, 1));
-  }
-  catch (cv::Exception& e) {
-    if (pointset != NULL)
-      cvFree(&pointset);
-    raise_cverror(e);
-  }
-  VALUE result = rb_ary_new2(length);
-  for (i = 0; i < length; ++i)
-    rb_ary_push(result, cCvPoint::new_object(pointset[i]));
-  cvFree(&pointset);
-  
-  return result;
-}
-
-/*
- * call-seq:
- *   optical_flow_hs(<i>prev[,velx = nil][,vely = nil][,options]</i>) -> [cvmat, cvmat]
- *
- * Calculates optical flow for two images (previous -> self) using Horn & Schunck algorithm.
- * Return horizontal component of the optical flow and vertical component of the optical flow.
- * <i>prev</i> is previous image
- * <i>velx</i> is previous velocity field of x-axis, and <i>vely</i> is previous velocity field of y-axis.
- *
- * options
- * * :lambda -> should be Float (default is 0.0005)
- *     Lagrangian multiplier.
- * * :criteria -> should be CvTermCriteria object (default is CvTermCriteria(1, 0.001))
- *     Criteria of termination of velocity computing.
- * note: <i>option</i>'s default value is CvMat::OPTICAL_FLOW_HS_OPTION.
- *
- * sample code
- *   velx, vely = nil, nil
- *   while true
- *     current = capture.query
- *     velx, vely = current.optical_flow_hs(prev, velx, vely) if prev
- *     prev = current
- *   end
- */
-VALUE
-rb_optical_flow_hs(int argc, VALUE *argv, VALUE self)
-{
-  VALUE prev, velx, vely, options;
-  int use_previous = 0;
-  rb_scan_args(argc, argv, "13", &prev, &velx, &vely, &options);
-  options = OPTICAL_FLOW_HS_OPTION(options);
-  CvMat *velx_ptr, *vely_ptr;
-  CvArr* self_ptr = CVARR(self);
-  try {
-    if (NIL_P(velx) && NIL_P(vely)) {
-      CvSize size = cvGetSize(self_ptr);
-      int type = CV_MAKETYPE(CV_32F, 1);
-      velx = cCvMat::new_object(size, type);
-      vely = cCvMat::new_object(size, type);
-      velx_ptr = CVMAT(velx);
-      vely_ptr = CVMAT(vely);
-    }
-    else {
-      use_previous = 1;
-      velx_ptr = CVMAT_WITH_CHECK(velx);
-      vely_ptr = CVMAT_WITH_CHECK(vely);
-    }
-    cvCalcOpticalFlowHS(CVMAT_WITH_CHECK(prev), self_ptr, use_previous, velx_ptr, vely_ptr,
-			HS_LAMBDA(options), HS_CRITERIA(options));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, velx, vely);
-}
-
-/*
- * call-seq:
- *   optical_flow_lk(<i>prev, win_size</i>) -> [cvmat, cvmat]
- *
- * Calculates optical flow for two images (previous -> self) using Lucas & Kanade algorithm
- * Return horizontal component of the optical flow and vertical component of the optical flow.
- *
- * <i>win_size</i> is size of the averaging window used for grouping pixels.
- */
-VALUE
-rb_optical_flow_lk(VALUE self, VALUE prev, VALUE win_size)
-{
-  VALUE velx = Qnil;
-  VALUE vely = Qnil;
-  try {
-    CvArr* self_ptr = CVARR(self);
-    CvSize size = cvGetSize(self_ptr);
-    int type = CV_MAKETYPE(CV_32F, 1);
-    velx = cCvMat::new_object(size, type);
-    vely = cCvMat::new_object(size, type);
-    cvCalcOpticalFlowLK(CVMAT_WITH_CHECK(prev), self_ptr, VALUE_TO_CVSIZE(win_size),
-			CVARR(velx), CVARR(vely));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, velx, vely);
-}
-
-/*
- * call-seq:
- *   optical_flow_bm(<i>prev[,velx = nil][,vely = nil][,option]</i>) -> [cvmat, cvmat]
- *
- * Calculates optical flow for two images (previous -> self) using block matching method.
- * Return horizontal component of the optical flow and vertical component of the optical flow.
- * <i>prev</i> is previous image.
- * <i>velx</i> is previous velocity field of x-axis, and <i>vely</i> is previous velocity field of y-axis.
- *
- * options
- * * :block_size -> should be CvSize (default is CvSize(4,4))
- *     Size of basic blocks that are compared.
- * * :shift_size -> should be CvSize (default is CvSize(1,1))
- *     Block coordinate increments.
- * * :max_range -> should be CvSize (default is CVSize(4,4))
- *     Size of the scanned neighborhood in pixels around block.
- * note: <i>option</i>'s default value is CvMat::OPTICAL_FLOW_BM_OPTION.
- *
- * Velocity is computed for every block, but not for every pixel,
- * so velocity image pixels correspond to input image blocks.
- * input/output velocity field's size should be (self.width / block_size.width)x(self.height / block_size.height).
- * e.g. image.size is 320x240 and block_size is 4x4, velocity field's size is 80x60.
- *
- */
-VALUE
-rb_optical_flow_bm(int argc, VALUE *argv, VALUE self)
-{
-  VALUE prev, velx, vely, options;
-  rb_scan_args(argc, argv, "13", &prev, &velx, &vely, &options);
-  options = OPTICAL_FLOW_BM_OPTION(options);
-  CvArr* self_ptr = CVARR(self);
-  CvSize block_size = BM_BLOCK_SIZE(options);
-  CvSize shift_size = BM_SHIFT_SIZE(options);
-  CvSize max_range  = BM_MAX_RANGE(options);
-
-  int use_previous = 0;
-  try {
-    CvSize image_size = cvGetSize(self_ptr);
-    CvSize velocity_size = cvSize((image_size.width - block_size.width + shift_size.width) / shift_size.width,
-				  (image_size.height - block_size.height + shift_size.height) / shift_size.height);
-    CvMat *velx_ptr, *vely_ptr;
-    if (NIL_P(velx) && NIL_P(vely)) {
-      int type = CV_MAKETYPE(CV_32F, 1);
-      velx = cCvMat::new_object(velocity_size, type);
-      vely = cCvMat::new_object(velocity_size, type);
-      velx_ptr = CVMAT(velx);
-      vely_ptr = CVMAT(vely);
-    }
-    else {
-      use_previous = 1;
-      velx_ptr = CVMAT_WITH_CHECK(velx);
-      vely_ptr = CVMAT_WITH_CHECK(vely);
-    }
-    cvCalcOpticalFlowBM(CVMAT_WITH_CHECK(prev), self_ptr,
-			block_size, shift_size, max_range, use_previous,
-			velx_ptr, vely_ptr);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return rb_ary_new3(2, velx, vely);
-}
-
-/*
- * call-seq:
- *   CvMat.find_fundamental_mat(<i>points1, points2[,options = {}]</i>) -> fundamental_matrix(cvmat) or nil
- *
- * Calculates fundamental matrix from corresponding points.
- * Size of the output fundamental matrix is 3x3 or 9x3 (7-point method may return up to 3 matrices)
- *
- * <i>points1</i> and <i>points2</i> should be 2xN, Nx2, 3xN or Nx3 1-channel, or 1xN or Nx1 multi-channel matrix.
- * <i>method<i> is method for computing the fundamental matrix
- *    - CV_FM_7POINT for a 7-point algorithm. (N = 7)
- *    - CV_FM_8POINT for an 8-point algorithm. (N >= 8)
- *    - CV_FM_RANSAC for the RANSAC algorithm. (N >= 8)
- *    - CV_FM_LMEDS for the LMedS algorithm. (N >= 8)
- * <i>option</i> should be Hash include these keys.
- *   :with_status (true or false)
- *      If set true, return fundamental_matrix and status. [fundamental_matrix, status]
- *      Otherwise return fundamental matrix only(default).
- *   :maximum_distance
- *      The parameter is used for RANSAC.  It is the maximum distance from point to epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution and the image noise.
- *   :desirable_level
- *      The optional output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in RANSAC and LMedS methods. For other methods it is set to all 1's.
- *
- * note: <i>option</i>'s default value is CvMat::FIND_FUNDAMENTAL_MAT_OPTION.
- */
-VALUE
-rb_find_fundamental_mat(int argc, VALUE *argv, VALUE klass)
-{
-  VALUE points1, points2, method, option, fundamental_matrix, status;
-  int num = 0;
-  rb_scan_args(argc, argv, "31", &points1, &points2, &method, &option);
-  option = FIND_FUNDAMENTAL_MAT_OPTION(option);
-  int fm_method = FIX2INT(method);
-  CvMat *points1_ptr = CVMAT_WITH_CHECK(points1);
-  if (fm_method == CV_FM_7POINT)
-    fundamental_matrix = cCvMat::new_object(9, 3, CV_MAT_DEPTH(points1_ptr->type));
-  else
-    fundamental_matrix = cCvMat::new_object(3, 3, CV_MAT_DEPTH(points1_ptr->type));
-
-  if (FFM_WITH_STATUS(option)) {
-    int status_len = (points1_ptr->rows > points1_ptr->cols) ? points1_ptr->rows : points1_ptr->cols;
-    status = cCvMat::new_object(1, status_len, CV_8UC1);
-    try {
-      num = cvFindFundamentalMat(points1_ptr, CVMAT_WITH_CHECK(points2), CVMAT(fundamental_matrix), fm_method,
-				 FFM_MAXIMUM_DISTANCE(option), FFM_DESIRABLE_LEVEL(option), CVMAT(status));
-    }
-    catch (cv::Exception& e) {
-      raise_cverror(e);
-    }
-    return num == 0 ? Qnil : rb_ary_new3(2, fundamental_matrix, status);
-  }
-  else {
-    try {
-      num = cvFindFundamentalMat(points1_ptr, CVMAT_WITH_CHECK(points2), CVMAT(fundamental_matrix), fm_method,
-				 FFM_MAXIMUM_DISTANCE(option), FFM_DESIRABLE_LEVEL(option), NULL);
-    }
-    catch (cv::Exception& e) {
-      raise_cverror(e);
-    }
-    return num == 0 ? Qnil : fundamental_matrix;
-  }
-}
-
-
-/*
- * call-seq:
- *   CvMat.compute_correspond_epilines(<i>points, which_image, fundamental_matrix</i>) -> correspondent_lines(cvmat)
- *
- * For points in one image of stereo pair computes the corresponding epilines in the other image.
- * Finds equation of a line that contains the corresponding point (i.e. projection of the same 3D point)
- * in the other image. Each line is encoded by a vector of 3 elements l=[a,b,c]T, so that:
- *   lT*[x, y, 1]T=0,
- * or
- *   a*x + b*y + c = 0
- * From the fundamental matrix definition (see cvFindFundamentalMatrix discussion), line l2 for a point p1 in the first image (which_image=1) can be computed as:
- *   l2=F*p1
- * and the line l1 for a point p2 in the second image (which_image=1) can be computed as:
- *   l1=FT*p2
- * Line coefficients are defined up to a scale. They are normalized (a2+b2=1) are stored into correspondent_lines.
- */
-VALUE
-rb_compute_correspond_epilines(VALUE klass, VALUE points, VALUE which_image, VALUE fundamental_matrix)
-{
-  VALUE correspondent_lines;
-  CvMat* points_ptr = CVMAT_WITH_CHECK(points);
-  int n;
-  if (points_ptr->cols <= 3 && points_ptr->rows >= 7)
-    n = points_ptr->rows;
-  else if (points_ptr->rows <= 3 && points_ptr->cols >= 7)
-    n = points_ptr->cols;
-  else
-    rb_raise(rb_eArgError, "input points should 2xN, Nx2 or 3xN, Nx3 matrix(N >= 7).");
-  
-  correspondent_lines = cCvMat::new_object(n, 3, CV_MAT_DEPTH(points_ptr->type));
-  try {
-    cvComputeCorrespondEpilines(points_ptr, NUM2INT(which_image), CVMAT_WITH_CHECK(fundamental_matrix),
-				CVMAT(correspondent_lines));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  return correspondent_lines;
-}
-
-/*
- * call-seq:
- *   extract_surf(params[,mask]) -> [cvseq(cvsurfpoint), array(float)]
- * Extracts Speeded Up Robust Features from an image
- *
- * <i>params</i> (CvSURFParams) - Various algorithm parameters put to the structure CvSURFParams.
- * <i>mask</i> (CvMat) - The optional input 8-bit mask. The features are only found in the areas that contain more than 50% of non-zero mask pixels.
- */
-VALUE
-rb_extract_surf(int argc, VALUE *argv, VALUE self)
-{
-  VALUE _params, _mask;
-  rb_scan_args(argc, argv, "11", &_params, &_mask);
-
-  // Prepare arguments
-  CvSURFParams params = *CVSURFPARAMS_WITH_CHECK(_params);
-  CvMat* mask = MASK(_mask);
-  VALUE storage = cCvMemStorage::new_object();
-  CvSeq* keypoints = NULL;
-  CvSeq* descriptors = NULL;
-
-  // Compute SURF keypoints and descriptors
-  try {
-    cvExtractSURF(CVARR(self), mask, &keypoints, &descriptors, CVMEMSTORAGE(storage),
-		  params, 0);
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-  VALUE _keypoints = cCvSeq::new_sequence(cCvSeq::rb_class(), keypoints, cCvSURFPoint::rb_class(), storage);
-  
-  // Create descriptor array
-  const int DIM_SIZE = (params.extended) ? 128 : 64;
-  const int NUM_KEYPOINTS = keypoints->total;
-  VALUE _descriptors = rb_ary_new2(NUM_KEYPOINTS);
-  for (int m = 0; m < NUM_KEYPOINTS; ++m) {
-    VALUE elem = rb_ary_new2(DIM_SIZE);
-    float *descriptor = (float*)cvGetSeqElem(descriptors, m);
-    for (int n = 0; n < DIM_SIZE; ++n) {
-      rb_ary_store(elem, n, rb_float_new(descriptor[n]));
-    }
-    rb_ary_store(_descriptors, m, elem);
-  }
-  
-  return rb_assoc_new(_keypoints, _descriptors);
-}
-
-
-/*
- * call-seq:
- *   subspace_project(w, mean) -> cvmat
- */
-VALUE
-rb_subspace_project(VALUE self, VALUE w, VALUE mean)
-{
-  VALUE projection;
-  try {
-    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
-    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
-    cv::Mat self_mat(CVMAT(self));
-    cv::Mat pmat = cv::subspaceProject(w_mat, mean_mat, self_mat);
-    projection = new_object(pmat.rows, pmat.cols, pmat.type());
-    CvMat tmp = pmat;
-    cvCopy(&tmp, CVMAT(projection));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return projection;
-}
-
-/*
- * call-seq:
- *   subspace_reconstruct(w, mean) -> cvmat
- */
-VALUE
-rb_subspace_reconstruct(VALUE self, VALUE w, VALUE mean)
-{
-  VALUE result;
-  try {
-    cv::Mat w_mat(CVMAT_WITH_CHECK(w));
-    cv::Mat mean_mat(CVMAT_WITH_CHECK(mean));
-    cv::Mat self_mat(CVMAT(self));
-    cv::Mat rmat = cv::subspaceReconstruct(w_mat, mean_mat, self_mat);
-    result = new_object(rmat.rows, rmat.cols, rmat.type());
-    CvMat tmp = rmat;
-    cvCopy(&tmp, CVMAT(result));
-  }
-  catch (cv::Exception& e) {
-    raise_cverror(e);
-  }
-
-  return result;
-}
-
-VALUE
-new_object(int rows, int cols, int type)
-{
-  return OPENCV_OBJECT(rb_klass, rb_cvCreateMat(rows, cols, type));
-}
-
-VALUE
-new_object(CvSize size, int type)
-{
-  return OPENCV_OBJECT(rb_klass, rb_cvCreateMat(size.height, size.width, type));
-}
-
-VALUE
-new_mat_kind_object(CvSize size, VALUE ref_obj)
-{
-  VALUE return_type = CLASS_OF(ref_obj);
-  if (rb_obj_is_kind_of(ref_obj, cIplImage::rb_class())) {
-    IplImage* img = IPLIMAGE(ref_obj);
-    return OPENCV_OBJECT(return_type, rb_cvCreateImage(size, img->depth, img->nChannels));
-  }
-  else if (rb_obj_is_kind_of(ref_obj, rb_klass)) // CvMat
-    return OPENCV_OBJECT(return_type, rb_cvCreateMat(size.height, size.width, cvGetElemType(CVMAT(ref_obj))));
-  else
-    rb_raise(rb_eNotImpError, "Only CvMat or IplImage are supported");
-
-  return Qnil;
-}
-
-VALUE
-new_mat_kind_object(CvSize size, VALUE ref_obj, int cvmat_depth, int channel)
-{
-  VALUE return_type = CLASS_OF(ref_obj);
-  if (rb_obj_is_kind_of(ref_obj, cIplImage::rb_class())) {
-    return OPENCV_OBJECT(return_type, rb_cvCreateImage(size, CV2IPL_DEPTH(cvmat_depth), channel));
-  }
-  else if (rb_obj_is_kind_of(ref_obj, rb_klass)) // CvMat
-    return OPENCV_OBJECT(return_type, rb_cvCreateMat(size.height, size.width,
-						     CV_MAKETYPE(cvmat_depth, channel)));
-  else
-    rb_raise(rb_eNotImpError, "Only CvMat or IplImage are supported");
-
-  return Qnil;
-}
-
 __NAMESPACE_END_OPENCV
 __NAMESPACE_END_CVMAT
+

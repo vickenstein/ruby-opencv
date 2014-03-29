@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_ALGORITHM
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 __NAMESPACE_END_ALGORITM
 

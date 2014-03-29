@@ -9,14 +9,14 @@ include OpenCV
 class TestOpenCV < OpenCVTestCase
   def test_constants
     # OpenCV version
-    assert_equal('2.4.7', CV_VERSION)
+    assert_equal('2.4.8', CV_VERSION)
     assert_equal(2, CV_MAJOR_VERSION)
     assert_equal(4, CV_MINOR_VERSION)
-    assert_equal(7, CV_SUBMINOR_VERSION)
+    assert_equal(8, CV_SUBMINOR_VERSION)
 
     assert_equal(2, CV_VERSION_EPOCH)
     assert_equal(4, CV_VERSION_MAJOR)
-    assert_equal(7, CV_VERSION_MINOR)
+    assert_equal(8, CV_VERSION_MINOR)
     assert_equal(0, CV_VERSION_REVISION)
 
     # Depths
@@ -149,7 +149,9 @@ class TestOpenCV < OpenCVTestCase
     assert_equal(4, CV_FM_LMEDS)
 
     # Flags of window
+    assert_equal(0, CV_WINDOW_NORMAL)
     assert_equal(1, CV_WINDOW_AUTOSIZE)
+    assert_equal(4096, CV_WINDOW_OPENGL)
 
     # Object detection mode
     assert_equal(1, CV_HAAR_DO_CANNY_PRUNING)

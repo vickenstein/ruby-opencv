@@ -20,7 +20,7 @@ __NAMESPACE_BEGIN_CVRECT
 
 VALUE rb_class();
 
-void define_ruby_class();
+void init_ruby_class();
 
 VALUE rb_compatible_q(VALUE klass, VALUE object);
 VALUE rb_max_rect(VALUE klass, VALUE rect1, VALUE rect2);
