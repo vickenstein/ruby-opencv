@@ -3,7 +3,7 @@
 An OpenCV wrapper for Ruby.
 
 * Web site: <https://github.com/ruby-opencv/ruby-opencv>
-* Ruby 1.9.3, 2.0.0, 2.1.0 and OpenCV 2.4.8 are supported.
+* Ruby 1.9.3, 2.0.0, 2.1.x and OpenCV 2.4.8 are supported.
 
 ## Requirement
 
@@ -24,10 +24,10 @@ Note: **/path/to/opencvdir** is the directory where you installed OpenCV.
 
 
 ### Windows
-You can use pre-build binary for Windows (mswin32, mingw32).
+You can use pre-build binary for Windows (mswin32).
 
 1. Install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/)
-2. Set path to OpenCV libraries. When you installed OpenCV to **C:\opencv**, add **C:\opencv\build\x86\vc10\bin (for mswin32)** or **C:\opencv\build\x86\mingw\bin (for mingw32)** to the systems path.
+2. Set path to OpenCV libraries. When you installed OpenCV to **C:\opencv**, add **C:\opencv\build\x86\vc10\bin** to the systems path.
 3. Install ruby-opencv
 
 ```
