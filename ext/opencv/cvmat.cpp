@@ -5087,7 +5087,7 @@ rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius)
 
 /*
  * call-seq:
- *   equalize_hist - cvmat
+ *   equalize_hist -> cvmat
  *
  * Equalize histgram of grayscale of image.
  *
