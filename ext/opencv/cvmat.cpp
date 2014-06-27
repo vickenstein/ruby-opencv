@@ -4056,7 +4056,7 @@ rb_dilate_bang(int argc, VALUE *argv, VALUE self)
 
 /*
  * call-seq:
- *   morpholohy(operation[,element = nil][,iteration = 1]) -> cvmat
+ *   morphology(operation[,element = nil][,iteration = 1]) -> cvmat
  *
  * Performs advanced morphological transformations.
  * <i>operation</i>
