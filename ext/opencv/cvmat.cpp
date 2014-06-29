@@ -4055,17 +4055,19 @@ rb_dilate_bang(int argc, VALUE *argv, VALUE self)
 }
 
 /*
- * call-seq:
- *   morpholohy(operation[,element = nil][,iteration = 1]) -> cvmat
+ * Performs advanced morphological transformations using erosion and dilation as basic operations.
  *
- * Performs advanced morphological transformations.
- * <i>operation</i>
- * Type of morphological operation, one of:
- *   CV_MOP_OPEN - opening
- *   CV_MOP_CLOSE - closing
- *   CV_MOP_GRADIENT - morphological gradient
- *   CV_MOP_TOPHAT - top hat
- *   CV_MOP_BLACKHAT - black hat
+ * @overload morphology(operation, element = nil, iteration = 1)
+ * @param operation [Integer] Type of morphological operation.
+ *   * <tt>CV_MOP_OPEN</tt> - Opening
+ *   * <tt>CV_MOP_CLOSE</tt> - Closing
+ *   * <tt>CV_MOP_GRADIENT</tt> - Morphological gradient
+ *   * <tt>CV_MOP_TOPHAT</tt> - Top hat
+ *   * <tt>CV_MOP_BLACKHAT</tt> - Black hat
+ * @param element [IplConvKernel] Structuring element.
+ * @param iteration [Integer] Number of times erosion and dilation are applied.
+ * @return [CvMat] Result array
+ * @opencv_func cvMorphologyEx
  */
 VALUE
 rb_morphology(int argc, VALUE *argv, VALUE self)
@@ -5087,7 +5089,7 @@ rb_inpaint(VALUE self, VALUE inpaint_method, VALUE mask, VALUE radius)
 
 /*
  * call-seq:
- *   equalize_hist - cvmat
+ *   equalize_hist -> cvmat
  *
  * Equalize histgram of grayscale of image.
  *
