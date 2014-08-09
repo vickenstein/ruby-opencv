@@ -24,6 +24,7 @@ void init_ruby_class();
 VALUE seqblock_class(void *ptr);
 void register_elem_class(CvSeq *seq, VALUE klass);
 void unregister_elem_class(void *ptr);
+CvSeq* create_seq(int seq_flags, size_t header_size, VALUE storage_value);
 
 VALUE rb_allocate(VALUE klass);
 

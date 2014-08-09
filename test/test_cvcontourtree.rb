@@ -9,11 +9,11 @@ include OpenCV
 # Tests for OpenCV::CvContourTree
 class TestCvContourTree < OpenCVTestCase
   def setup
-    @tree = CvContourTree.new(CvPoint)
+    @tree = CvContourTree.new(CV_SEQ_ELTYPE_POINT)
   end
 
   def test_initialize
-    tree = CvContourTree.new(CvPoint)
+    tree = CvContourTree.new(CV_SEQ_ELTYPE_POINT)
     assert_equal(CvContourTree, tree.class)
     assert(tree.is_a? CvSeq)
   end
