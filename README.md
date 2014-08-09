@@ -3,7 +3,7 @@
 An OpenCV wrapper for Ruby.
 
 * Web site: <https://github.com/ruby-opencv/ruby-opencv>
-* Ruby 1.9.3, 2.0.0, 2.1.x and OpenCV 2.4.8 are supported.
+* Ruby 1.9.3, 2.0.0, 2.1.x and OpenCV 2.4.9 are supported.
 
 ## Requirement
 
