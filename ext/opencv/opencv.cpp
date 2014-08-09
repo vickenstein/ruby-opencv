@@ -388,6 +388,47 @@ init_ruby_module()
   rb_define_const(rb_module, "COLORMAP_PINK", INT2FIX(cv::COLORMAP_PINK));
   rb_define_const(rb_module, "COLORMAP_HOT", INT2FIX(cv::COLORMAP_HOT));
 
+  /* Sequence types */
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_BITS", INT2FIX(CV_SEQ_ELTYPE_BITS));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_MASK", INT2FIX(CV_SEQ_ELTYPE_MASK));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_POINT", INT2FIX(CV_SEQ_ELTYPE_POINT));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_CODE", INT2FIX(CV_SEQ_ELTYPE_CODE));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_GENERIC", INT2FIX(CV_SEQ_ELTYPE_GENERIC));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_PTR", INT2FIX(CV_SEQ_ELTYPE_PTR));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_PPOINT", INT2FIX(CV_SEQ_ELTYPE_PPOINT));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_INDEX", INT2FIX(CV_SEQ_ELTYPE_INDEX));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_GRAPH_EDGE", INT2FIX(CV_SEQ_ELTYPE_GRAPH_EDGE));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_GRAPH_VERTEX", INT2FIX(CV_SEQ_ELTYPE_GRAPH_VERTEX));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_TRIAN_ATR", INT2FIX(CV_SEQ_ELTYPE_TRIAN_ATR));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_CONNECTED_COMP", INT2FIX(CV_SEQ_ELTYPE_CONNECTED_COMP));
+  rb_define_const(rb_module, "CV_SEQ_ELTYPE_POINT3D", INT2FIX(CV_SEQ_ELTYPE_POINT3D));
+  rb_define_const(rb_module, "CV_SEQ_KIND_BITS", INT2FIX(CV_SEQ_KIND_BITS));
+  rb_define_const(rb_module, "CV_SEQ_KIND_MASK", INT2FIX(CV_SEQ_KIND_MASK));
+  rb_define_const(rb_module, "CV_SEQ_KIND_GENERIC", INT2FIX(CV_SEQ_KIND_GENERIC));
+  rb_define_const(rb_module, "CV_SEQ_KIND_CURVE", INT2FIX(CV_SEQ_KIND_CURVE));
+  rb_define_const(rb_module, "CV_SEQ_KIND_BIN_TREE", INT2FIX(CV_SEQ_KIND_BIN_TREE));
+  rb_define_const(rb_module, "CV_SEQ_KIND_GRAPH", INT2FIX(CV_SEQ_KIND_GRAPH));
+  rb_define_const(rb_module, "CV_SEQ_KIND_SUBDIV2D", INT2FIX(CV_SEQ_KIND_SUBDIV2D));
+  rb_define_const(rb_module, "CV_SEQ_FLAG_SHIFT", INT2FIX(CV_SEQ_FLAG_SHIFT));
+  rb_define_const(rb_module, "CV_SEQ_FLAG_CLOSED", INT2FIX(CV_SEQ_FLAG_CLOSED));
+  rb_define_const(rb_module, "CV_SEQ_FLAG_SIMPLE", INT2FIX(CV_SEQ_FLAG_SIMPLE));
+  rb_define_const(rb_module, "CV_SEQ_FLAG_CONVEX", INT2FIX(CV_SEQ_FLAG_CONVEX));
+  rb_define_const(rb_module, "CV_SEQ_FLAG_HOLE", INT2FIX(CV_SEQ_FLAG_HOLE));
+  rb_define_const(rb_module, "CV_GRAPH_FLAG_ORIENTED", INT2FIX(CV_GRAPH_FLAG_ORIENTED));
+  rb_define_const(rb_module, "CV_GRAPH", INT2FIX(CV_GRAPH));
+  rb_define_const(rb_module, "CV_ORIENTED_GRAPH", INT2FIX(CV_ORIENTED_GRAPH));
+  rb_define_const(rb_module, "CV_SEQ_POINT_SET", INT2FIX(CV_SEQ_POINT_SET));
+  rb_define_const(rb_module, "CV_SEQ_POINT3D_SET", INT2FIX(CV_SEQ_POINT3D_SET));
+  rb_define_const(rb_module, "CV_SEQ_POLYLINE", INT2FIX(CV_SEQ_POLYLINE));
+  rb_define_const(rb_module, "CV_SEQ_POLYGON", INT2FIX(CV_SEQ_POLYGON));
+  rb_define_const(rb_module, "CV_SEQ_CONTOUR", INT2FIX(CV_SEQ_CONTOUR));
+  rb_define_const(rb_module, "CV_SEQ_SIMPLE_POLYGON", INT2FIX(CV_SEQ_SIMPLE_POLYGON));
+  rb_define_const(rb_module, "CV_SEQ_CHAIN", INT2FIX(CV_SEQ_CHAIN));
+  rb_define_const(rb_module, "CV_SEQ_CHAIN_CONTOUR", INT2FIX(CV_SEQ_CHAIN_CONTOUR));
+  rb_define_const(rb_module, "CV_SEQ_POLYGON_TREE", INT2FIX(CV_SEQ_POLYGON_TREE));
+  rb_define_const(rb_module, "CV_SEQ_CONNECTED_COMP", INT2FIX(CV_SEQ_CONNECTED_COMP));
+  rb_define_const(rb_module, "CV_SEQ_INDEX", INT2FIX(CV_SEQ_INDEX));
+
   VALUE inversion_method = rb_hash_new();
   /* {:lu, :svd, :svd_sym(:svd_symmetric)}: Inversion method */
   rb_define_const(rb_module, "INVERSION_METHOD", inversion_method);
