@@ -74,7 +74,7 @@ class TestCvHistogram < OpenCVTestCase
     assert_raise(TypeError) {
       @hist1.calc_hist([img], true, DUMMY_OBJ)
     }
-    assert_raise(CvStsBadArg) {
+    assert_raise(ArgumentError) {
       @hist1.calc_hist([])
     }
   end

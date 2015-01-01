@@ -193,6 +193,9 @@ rb_calc_hist_bang(int argc, VALUE* argv, VALUE self)
   rb_scan_args(argc, argv, "12", &images, &accumulate, &mask);
   Check_Type(images, T_ARRAY);
   int num_images = RARRAY_LEN(images);
+  if (num_images == 0) {
+    rb_raise(rb_eArgError, "One or more arrays are required.");
+  }
   IplImage** img = ALLOCA_N(IplImage*, num_images);
   VALUE* images_ptr = RARRAY_PTR(images);
   for (int i = 0; i < num_images; i++) {
@@ -205,7 +208,6 @@ rb_calc_hist_bang(int argc, VALUE* argv, VALUE self)
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-  
   return self;
 }
 
