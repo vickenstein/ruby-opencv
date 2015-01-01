@@ -2161,6 +2161,39 @@ class TestCvMat < OpenCVTestCase
     }
   end
 
+  def test_norm
+    src1 = CvMat.new(3, 3, :cv32f, 1).set_data([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    src2 = CvMat.new(3, 3, :cv32f, 1).set_data([2, 3, 4, 5, 6, 7, 8, 9, 1])
+    mask = CvMat.new(3, 3, :cv8u, 1).set_data([1, 1, 0, 1, 1, 0, 0, 0, 0])
+
+    assert_in_delta(CvMat.norm(src1), 16.88, 0.01)
+
+    assert_in_delta(CvMat.norm(src1, nil, CV_NORM_L1), 45.0, 0.01)
+    assert_in_delta(CvMat.norm(src1, nil, CV_NORM_L2), 16.88, 0.01)
+    assert_in_delta(CvMat.norm(src1, nil, CV_NORM_INF), 9.0, 0.01)
+
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_L1), 16.0, 0.01)
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_L2), 8.49, 0.01)
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_INF), 8.0, 0.01)
+
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_L1, mask), 4.0, 0.01)
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_L2, mask), 2.0, 0.01)
+    assert_in_delta(CvMat.norm(src1, src2, CV_NORM_INF, mask), 1.0, 0.01)
+
+    assert_raise(TypeError) {
+      CvMat.norm(DUMMY_OBJ)
+    }
+    assert_raise(TypeError) {
+      CvMat.norm(src1, DUMMY_OBJ)
+    }
+    assert_raise(TypeError) {
+      CvMat.norm(src1, src2, DUMMY_OBJ)
+    }
+    assert_raise(TypeError) {
+      CvMat.norm(src1, src2, CV_NORM_L1, DUMMY_OBJ)
+    }
+  end
+
   def test_dot_product
     m1 = create_cvmat(2, 2, :cv32f, 1) { |j, i, c|
       CvScalar.new(c * 0.5)

@@ -119,7 +119,7 @@ VALUE rb_avg_sdv(int argc, VALUE *argv, VALUE self);
 VALUE rb_sdv(int argc, VALUE *argv, VALUE self);
 VALUE rb_min_max_loc(int argc, VALUE *argv, VALUE self);
 
-//VALUE rb_norm();
+VALUE rb_norm(int argc, VALUE *argv, VALUE self);
 VALUE rb_dot_product(VALUE self, VALUE mat);
 VALUE rb_cross_product(VALUE self, VALUE mat);
 // VALUE rb_gemm();

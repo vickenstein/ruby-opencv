@@ -2277,6 +2277,47 @@ rb_min_max_loc(int argc, VALUE *argv, VALUE self)
 }
 
 /*
+ * Calculates an absolute array norm, an absolute difference norm, or a relative difference norm.
+ *
+ * @overload norm(src1, src2=nil, norm_type=NORM_L2, mask=nil)
+ * @param src1 [CvMat] First input array.
+ * @param src2 [CvMat] Second input array of the same size and the same type as <tt>src1</tt>.
+ * @param norm_type [Integer] Type of the norm.
+ * @param mask [CvMat] Optional operation mask; it must have the same size as <tt>src1</tt> and <tt>CV_8UC1</tt> type.
+ * @return [Number] The norm of two arrays.
+ * @opencv_func cvNorm
+ * @scope class
+ */
+VALUE
+rb_norm(int argc, VALUE *argv, VALUE self)
+{
+  VALUE src1, src2, norm_type_val, mask_val;
+  rb_scan_args(argc, argv, "13", &src1, &src2, &norm_type_val, &mask_val);
+
+  CvMat *src1_ptr = NULL;
+  CvMat *src2_ptr = NULL;
+  int norm_type = NIL_P(norm_type_val) ? cv::NORM_L2 : NUM2INT(norm_type_val);
+  CvMat *mask = NULL;
+  double norm = 0.0;
+
+  try {
+    src1_ptr = CVMAT_WITH_CHECK(src1);
+    if (!NIL_P(src2)) {
+      src2_ptr = CVMAT_WITH_CHECK(src2);
+    }
+    if (!NIL_P(mask_val)) {
+      mask = CVMAT_WITH_CHECK(mask_val);
+    }
+    norm = cvNorm(src1_ptr, src2_ptr, norm_type, mask);
+  }
+  catch (cv::Exception& e) {
+    raise_cverror(e);
+  }
+
+  return DBL2NUM(norm);
+}
+
+/*
  * Calculates the dot product of two arrays in Euclidean metrics.
  *
  * @overload dot_product(mat)
@@ -5913,6 +5954,7 @@ init_ruby_class()
   rb_define_method(rb_klass, "avg_sdv", RUBY_METHOD_FUNC(rb_avg_sdv), -1);
   rb_define_method(rb_klass, "sdv", RUBY_METHOD_FUNC(rb_sdv), -1);
   rb_define_method(rb_klass, "min_max_loc", RUBY_METHOD_FUNC(rb_min_max_loc), -1);
+  rb_define_singleton_method(rb_klass, "norm", RUBY_METHOD_FUNC(rb_norm), -1);
   rb_define_method(rb_klass, "dot_product", RUBY_METHOD_FUNC(rb_dot_product), 1);
   rb_define_method(rb_klass, "cross_product", RUBY_METHOD_FUNC(rb_cross_product), 1);
   rb_define_method(rb_klass, "transform", RUBY_METHOD_FUNC(rb_transform), -1);
