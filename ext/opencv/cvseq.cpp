@@ -10,27 +10,6 @@
 #include "cvseq.h"
 /*
  * Document-class: OpenCV::CvSeq
- *
- * Generic Sequence class. CvSeq has the method like Array (push, pop, select, etc...).
- * But, CvSeq cannot store the object of a different class.
- * When storing object in CvSeq, conversion is automatically tried,
- * and the object occurs the error if it cannot be done.
- *
- * e.g.
- *   seq = CvSeq.new(CvPoint)    # Argument mean "this sequence contain only this class's object"
- *   seq.push(CvPoint.new(0, 0)) # => it's ok
- *   seq.push("hello")           # => try convert "hello" to CvPoint. but can't do it. raise error.
- *
- * If the sequecne contain object of class A.
- * When storing object(named "obj") of class B to the sequence.
- *   Try automatically : A.from_B(obj) => object of class A.
- *
- * The sequence might have another sequence outside. see below. 
- * Each sequece has h_prev, h_next, v_prev, v_next method.
- * If the adjoining sequence exists, each method return the adjoining sequence.
- * Otherwise return nil.
- *
- * link:../images/CvSeq_relationmap.png
  */
 __NAMESPACE_BEGIN_OPENCV
 __NAMESPACE_BEGIN_CVSEQ
@@ -80,62 +59,116 @@ rb_allocate(VALUE klass)
   return Data_Wrap_Struct(klass, 0, unregister_elem_class, ptr);
 }
 
-/*
- * call-seq:
- *   CvSeq.new(type[,storage])
- *
- * Return a new CvSeq. <i>type</i> should be following classes.
- *
- * * CvIndex
- * * CvPoint
- */
-VALUE
-rb_initialize(int argc, VALUE *argv, VALUE self)
+CvSeq*
+create_seq(int seq_flags, size_t header_size, VALUE storage_value)
 {
-  VALUE klass, storage_value;
+  VALUE klass = Qnil;
+  int eltype = seq_flags & CV_SEQ_ELTYPE_MASK;
+  storage_value = CHECK_CVMEMSTORAGE(storage_value);
 
-  rb_scan_args(argc, argv, "11", &klass, &storage_value);
-  if (!rb_obj_is_kind_of(klass, rb_cClass))
-    raise_typeerror(klass, rb_cClass);
+  switch (eltype) {
+  case CV_SEQ_ELTYPE_POINT:
+    klass = cCvPoint::rb_class();
+    break;
+  case CV_32FC2:
+    klass = cCvPoint2D32f::rb_class();
+    break;
+  case CV_SEQ_ELTYPE_POINT3D:
+    klass = cCvPoint3D32f::rb_class();
+    break;
+  case CV_SEQ_ELTYPE_CODE:
+  case CV_SEQ_ELTYPE_INDEX:
+    klass = rb_cFixnum;
+    break;
+  case CV_SEQ_ELTYPE_PPOINT: // or CV_SEQ_ELTYPE_PTR:
+    // Not supported
+    rb_raise(rb_eArgError, "seq_flags %d is not supported.", eltype);
+    break;
+  default:
+    seq_flags = CV_SEQ_ELTYPE_POINT | CV_SEQ_KIND_GENERIC;
+    klass = cCvPoint::rb_class();
+    break;
+  }
 
-  int type = 0, size = 0;
-  if (klass == rb_cFixnum) {
-    type = CV_SEQ_ELTYPE_INDEX;
-    size = sizeof(int);
-  }
-  else if (klass == cCvPoint::rb_class()) {
-    type = CV_SEQ_ELTYPE_POINT;
-    size = sizeof(CvPoint);
-  }
-  else if (klass == cCvPoint2D32f::rb_class()) {
-    type = CV_SEQ_ELTYPE_POINT;
-    size = sizeof(CvPoint2D32f);
-  }
-  else if (klass == cCvPoint3D32f::rb_class()) {
-    type = CV_SEQ_ELTYPE_POINT3D;
-    size = sizeof(CvPoint3D32f);
-  }
-  else
-    rb_raise(rb_eArgError, "unsupport %s class for sequence-block.", rb_class2name(klass));
-  
+  int mat_type = CV_MAT_TYPE(seq_flags);
+  size_t elem_size = (size_t)(CV_ELEM_SIZE(mat_type));
   CvSeq* seq = NULL;
-  if (NIL_P(storage_value)) {
-    storage_value = cCvMemStorage::new_object(0);
-  }
-  else {
-    storage_value = CHECK_CVMEMSTORAGE(storage_value);
-  }
-  
   try {
-    seq = cvCreateSeq(type, sizeof(CvSeq), size, CVMEMSTORAGE(storage_value));
+    seq = cvCreateSeq(seq_flags, header_size, elem_size, CVMEMSTORAGE(storage_value));
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-  DATA_PTR(self) = seq;
   register_elem_class(seq, klass);
   register_root_object(seq, storage_value);
   
+  return seq;
+}
+
+VALUE
+class2seq_flags_value(VALUE klass) {
+  int seq_flags;
+  if (klass == cCvPoint::rb_class()) {
+    seq_flags = CV_SEQ_ELTYPE_POINT;
+  }
+  else if (klass == cCvPoint2D32f::rb_class()) {
+    seq_flags = CV_32FC2;
+  }
+  else if (klass == cCvPoint3D32f::rb_class()) {
+    seq_flags = CV_SEQ_ELTYPE_POINT3D;
+  }
+  else if (klass == rb_cFixnum) {
+    seq_flags = CV_SEQ_ELTYPE_INDEX;
+  }
+  else {
+    rb_raise(rb_eTypeError, "unexpected type: %s", rb_class2name(klass));
+  }
+
+  return INT2NUM(seq_flags | CV_SEQ_KIND_GENERIC);
+}
+
+/*
+ * Constructor
+ *
+ * @overload new(seq_flags, storage = nil)
+ *   @param [Fixnum] seq_flags Flags of the created sequence, which are combinations of
+ *     the element types and sequence types.
+ *     - Element type:
+ *       - <tt>CV_SEQ_ELTYPE_POINT</tt>: {CvPoint}
+ *       - <tt>CV_32FC2</tt>: {CvPoint2D32f}
+ *       - <tt>CV_SEQ_ELTYPE_POINT3D</tt>: {CvPoint3D32f}
+ *       - <tt>CV_SEQ_ELTYPE_INDEX</tt>: Fixnum
+ *       - <tt>CV_SEQ_ELTYPE_CODE</tt>: Fixnum (Freeman code)
+ *     - Sequence type:
+ *       - <tt>CV_SEQ_KIND_GENERIC</tt>: Generic sequence
+ *       - <tt>CV_SEQ_KIND_CURVE</tt>: Curve
+ *   @param [CvMemStorage] storage Sequence location
+ * @return [CvSeq] self
+ * @opencv_func cvCreateSeq
+ * @example
+ *   seq1 = CvSeq.new(CV_SEQ_ELTYPE_INDEX)
+ *   seq1 << 1
+ *   seq1 << CvPoint.new(1, 2) #=> TypeError
+ *
+ *   seq2 = CvSeq.new(CV_SEQ_ELTYPE_POINT | CV_SEQ_KIND_CURVE)
+ *   seq2 << CvPoint.new(1, 2)
+ *   seq2 << 3 #=> TypeError
+ */
+VALUE
+rb_initialize(int argc, VALUE *argv, VALUE self)
+{
+  VALUE seq_flags_value, storage_value;
+  rb_scan_args(argc, argv, "11", &seq_flags_value, &storage_value);
+  int seq_flags = 0;
+
+  if (TYPE(seq_flags_value) == T_CLASS) { // To maintain backward compatibility
+    seq_flags_value = class2seq_flags_value(seq_flags_value);
+  }
+  Check_Type(seq_flags_value, T_FIXNUM);
+  seq_flags = FIX2INT(seq_flags_value);
+
+  DATA_PTR(self) = create_seq(seq_flags, sizeof(CvSeq), storage_value);
+
   return self;
 }
     
@@ -174,17 +207,22 @@ rb_aref(VALUE self, VALUE index)
 {
   CvSeq *seq = CVSEQ(self);
   int idx = NUM2INT(index);
-  if (seq->total == 0)
+  if (seq->total == 0) {
     return Qnil;
-  if (idx >= seq->total)
+  }
+  if (idx >= seq->total) {
     rb_raise(rb_eIndexError, "index %d out of sequence", idx);
+  }
 
   VALUE result = Qnil;
   try {
-    if (seqblock_class(seq) == rb_cFixnum)
+    VALUE klass = seqblock_class(seq);
+    if (RTEST(rb_class_inherited_p(klass, rb_cInteger))) {
       result = INT2NUM(*CV_GET_SEQ_ELEM(int, seq, idx));
-    else
-      result = REFER_OBJECT(seqblock_class(seq), cvGetSeqElem(seq, idx), self);
+    }
+    else {
+      result = REFER_OBJECT(klass, cvGetSeqElem(seq, idx), self);
+    }
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
@@ -288,15 +326,19 @@ VALUE
 rb_seq_push(VALUE self, VALUE args, int flag)
 {
   CvSeq *seq = CVSEQ(self);
-  VALUE klass = seqblock_class(seq), object;
+  VALUE klass = seqblock_class(seq);
   volatile void *elem = NULL;
   int len = RARRAY_LEN(args);
-  for (int i = 0; i < len; ++i) {
-    object = RARRAY_PTR(args)[i];
-    if (CLASS_OF(object) == klass) {
-      if (TYPE(object) == T_FIXNUM) {
-	volatile int int_elem = FIX2INT(object);
+  for (int i = 0; i < len; i++) {
+    VALUE object = RARRAY_PTR(args)[i];
+    if (rb_obj_is_kind_of(object, klass)) {
+      if (rb_obj_is_kind_of(object, rb_cInteger)) {
+	volatile int int_elem = NUM2INT(object);
 	elem = &int_elem;
+      }
+      else if (rb_obj_is_kind_of(object, rb_cNumeric)) {
+	volatile double double_elem = NUM2DBL(object);
+	elem = &double_elem;
       }
       else {
 	elem = (void*)DATA_PTR(object);
@@ -311,7 +353,8 @@ rb_seq_push(VALUE self, VALUE args, int flag)
 	raise_cverror(e);
       }
     }
-    else if (rb_obj_is_kind_of(object, rb_klass) && CLASS_OF(rb_first(object)) == klass) { // object is CvSeq
+    else if ((rb_obj_is_kind_of(object, rb_klass) == Qtrue) &&
+	     RTEST(rb_class_inherited_p(seqblock_class(CVSEQ(object)), klass))) { // object is CvSeq
       void *buffer = NULL;
       try {
 	buffer = cvCvtSeqToArray(CVSEQ(object), rb_cvAlloc(CVSEQ(object)->total * CVSEQ(object)->elem_size));

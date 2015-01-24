@@ -10,7 +10,7 @@ include OpenCV
 class TestCvConnectedComp < OpenCVTestCase
   def setup
     @connected_comp = CvConnectedComp.new(9216, CvScalar.new(1, 2, 3, 4),
-                                          CvRect.new(1, 2, 3, 4), CvSeq.new(CvPoint))
+                                          CvRect.new(1, 2, 3, 4), CvSeq.new(CV_SEQ_ELTYPE_INDEX))
   end
   
   def test_initialize
@@ -22,7 +22,7 @@ class TestCvConnectedComp < OpenCVTestCase
     assert_not_nil(connected_comp.contour)
 
     connected_comp = CvConnectedComp.new(100, CvScalar.new(1, 2, 3, 4),
-                                         CvRect.new(1, 2, 3, 4), CvSeq.new(CvPoint))
+                                         CvRect.new(1, 2, 3, 4), CvSeq.new(CV_SEQ_ELTYPE_POINT))
     assert_equal(CvConnectedComp, connected_comp.class)
     assert_not_nil(connected_comp.area)
     assert_not_nil(connected_comp.value)

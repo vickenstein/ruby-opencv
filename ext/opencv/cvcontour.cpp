@@ -42,31 +42,49 @@ rb_allocate(VALUE klass)
 
 /*
  * Constructor
- * @overload new(storage = nil)
+ *
+ * @overload new(seq_flags = CV_SEQ_ELTYPE_POINT | CV_SEQ_KIND_GENERIC, storage = nil)
+ *   @param [Fixnum] seq_flags Flags of the created sequence, which are combinations of
+ *     the element types and sequence types.
+ *     - Element type:
+ *       - <tt>CV_SEQ_ELTYPE_POINT</tt>: {CvPoint}
+ *       - <tt>CV_32FC2</tt>: {CvPoint2D32f}
+ *       - <tt>CV_SEQ_ELTYPE_POINT3D</tt>: {CvPoint3D32f}
+ *       - <tt>CV_SEQ_ELTYPE_INDEX</tt>: Fixnum
+ *       - <tt>CV_SEQ_ELTYPE_CODE</tt>: Fixnum (Freeman code)
+ *     - Sequence type:
+ *       - <tt>CV_SEQ_KIND_GENERIC</tt>: Generic sequence
+ *       - <tt>CV_SEQ_KIND_CURVE</tt>: Curve
  *   @param [CvMemStorage] storage Sequence location
  * @return [CvContour] self
  * @opencv_func cvCreateSeq
+ * @example
+ *   seq = CvContour.new(CV_SEQ_ELTYPE_POINT | CV_SEQ_KIND_CURVE)
+ *   seq << CvPoint.new(1, 2)
+ *   seq << 3 #=> TypeError
  */
 VALUE
 rb_initialize(int argc, VALUE *argv, VALUE self)
 {
-  VALUE storage;
-  rb_scan_args(argc, argv, "01", &storage);
+  VALUE seq_flags_value, storage_value;
+  rb_scan_args(argc, argv, "02", &seq_flags_value, &storage_value);
 
-  if (NIL_P(storage))
-    storage = cCvMemStorage::new_object(0);
-  else
-    storage = CHECK_CVMEMSTORAGE(storage);
+  int seq_flags = 0;
+  if (NIL_P(seq_flags_value)) {
+    seq_flags = CV_SEQ_ELTYPE_POINT | CV_SEQ_KIND_GENERIC;
+  }
+  else {
+    Check_Type(seq_flags_value, T_FIXNUM);
+    seq_flags = FIX2INT(seq_flags_value);
+  }
+  storage_value = CHECK_CVMEMSTORAGE(storage_value);
 
   try {
-    DATA_PTR(self) = (CvContour*)cvCreateSeq(CV_SEQ_ELTYPE_POINT, sizeof(CvContour),
-					     sizeof(CvPoint), CVMEMSTORAGE(storage));
+    DATA_PTR(self) = (CvContour*)cCvSeq::create_seq(seq_flags, sizeof(CvContour), storage_value);
   }
   catch (cv::Exception& e) {
     raise_cverror(e);
   }
-  cCvSeq::register_elem_class(CVSEQ(self), cCvPoint::rb_class());
-  register_root_object(CVSEQ(self), storage);
 
   return self;
 }
