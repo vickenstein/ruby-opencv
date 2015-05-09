@@ -13,6 +13,7 @@ class TestLBPH < OpenCVTestCase
     @lbph = LBPH.new
 
     @lbph_trained = LBPH.new
+    @lbph_update = LBPH.new
     @images = [CvMat.load(FILENAME_LENA256x256, CV_LOAD_IMAGE_GRAYSCALE)] * 2
     @labels = [1, 2]
     @lbph_trained.train(@images, @labels)
@@ -49,6 +50,19 @@ class TestLBPH < OpenCVTestCase
 
     assert_raise(TypeError) {
       @lbph.train(@images, DUMMY_OBJ)
+    }
+  end
+
+  def test_update
+    assert_nil(@lbph_update.train([@images[0]], [@labels[0]]))
+    assert_nil(@lbph_update.update([@images[1]], [@labels[1]]))
+
+    assert_raise(TypeError) {
+      @lbph_update.train(DUMMY_OBJ, @labels)
+    }
+
+    assert_raise(TypeError) {
+      @lbph_update.train(@images, DUMMY_OBJ)
     }
   end
 
