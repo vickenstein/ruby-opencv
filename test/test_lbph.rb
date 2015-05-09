@@ -58,11 +58,11 @@ class TestLBPH < OpenCVTestCase
     assert_nil(@lbph_update.update([@images[1]], [@labels[1]]))
 
     assert_raise(TypeError) {
-      @lbph_update.train(DUMMY_OBJ, @labels)
+      @lbph_update.update(DUMMY_OBJ, @labels)
     }
 
     assert_raise(TypeError) {
-      @lbph_update.train(@images, DUMMY_OBJ)
+      @lbph_update.update(@images, DUMMY_OBJ)
     }
   end
 
