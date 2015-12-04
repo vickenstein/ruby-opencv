@@ -56,7 +56,7 @@ VALUE
 rb_allocate(VALUE klass)
 {
   CvSeq *ptr = ALLOC(CvSeq);
-  return Data_Wrap_Struct(klass, 0, unregister_elem_class, ptr);
+  return Data_Wrap_Struct(klass, mark_root_object, unregister_elem_class, ptr);
 }
 
 CvSeq*
