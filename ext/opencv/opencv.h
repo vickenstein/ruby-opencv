@@ -7,16 +7,7 @@
     Copyright (C) 2005-2007 Masakazu Yonekura
 
 ************************************************************/
-
-static const char CV_VERSION = "2.4.3"
-static const int CV_VERSION_EPOCH = 2
-static const int CV_VERSION_MAJOR = 4
-static const int CV_VERSION_MINOR = 3
-static const int CV_VERSION_REVISION = 0
-static const int CV_MAJOR_VERSION = 2
-static const int CV_MINOR_VERSION = 4
-static const int CV_SUBMINOR_VERSION = 3
-
+    
 #ifndef RUBY_OPENCV_H
 #define RUBY_OPENCV_H
 
