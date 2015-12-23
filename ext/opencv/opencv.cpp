@@ -160,6 +160,17 @@ init_ruby_module()
     return;
   rb_module = rb_define_module("OpenCV");  
   
+  /* define version */
+
+  const char* CV_VERSION = '2.4.3';
+  const int CV_MAJOR_VERSION = 2;
+  const int CV_MINOR_VERSION = 4;
+  const int CV_SUBMINOR_VERSION = 3;
+  const int CV_VERSION_EPOCH = 2;
+  const int CV_VERSION_MAJOR = 4;
+  const int CV_VERSION_MINOR = 3;
+  const int CV_VERSION_REVISION = 0;
+
   /* OpenCV version */
   rb_define_const(rb_module, "CV_VERSION", rb_str_new2(CV_VERSION));
   rb_define_const(rb_module, "CV_MAJOR_VERSION", INT2FIX(CV_MAJOR_VERSION));
