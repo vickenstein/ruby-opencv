@@ -57,6 +57,12 @@ extern "C" {
 
 // OpenCV headers
 #include "opencv2/core/version.hpp"
+
+#define CV_VERSION_EPOCH      2
+#define CV_VERSION_MAJOR      4
+#define CV_VERSION_MINOR      3
+#define CV_VERSION_REVISION   0
+
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
