@@ -20,14 +20,19 @@ def cv_version_suffix(incdir)
       subminor = $1.to_s if line =~ /\A#define\s+(?:CV_VERSION_MINOR|CV_SUBMINOR_VERSION)\s+(\d+)\s*\Z/
     }
   }
+  puts "VERSION: " + major + minor + subminor
   major + minor + subminor
 end
 
 # Quick fix for 2.0.0
 # @libdir_basename is set to nil and dir_config() sets invalid libdir '${opencv-dir}/' when --with-opencv-dir option passed.
 @libdir_basename ||= 'lib'
+puts "@libdir_basename: " + @libdir_basename
 incdir, libdir = dir_config("opencv", "/usr/local/include", "/usr/local/lib")
 dir_config("libxml2", "/usr/include", "/usr/lib")
+
+puts incdir.inspect
+puts libdir.inspect
 
 opencv_headers = ["opencv2/core/core_c.h", "opencv2/core/core.hpp", "opencv2/imgproc/imgproc_c.h",
                   "opencv2/imgproc/imgproc.hpp", "opencv2/video/tracking.hpp", "opencv2/features2d/features2d.hpp",
@@ -43,6 +48,7 @@ opencv_libraries_opt = ["opencv_gpu", "opencv_nonfree"]
 
 puts ">> Check the required libraries..."
 if $mswin or $mingw
+  puts "MSWIN|MINGW"
   suffix = cv_version_suffix(incdir)
   opencv_libraries.map! { |lib| lib + suffix }
   opencv_libraries_opt.map! { |lib| lib + suffix }
@@ -52,11 +58,16 @@ if $mswin or $mingw
     CONFIG['CXXFLAGS'] << ' /EHsc'
   end
 else
+  puts "UNIX"
   have_library("stdc++")
 end
 
-opencv_libraries.each { |lib| raise "#{lib} not found." unless have_library(lib) }
-opencv_libraries_opt.each { |lib| warn "#{lib} not found." unless have_library(lib) }
+opencv_libraries.each do |lib|
+  raise "#{lib} not found." unless have_library(lib)
+end
+opencv_libraries_opt.each do |lib|
+  warn "#{lib} not found." unless have_library(lib)
+end
 
 # Check the required headers
 puts ">> Check the required headers..."
