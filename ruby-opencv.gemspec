@@ -4,7 +4,7 @@
 
 Gem::Specification.new do |s|
   s.name = "ruby-opencv"
-  s.version = "0.0.14.20150125044335"
+  s.version = "0.0.14.30150125044335"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]

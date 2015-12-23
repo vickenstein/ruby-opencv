@@ -49,7 +49,7 @@ opencv_libraries_opt = ["opencv_gpu", "opencv_nonfree"]
 puts ">> Check the required libraries..."
 if $mswin or $mingw
   puts "MSWIN|MINGW"
-  suffix = cv_version_suffix(incdir)
+  suffix = cv_version_suffix(libdir)
   opencv_libraries.map! { |lib| lib + suffix }
   opencv_libraries_opt.map! { |lib| lib + suffix }
   have_library("msvcrt")
